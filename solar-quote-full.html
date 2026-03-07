@@ -1528,9 +1528,11 @@ function tryLoadQuote() {
 document.addEventListener('DOMContentLoaded', () => {
   initCitySearch();
   updatePreview();
-  // Try immediately, then retry after short delay (for Worker injection timing)
+});
+// Run after full page load — ensures Worker-injected __QUOTE_DATA__ is available
+window.addEventListener('load', () => {
   if (!tryLoadQuote()) {
-    setTimeout(() => tryLoadQuote(), 200);
+    setTimeout(() => tryLoadQuote(), 300);
   }
 });
 document.querySelectorAll('input,select,textarea').forEach(el=>el.addEventListener('input',updatePreview));
