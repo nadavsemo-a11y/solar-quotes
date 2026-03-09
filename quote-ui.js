@@ -543,17 +543,23 @@ class QuoteUI {
       kw: get('sysKW'), acKW: get('sysAC'), ppkw: get('ppkw'),
       batt: get('batteries'), panelW: get('panelW'), panelCt: get('panelCount'),
       roofArea: get('roofArea'), hours: get('hoursPerKw'), infl: get('inflationPct'),
-      roof: vals.roof, inv: vals.inv, plan: vals.plan, evYN: vals.evCharger,
-      battP: get('battUnitPrice'), hybrP: get('hybridInvPrice'),
-      hybrFP: get('hybridFullPrice'), seP: get('sePrice'),
-      premP: get('premiumPanelPrice'), monP: get('monitoringPrice'),
+      roof: vals.roof, inv: vals.inv, plan: vals.plan,
+      customInvModel: get('customInvModel'),
+      battFP: get('battFirstPrice'), battEP: get('battExtraPrice'),
+      hybrP: get('hybridInvPrice'), hybrFP: get('hybridFullPrice'),
+      premP: get('premiumPanelPrice'), usdRate: get('usdRate'),
       concP: get('concretePerKw'), meterP: get('meterPanelPrice'),
-      evP: get('evPrice'), evM: get('evModel'),
-      exDrilling:  document.getElementById('chk-drilling')?.checked  || false,
-      exWifi:      document.getElementById('chk-wifi')?.checked      || false,
-      exSupport:   document.getElementById('chk-support')?.checked   || false,
-      exInspector: document.getElementById('chk-inspector')?.checked || false,
-      exDrillingP: get('price-drilling'), exWifiP:    get('price-wifi'),
+      evM: get('evModel'),
+      // extras checkboxes + prices
+      exEv:        document.getElementById('chk-ev')?.checked         || false,
+      exMonitor:   document.getElementById('chk-monitoring')?.checked || false,
+      exPremium:   document.getElementById('chk-premium')?.checked    || false,
+      exDrilling:  document.getElementById('chk-drilling')?.checked   || false,
+      exWifi:      document.getElementById('chk-wifi')?.checked       || false,
+      exSupport:   document.getElementById('chk-support')?.checked    || false,
+      exInspector: document.getElementById('chk-inspector')?.checked  || false,
+      exEvP: get('price-ev'), exMonitorP: get('price-monitoring'),
+      exDrillingP: get('price-drilling'), exWifiP: get('price-wifi'),
       exSupportP:  get('price-support'),  exInspectorP: get('price-inspector'),
     };
   }
@@ -570,11 +576,12 @@ class QuoteUI {
     set('batteries', s.batt); set('panelW', s.panelW); set('panelCount', s.panelCt);
     set('roofArea', s.roofArea); set('hoursPerKw', s.hours);
     set('inflationPct', s.infl);
-    set('battUnitPrice', s.battP); set('hybridInvPrice', s.hybrP);
-    set('hybridFullPrice', s.hybrFP); set('sePrice', s.seP);
-    set('premiumPanelPrice', s.premP); set('monitoringPrice', s.monP);
+    set('customInvModel', s.customInvModel);
+    set('battFirstPrice', s.battFP); set('battExtraPrice', s.battEP);
+    set('hybridInvPrice', s.hybrP); set('hybridFullPrice', s.hybrFP);
+    set('premiumPanelPrice', s.premP); set('usdRate', s.usdRate);
     set('concretePerKw', s.concP); set('meterPanelPrice', s.meterP);
-    set('evPrice', s.evP); set('evModel', s.evM);
+    set('evModel', s.evM);
     if (s.city) this._selectCity(s.city);
     const radio = (name, val) => {
       if (!val) return;
@@ -582,10 +589,18 @@ class QuoteUI {
       if (r) r.checked = true;
     };
     radio('roof', s.roof); radio('inv', s.inv);
-    radio('planRadio', s.plan); radio('evCharger', s.evYN);
+    radio('planRadio', s.plan);
+    // Show custom inv field if needed
+    if (s.inv === 'אחר') {
+      const field = document.getElementById('customInvField');
+      if (field) field.style.display = 'block';
+    }
     const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val || false; };
+    setChk('chk-ev', s.exEv); setChk('chk-monitoring', s.exMonitor);
+    setChk('chk-premium', s.exPremium);
     setChk('chk-drilling', s.exDrilling); setChk('chk-wifi', s.exWifi);
     setChk('chk-support',  s.exSupport);  setChk('chk-inspector', s.exInspector);
+    set('price-ev', s.exEvP); set('price-monitoring', s.exMonitorP);
     set('price-drilling', s.exDrillingP); set('price-wifi', s.exWifiP);
     set('price-support',  s.exSupportP);  set('price-inspector', s.exInspectorP);
   }
