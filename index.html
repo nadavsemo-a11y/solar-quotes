@@ -785,102 +785,24 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
             <label>ממיר</label>
             <div class="radio-group">
               <label class="radio-btn"><input type="radio" name="inv" value="Sungrow" checked><span>Sungrow</span></label>
-              <label class="radio-btn"><input type="radio" name="inv" value="Solaredge"><span>SolarEdge</span></label>
+              <label class="radio-btn"><input type="radio" name="inv" value="אחר"><span>אחר</span></label>
             </div>
+          </div>
+          <div class="field" id="customInvField" style="display:none">
+            <label>דגם ממיר</label>
+            <input id="customInvModel" type="text" placeholder="למשל: Huawei SUN2000">
           </div>
         </div>
         <div class="divider"></div>
         <div class="form-grid four">
           <div class="field"><label>מחיר לקו"ט (₪)</label><input id="ppkw" type="number" value="2600" step="50"></div>
-          <div class="field"><label>כמות מצברים (5 קו"ט)</label><input id="batteries" type="number" value="2" min="0"></div>
-          <div class="field"><label>הספק פאנל (וואט)</label><input id="panelW" type="number" value="630" step="10"></div>
-          <div class="field"><label>כמות פאנלים משוערת</label><input id="panelCount" type="number" value="42"></div>
+          <div class="field"><label>כמות מצברים (5 קו"ט)</label><input id="batteries" type="number" value="0" min="0"></div>
+          <div class="field"><label>הספק פאנל (וואט)</label><input id="panelW" type="number" value="640" step="10"></div>
+          <div class="field"><label>כמות פאנלים (חישוב אוטומטי)</label><input id="panelCount" type="number" value="0" readonly style="background:#f1f5f9;color:var(--gray)"></div>
         </div>
-        <div class="divider"></div>
-        <!-- PLAN SELECTOR -->
-        <div class="plan-selector-wrap">
-          <div style="font-size:12px;font-weight:700;color:var(--sky-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">בחר מסלול תעריף</div>
-          <div class="plan-cards" id="planCards">
-
-            <!-- מסלול ירוק -->
-            <label class="plan-card" id="pc-green">
-              <input type="radio" name="planRadio" value="green" checked>
-              <div class="pc-top">
-                <div class="pc-icon">🌿</div>
-                <div>
-                  <div class="pc-name">מסלול ירוק <span id="green-rate-badge" style="background:#22c55e;color:white;font-size:11px;padding:2px 8px;border-radius:50px;font-weight:700;margin-right:6px"></span></div>
-                  <div class="pc-rate" id="green-rate-desc">תעריף משוקלל לפי הספק AC — ≤15kW: 48 אג'</div>
-                </div>
-                <div class="pc-check">✓</div>
-              </div>
-              <div class="pc-body">
-                תעריף קבוע לאורך 25 שנה, מחושב לפי הספק ה-AC (מדרגות לפי הוראות הרשות לשנת 2026).<br>
-                <span style="color:#15803d;font-weight:700">✓ ללא צורך בלוח מונה ייצור</span> עד 15 kW AC.
-                <div id="green-over15-warning" style="display:none;margin-top:8px;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e">
-                  ⚠️ הספק AC מעל 15 kW — מסלול ירוק אינו זמין. יש לבחור מסלול אחר.
-                </div>
-              </div>
-            </label>
-
-            <!-- מסלול רגיל -->
-            <label class="plan-card" id="pc-regular">
-              <input type="radio" name="planRadio" value="regular">
-              <div class="pc-top">
-                <div class="pc-icon">📊</div>
-                <div>
-                  <div class="pc-name">מסלול רגיל <span id="regular-rate-badge" style="background:#f59e0b;color:white;font-size:11px;padding:2px 8px;border-radius:50px;font-weight:700;margin-right:6px"></span></div>
-                  <div class="pc-rate" id="regular-rate-desc">תעריף משוקלל לפי הספק AC</div>
-                </div>
-                <div class="pc-check">✓</div>
-              </div>
-              <div class="pc-body">
-                תעריף אחיד וקבוע על כל הייצור. מחושב לפי הספק AC (מדרגות 2026).<br>
-                <span style="color:#64748b;font-size:12px">⚡ הספק AC מעל 15 kW — יתווסף לוח מונה ייצור אוטומטית</span>
-              </div>
-            </label>
-
-            <!-- מסלול החזר מהיר -->
-            <label class="plan-card" id="pc-fast">
-              <input type="radio" name="planRadio" value="fast">
-              <div class="pc-top">
-                <div class="pc-icon">⚡</div>
-                <div>
-                  <div class="pc-name">מסלול החזר השקעה מהיר</div>
-                  <div class="pc-rate" id="fast-rate-desc">60 אג' (5 שנות ראשונות) ← 39 אג' לאחר מכן</div>
-                </div>
-                <div class="pc-check">✓</div>
-              </div>
-              <div class="pc-body">
-                <strong>5 שנים ראשונות:</strong> 60 אג' על ≤AC kW הראשונים | 48 אג' על יתרת ההספק.<br>
-                <strong>שנה 6–25:</strong> 39 אג' על כל הייצור.<br>
-                <span style="color:#64748b;font-size:12px">⚡ הספק AC מעל 15 kW — יתווסף לוח מונה ייצור אוטומטית</span>
-              </div>
-            </label>
-
-            <!-- מסלול צמוד מדד -->
-            <label class="plan-card" id="pc-index">
-              <input type="radio" name="planRadio" value="index">
-              <div class="pc-top">
-                <div class="pc-icon">📈</div>
-                <div>
-                  <div class="pc-name">מסלול צמוד מדד</div>
-                  <div class="pc-rate">38.7 אג' לקו"ט + צמוד למדד המחירים</div>
-                </div>
-                <div class="pc-check">✓</div>
-              </div>
-              <div class="pc-body">
-                תעריף התחלתי נמוך יותר, צמוד למדד המחירים לצרכן ומתעדכן מדי שנה.<br>
-                <span style="color:#64748b;font-size:12px">⚡ הספק AC מעל 15 kW — יתווסף לוח מונה ייצור אוטומטית</span>
-                <div class="inflation-row" id="inflationRow">
-                  <span>📉 אחוז אינפלציה שנתי משוער:</span>
-                  <input id="inflationPct" type="number" value="2.5" min="0" max="15" step="0.5">
-                  <span>%</span>
-                </div>
-              </div>
-            </label>
-
-          </div>
-        </div>
+        <!-- Plan selection removed from portal — customer chooses in quote -->
+        <input type="hidden" name="planRadio" value="green">
+        <input type="hidden" id="inflationPct" value="2.5">
 
         <div class="form-grid" style="margin-top:18px">
           <div class="field"><label>הערה אישית לגוף ההצעה</label><textarea id="customNote" placeholder="הוסף הערה שתופיע בהצעה..."></textarea></div>
@@ -900,86 +822,88 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
       <div class="card-header"><div class="icon">💰</div><h2>מחירי תוספות ושדרוגים</h2></div>
       <div class="card-body">
         <p style="font-size:13px;color:var(--gray);margin-bottom:18px">ערכי ברירת מחדל לפי המחירון — ניתן לשנות לכל הצעה</p>
+        <!-- BATTERY PRICING -->
         <div class="form-grid four">
           <div class="field">
-            <label>מצבר 5 קו"ט — מחיר ליחידה (₪)</label>
-            <input id="battUnitPrice" type="number" value="12000" step="100">
-            <span class="hint">מכפיל כמות המצברים</span>
+            <label>מצבר ראשון — 5 קו"ט (₪)</label>
+            <input id="battFirstPrice" type="number" value="8900" step="100">
+          </div>
+          <div class="field">
+            <label>כל מצבר נוסף — 5 קו"ט (₪)</label>
+            <input id="battExtraPrice" type="number" value="6500" step="100">
           </div>
           <div class="field">
             <label>ממיר היברידי בלבד (₪)</label>
-            <input id="hybridInvPrice" type="number" value="10100" step="100">
-          </div>
-          <div class="field">
-            <label>ממיר SolarEdge (₪)</label>
-            <input id="sePrice" type="number" value="12000" step="100">
-          </div>
-          <div class="field">
-            <label>פאנל פרמיום שחור ($ לקו"ט)</label>
-            <input id="premiumPanelPrice" type="number" value="100" step="10">
-            <span class="hint">בדולרים — יוצג בהצעה</span>
-          </div>
-        </div>
-        <div class="divider"></div>
-        <div class="form-grid four">
-          <div class="field">
-            <label>ניטור ובקרה מרחוק (₪/שנה)</label>
-            <input id="monitoringPrice" type="number" value="1500" step="100">
+            <input id="hybridInvPrice" type="number" value="8900" step="100">
           </div>
           <div class="field">
             <label>ממיר היברידי + אגירה 10 קו"ט (₪)</label>
             <input id="hybridFullPrice" type="number" value="37100" step="100">
           </div>
+        </div>
+        <div class="divider"></div>
+        <div class="form-grid four">
           <div class="field">
             <label>תוספת גג בטון (₪ לקו"ט)</label>
             <input id="concretePerKw" type="number" value="50" step="10">
           </div>
           <div class="field">
-            <label>לוח מונה ייצור (₪) <span style="font-size:10px;color:#92400e;font-weight:700">נדרש בהספק AC מעל 15 kW</span></label>
+            <label>לוח מונה ייצור (₪) <span style="font-size:10px;color:#92400e;font-weight:700">AC > 15kW</span></label>
             <input id="meterPanelPrice" type="number" value="2500" step="100">
-            <span class="hint">מתווסף אוטומטית במסלולים שאינם ירוק</span>
+          </div>
+          <div class="field">
+            <label>פאנל פרמיום שחור ($ לקו"ט DC)</label>
+            <input id="premiumPanelPrice" type="number" value="100" step="10">
+            <span class="hint">בדולרים — יחושב לפי שער יציג</span>
+          </div>
+          <div class="field">
+            <label>שער דולר יציג (₪)</label>
+            <input id="usdRate" type="number" value="3.65" step="0.01">
           </div>
         </div>
         <div class="divider"></div>
 
-        <!-- CHARGING STATION -->
-        <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;border-radius:13px;padding:18px 20px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-            <span style="font-size:22px">🔌</span>
-            <div>
-              <div style="font-size:14px;font-weight:800;color:#1e40af">עמדת טעינה לרכב חשמלי</div>
-              <div style="font-size:12px;color:#3b82f6">תוספת אופציונלית — תופיע בסעיף "תוספות ושדרוגים" בהצעה</div>
-            </div>
-          </div>
-          <div class="form-grid three">
-            <div class="field">
-              <label>כלול בהצעה?</label>
-              <div class="radio-group">
-                <label class="radio-btn"><input type="radio" name="evCharger" value="לא" checked><span>❌ לא</span></label>
-                <label class="radio-btn"><input type="radio" name="evCharger" value="כן"><span>✅ כן</span></label>
-              </div>
-            </div>
-            <div class="field">
-              <label>מחיר עמדת טעינה (₪)</label>
-              <input id="evPrice" type="number" value="4500" step="100">
-            </div>
-            <div class="field">
-              <label>תיאור / דגם (אופציונלי)</label>
-              <input id="evModel" type="text" placeholder='למשל: עמדת 7kW עם חיבור Type 2' value="">
-            </div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <!-- OPTIONAL EXTRAS -->
+        <!-- UPGRADES AS CHECKBOXES -->
         <div>
-          <div style="font-size:13px;font-weight:700;color:var(--sky);margin-bottom:4px">עלויות נוספות אופציונליות</div>
-          <div style="font-size:12px;color:var(--gray);margin-bottom:14px">סמן את הפריטים הרלוונטיים — יתווספו למחיר ויופיעו בהצעה</div>
+          <div style="font-size:13px;font-weight:700;color:var(--sky);margin-bottom:4px">תוספות ושדרוגים</div>
+          <div style="font-size:12px;color:var(--gray);margin-bottom:14px">סמן את הפריטים הרלוונטיים — יוצגו בהצעה כאופציה ללקוח</div>
+
+          <div class="extra-item" id="ex-ev">
+            <div class="extra-left">
+              <input class="extra-checkbox" type="checkbox" id="chk-ev" onchange="updatePreview()">
+              <label class="extra-label" for="chk-ev">עמדת טעינה לרכב חשמלי</label>
+            </div>
+            <div class="extra-right">
+              <span class="extra-currency">₪</span>
+              <input class="extra-price-input" id="price-ev" type="number" value="4500" step="100" oninput="updatePreview()">
+              <input id="evModel" type="text" placeholder="דגם (אופציונלי)" style="width:140px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;margin-right:8px">
+            </div>
+          </div>
+
+          <div class="extra-item" id="ex-monitoring">
+            <div class="extra-left">
+              <input class="extra-checkbox" type="checkbox" id="chk-monitoring" onchange="updatePreview()">
+              <label class="extra-label" for="chk-monitoring">ניטור ובקרה מרחוק (שנתי)</label>
+            </div>
+            <div class="extra-right">
+              <span class="extra-currency">₪</span>
+              <input class="extra-price-input" id="price-monitoring" type="number" value="1500" step="100" oninput="updatePreview()">
+            </div>
+          </div>
+
+          <div class="extra-item" id="ex-premium">
+            <div class="extra-left">
+              <input class="extra-checkbox" type="checkbox" id="chk-premium" onchange="updatePreview()">
+              <label class="extra-label" for="chk-premium">שדרוג לפאנל פרמיום שחור</label>
+            </div>
+            <div class="extra-right">
+              <span class="extra-currency" style="font-size:11px;color:var(--gray)">חישוב אוטומטי</span>
+            </div>
+          </div>
 
           <div class="extra-item" id="ex-drilling">
             <div class="extra-left">
-              <input class="extra-checkbox" type="checkbox" id="chk-drilling" checked onchange="updatePreview()">
+              <input class="extra-checkbox" type="checkbox" id="chk-drilling" onchange="updatePreview()">
               <label class="extra-label" for="chk-drilling">קידוח ומעבר קיר בטון / בלוק</label>
             </div>
             <div class="extra-right">
@@ -990,7 +914,7 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
 
           <div class="extra-item" id="ex-wifi">
             <div class="extra-left">
-              <input class="extra-checkbox" type="checkbox" id="chk-wifi" checked onchange="updatePreview()">
+              <input class="extra-checkbox" type="checkbox" id="chk-wifi" onchange="updatePreview()">
               <label class="extra-label" for="chk-wifi">התקנת מגביר טווח אלחוטי (WiFi Extender)</label>
             </div>
             <div class="extra-right">
@@ -1001,7 +925,7 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
 
           <div class="extra-item" id="ex-support">
             <div class="extra-left">
-              <input class="extra-checkbox" type="checkbox" id="chk-support" checked onchange="updatePreview()">
+              <input class="extra-checkbox" type="checkbox" id="chk-support" onchange="updatePreview()">
               <label class="extra-label" for="chk-support">קריאת שירות לשינויים בהגדרות האינטרנט</label>
             </div>
             <div class="extra-right">
@@ -1012,19 +936,8 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
 
           <div class="extra-item" id="ex-inspector">
             <div class="extra-left">
-              <input class="extra-checkbox" type="checkbox" id="chk-inspector" checked onchange="updatePreview()">
-              <label class="extra-label" for="chk-inspector">
-                ביקור חשמלאי בודק לפני ההתקנה
-                <span class="tip-wrap" style="margin-right:6px;vertical-align:middle">
-                  <button class="tip-btn" type="button" onclick="toggleTip('tip-inspector',event)">?</button>
-                  <div class="tip-popup" id="tip-inspector">
-                    <div class="tip-title">🔍 ביקור חשמלאי בודק</div>
-                    לאחר התקנת המערכת מגיע למבנה חשמלאי עם רישיון <strong>"חשמלאי בודק"</strong> הבודק את תקינות ההתקנה ואת תקינות תשתית החשמל בבית.<br><br>
-                    ייתכן ויתגלו ליקויים במבנה שיידרשו לתיקון בטרם חיבור המערכת לרשת החשמל.<br><br>
-                    במידה והלקוח מבקש ביקור חשמלאי בודק <em>לפני</em> ההתקנה — לצורך בדיקת התשתיות מראש — עלות הביקור תהיה <strong>₪850</strong>.
-                  </div>
-                </span>
-              </label>
+              <input class="extra-checkbox" type="checkbox" id="chk-inspector" onchange="updatePreview()">
+              <label class="extra-label" for="chk-inspector">ביקור חשמלאי בודק לפני ההתקנה</label>
             </div>
             <div class="extra-right">
               <span class="extra-currency">₪</span>
