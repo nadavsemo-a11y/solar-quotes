@@ -186,8 +186,7 @@ const QuoteEngine = (() => {
     if (inv === 'Solaredge')  price += sePrice;
     if (evCharger === 'כן')   price += evPrice;
     if (needsMeter)           price += meterPanelPrice;
-    const extrasTotal = (extras || []).filter(e => e.checked).reduce((s, e) => s + e.price, 0);
-    price += extrasTotal;
+    // Extras are NOT included in the quote price — shown as separate potential costs
     return price;
   }
 
