@@ -43,7 +43,6 @@ const TemplateEngine = (() => {
     if (d.inv === 'Solaredge') rows.push(['תוספת ממיר SolarEdge', `₪${fmt(d.sePrice)}`]);
     if (d.evCharger === 'כן')  rows.push([`עמדת טעינה EV${d.evModel ? ' — ' + d.evModel : ''}`, `₪${fmt(d.evPrice)}`]);
     if (d.needsMeter)          rows.push(['לוח מונה ייצור', `₪${fmt(d.meterPanelPrice)}`]);
-    d.extras.filter(e => e.checked).forEach(e => rows.push([e.label, `₪${fmt(e.price)}`]));
     return rows.map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join('\n    ');
   }
 
@@ -57,6 +56,24 @@ const TemplateEngine = (() => {
   function buildClientIdField(cid) {
     if (!cid) return '';
     return `<div class="field"><span class="label">ת.ז.:</span><span class="val">${cid}</span></div>`;
+  }
+
+  // ── עלויות נוספות אפשריות ─────────────────────────────────────────────
+  function buildExtrasSection(extras) {
+    const checked = (extras || []).filter(e => e.checked);
+    if (checked.length === 0) return '';
+    const rows = checked.map(e =>
+      `<tr><td>${e.label}</td><td class="num">₪${fmt(e.price)}</td></tr>`
+    ).join('\n    ');
+    return `
+<div class="section">
+  <h2>עלויות נוספות אפשריות</h2>
+  <div class="extras-note">הפריטים הבאים אינם כלולים במחיר ההצעה — ייתכן שיידרשו בהתאם לתנאי השטח.</div>
+  <table>
+    <tr><th>פריט</th><th style="text-align:left">עלות</th></tr>
+    ${rows}
+  </table>
+</div>`;
   }
 
   // ── הערה אישית ────────────────────────────────────────────────────────
@@ -127,7 +144,7 @@ const TemplateEngine = (() => {
       '{{SPEC_SECTION_HTML}}':       '',  // ימולא על ידי ה-UI אם נדרש
       '{{STEPS_SECTION_HTML}}':      '',
       '{{EXCLUSIONS_SECTION_HTML}}': '',
-      '{{EXTRAS_SECTION_HTML}}':     '',
+      '{{EXTRAS_SECTION_HTML}}':     buildExtrasSection(d.extras),
       '{{NOTE_SECTION_HTML}}':       buildNoteSection(client.note),
 
       // לוגו — ניתן לשנות ל-URL חיצוני
