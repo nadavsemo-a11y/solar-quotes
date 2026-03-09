@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>הסכם הצעת מחיר</title>
+<style>
+@page { size: A4 portrait; margin: 20mm 16mm 26mm 16mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; color: #111; direction: rtl; line-height: 1.6; }
+
+/* ── Header ── */
+.page-logo { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #1a3a5c; padding-bottom: 8px; margin-bottom: 18px; }
+.logo-area { display: flex; align-items: center; gap: 10px; }
+.logo-area img { height: 32px; }
+.company-name { font-size: 12pt; font-weight: 700; color: #1a3a5c; }
+.doc-meta { text-align: left; font-size: 8pt; color: #555; }
+
+/* ── Typography ── */
+h1 { font-size: 16pt; color: #1a3a5c; margin-bottom: 4px; }
+h2 { font-size: 10.5pt; color: #1a3a5c; border-right: 4px solid #F4A200; padding-right: 8px; margin-bottom: 10px; }
+
+/* ── Title Block ── */
+.doc-title-block { text-align: center; padding: 14px 0 12px; border-bottom: 1px solid #ddd; margin-bottom: 18px; }
+.doc-title-block p { color: #555; font-size: 9pt; margin-top: 4px; }
+.ref-tag { display: inline-block; background: #1a3a5c; color: #F4A200; font-weight: 700; font-size: 8pt; padding: 2px 10px; border-radius: 20px; margin-top: 6px; }
+
+/* ── Sections ── */
+.section { margin-bottom: 20px; page-break-inside: avoid; }
+.doc-list { margin: 6px 0 0; padding-right: 18px; font-size: 9.5pt; line-height: 1.8; }
+.doc-list li { margin-bottom: 2px; }
+
+/* ── Grid / Fields ── */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 16px; }
+.field { display: flex; gap: 6px; font-size: 9.5pt; }
+.field .label { color: #555; white-space: nowrap; }
+.field .val { font-weight: 600; }
+
+/* ── Tables ── */
+table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-top: 4px; }
+th { background: #1a3a5c; color: white; padding: 5px 10px; text-align: right; font-weight: 600; }
+td { padding: 4px 10px; border-bottom: 1px solid #e8e8e8; }
+tr:nth-child(even) td { background: #f7f9fc; }
+td.num { text-align: left; font-family: monospace; }
+.total-row td { border-top: 2px solid #1a3a5c; font-weight: 700; background: #eef3f9 !important; }
+.vat-row td { font-size: 8.5pt; color: #555; background: #f9f9f9 !important; }
+
+/* ── Financial Box ── */
+.fin-box { background: #f0f7ff; border: 1px solid #b8d4f0; border-radius: 8px; padding: 12px 14px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 4px; }
+.fin-item { text-align: center; }
+.fin-val { font-size: 13pt; font-weight: 800; color: #1a3a5c; }
+.fin-lbl { font-size: 7.5pt; color: #666; margin-top: 2px; }
+
+/* ── Page Break ── */
+.page-break { page-break-after: always; break-after: always; }
+
+/* ── Notes / Declarations ── */
+.declaration { background: #f0fff4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; font-size: 9.5pt; line-height: 1.7; margin-bottom: 16px; }
+.note-text { background: #fffbeb; border-right: 4px solid #F4A200; padding: 8px 12px; border-radius: 4px; font-size: 9.5pt; }
+.extras-note { font-size: 8.5pt; color: #666; margin-bottom: 8px; font-style: italic; }
+.extras-warn { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 6px 10px; font-size: 8.5pt; color: #9a3412; margin-bottom: 8px; }
+
+/* ── Signature ── */
+.sig-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 14px; }
+.sig-field label { display: block; font-size: 8.5pt; color: #555; margin-bottom: 6px; }
+.mandatory-star { color: #dc2626; font-weight: 700; }
+.sig-field input[type=text] { width: 100%; border: none; border-bottom: 1.5px solid #333; background: transparent; font-size: 11pt; padding: 2px 4px; font-family: inherit; outline: none; }
+.sig-field input[type=text]:focus { border-bottom-color: #1a3a5c; }
+.sig-field input.error { border-bottom-color: #dc2626 !important; }
+.error-msg { color: #dc2626; font-size: 8pt; margin-top: 3px; display: none; }
+.sig-canvas-wrap { border: 1.5px solid #333; border-radius: 4px; background: #fff; height: 88px; cursor: crosshair; }
+.sig-canvas-wrap canvas { width: 100%; height: 100%; display: block; border-radius: 4px; }
+.agree-row { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; font-size: 9pt; }
+.agree-row input { margin-top: 2px; flex-shrink: 0; }
+.submit-btn { background: linear-gradient(135deg, #F4A200, #f59e0b); color: #0A1628; border: none; border-radius: 10px; padding: 13px 30px; font-size: 13pt; font-weight: 900; font-family: inherit; cursor: pointer; display: block; margin: 14px auto 0; }
+.clear-btn { margin-top: 4px; font-size: 8pt; background: none; border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+
+/* ── Print ── */
+.print-lines { display: none; }
+@media print {
+  .no-print { display: none !important; }
+  .print-lines { display: block !important; }
+  .sig-lines-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 22px; margin-top: 18px; }
+  .sig-line { border-bottom: 1.5px solid #333; height: 38px; margin-bottom: 5px; }
+  .sig-line-label { font-size: 8pt; color: #555; }
+  .sig-lines-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 20px; }
+}
+
+footer { font-size: 7.5pt; color: #888; text-align: center; margin-top: 18px; border-top: 1px solid #e0e0e0; padding-top: 7px; }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────────────── -->
+<div class="page-logo">
+  <div class="logo-area">
+    <img src="{{LOGO_SRC}}" alt="AGS">
+    <div class="company-name">סמו א.ג.ס בע"מ</div>
+  </div>
+  <div class="doc-meta">ח.פ. 515942282<br>תאריך: {{QUOTE_DATE}}</div>
+</div>
+
+<!-- ── TITLE ──────────────────────────────────────────────────────────── -->
+<div class="doc-title-block">
+  <h1>הסכם הצעת מחיר — מערכת סולארית</h1>
+  <p>מסמך זה מהווה הצעת מחיר מחייבת לאספקה והתקנה של מערכת סולארית</p>
+  <div class="ref-tag" id="refTagEl">טוען...</div>
+</div>
+
+<!-- ── CLIENT DETAILS ─────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>פרטי הלקוח</h2>
+  <div class="grid2">
+    <div class="field"><span class="label">שם מלא:</span><span class="val">{{CLIENT_NAME}}</span></div>
+    <div class="field"><span class="label">טלפון:</span><span class="val">{{CLIENT_PHONE}}</span></div>
+    <div class="field"><span class="label">כתובת:</span><span class="val">{{CLIENT_ADDRESS}}</span></div>
+    <div class="field"><span class="label">עיר:</span><span class="val">{{CLIENT_CITY}}</span></div>
+    {{CLIENT_ID_FIELD}}
+    <div class="field"><span class="label">תאריך הצעה:</span><span class="val">{{QUOTE_DATE}}</span></div>
+  </div>
+</div>
+
+<!-- ── TECHNICAL SPEC ──────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>מפרט טכני</h2>
+  <table>
+    <tr><th>פרט</th><th>ערך</th></tr>
+    {{SPEC_ROWS}}
+  </table>
+</div>
+
+<!-- ── PRICE BREAKDOWN ────────────────────────────────────────────────── -->
+<div class="section page-break">
+  <h2>פירוט מחיר ההצעה (לא כולל מע"מ)</h2>
+  <table>
+    <tr><th>פריט</th><th style="text-align:left">מחיר</th></tr>
+    {{PRICE_ROWS}}
+    <tr class="total-row">
+      <td><strong>סה"כ לא כולל מע"מ</strong></td>
+      <td class="num"><strong>₪{{TOTAL_PRICE}}</strong></td>
+    </tr>
+    <tr class="vat-row">
+      <td>סה"כ כולל מע"מ (18%)</td>
+      <td class="num">₪{{TOTAL_PRICE_VAT}}</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ── PAYMENT STAGES ─────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>תנאי תשלום (4 שלבים)</h2>
+  <table>
+    <tr><th>שלב</th><th>תיאור</th><th style="text-align:left">סכום (לא כולל מע"מ)</th></tr>
+    <tr><td>1 — מקדמה</td><td>בחתימת ההסכם</td><td class="num">₪{{PAY_1}}</td></tr>
+    <tr><td>2 — השלמה ל-35%</td><td>בקבלת תוכניות ביצוע</td><td class="num">₪{{PAY_2}}</td></tr>
+    <tr><td>3 — השלמה ל-95%</td><td>7 ימי עסקים בטרם אספקת פנלים לאתר</td><td class="num">₪{{PAY_3}}</td></tr>
+    <tr><td>4 — 5% אחרון</td><td>ביום החיבור לחברת החשמל</td><td class="num">₪{{PAY_4}}</td></tr>
+    <tr class="total-row"><td colspan="2"><strong>סה"כ</strong></td><td class="num"><strong>₪{{TOTAL_PRICE}}</strong></td></tr>
+    <tr class="vat-row"><td colspan="2">סה"כ כולל מע"מ</td><td class="num">₪{{TOTAL_PRICE_VAT}}</td></tr>
+  </table>
+</div>
+
+<!-- ── FINANCIAL FORECAST ─────────────────────────────────────────────── -->
+<div class="section">
+  <h2>תחזית כלכלית (הערכה)</h2>
+  <div class="fin-box">
+    <div class="fin-item"><div class="fin-val">₪{{FIN_YR1}}</div><div class="fin-lbl">הכנסות שנה 1</div></div>
+    <div class="fin-item"><div class="fin-val">{{FIN_ROI}}%</div><div class="fin-lbl">תשואה שנה 1</div></div>
+    <div class="fin-item"><div class="fin-val">{{FIN_PAYBACK}} שנה</div><div class="fin-lbl">החזר השקעה</div></div>
+    <div class="fin-item"><div class="fin-val">₪{{FIN_TOTAL_25}}</div><div class="fin-lbl">סה"כ הכנסות 25 שנה</div></div>
+    <div class="fin-item"><div class="fin-val">₪{{FIN_AVG_ANNUAL}}</div><div class="fin-lbl">ממוצע שנתי</div></div>
+    <div class="fin-item"><div class="fin-val">₪{{FIN_PROFIT}}</div><div class="fin-lbl">רווח נטו 25 שנה</div></div>
+  </div>
+  <p style="font-size:8pt;color:#888;margin-top:6px">{{RATE_NOTE}} — כל הנתונים הפיננסיים הם הערכות בלבד.</p>
+</div>
+
+<!-- ── EQUIPMENT & WARRANTY ───────────────────────────────────────────── -->
+{{SPEC_SECTION_HTML}}
+
+<!-- ── INSTALLATION STEPS ─────────────────────────────────────────────── -->
+{{STEPS_SECTION_HTML}}
+
+<!-- ── EXCLUSIONS ─────────────────────────────────────────────────────── -->
+{{EXCLUSIONS_SECTION_HTML}}
+
+<!-- ── EXTRAS ────────────────────────────────────────────────────────── -->
+{{EXTRAS_SECTION_HTML}}
+
+<!-- ── CUSTOM NOTE ───────────────────────────────────────────────────── -->
+{{NOTE_SECTION_HTML}}
+
+<!-- ── WARRANTY TABLE ────────────────────────────────────────────────── -->
+<div class="section page-break">
+  <h2>מפרט ציוד ואחריות</h2>
+  <table>
+    <tr><th>רכיב</th><th>ערך</th></tr>
+    <tr><td>פנלים Tier 1 בהספק {{PANEL_W}} וואט</td><td>אחריות יצרן 30 שנה</td></tr>
+    <tr><td>אינוורטר {{INVERTER}}</td><td>אחריות יצרן 10 שנים</td></tr>
+    <tr><td>עבודת התקנה</td><td>אחריות 5 שנים</td></tr>
+    <tr><td>קונסטרוקציה ותשתיות</td><td>נירוסטה, ברגים אירופאים</td></tr>
+    <tr><td>ציוד מיתוג ABB</td><td>יצרת שוויץ או שווה ערך</td></tr>
+    <tr><td>אפליקציה ניטור</td><td>כלול</td></tr>
+    <tr><td>חיווט בתעלות</td><td>כלול</td></tr>
+    <tr><td>הגנות ברקים DC</td><td>כלול</td></tr>
+    {{BATTERY_WARRANTY_ROW}}
+  </table>
+</div>
+
+<!-- ── GENERAL TERMS ─────────────────────────────────────────────────── -->
+<div class="section">
+  <h2>תנאים כלליים</h2>
+  <p style="font-size:9pt;line-height:1.8;color:#333">
+    1. הצעה זו בתוקף למשך 30 יום מתאריך הנפקתה.<br>
+    2. לכל הסכומים יצורף מע"מ כחוק (18%).<br>
+    3. לוח זמנים צפוי: עד 60 ימי עסקים מחתימת ההסכם.<br>
+    4. כל שינוי בהסכם ייעשה בכתב ובהסכמת שני הצדדים.<br>
+    5. הסכם זה כפוף לדין הישראלי וסמכות השיפוט לבתי המשפט בישראל.
+  </p>
+</div>
+
+<!-- ── CLIENT DECLARATION ─────────────────────────────────────────────── -->
+<div class="section">
+  <h2>הצהרת הלקוח</h2>
+  <div class="declaration">אני הח"מ מאשר/ת כי קראתי את הצעת המחיר, הבנתי את כל תנאיה, ואני מסכים/ת לפרטים הטכניים, למחיר וללוח התשלומים. אני מסכים/ת לאספקת המערכת ולהתקנתה על פי המפרט הנ"ל ומתחייב/ת לשלם בהתאם ללוח התשלומים המוסכם.</div>
+</div>
+
+<!-- ── SIGNATURE BLOCK ────────────────────────────────────────────────── -->
+<div class="section" id="printSigBlock">
+  <h2>חתימה ואישור</h2>
+
+  <!-- Digital signature form (screen only) -->
+  <div class="sig-row no-print">
+    <div class="sig-field">
+      <label>מספר תעודת זהות <span class="mandatory-star">*</span></label>
+      <input type="text" id="print-idnum" maxlength="9" inputmode="numeric" placeholder="000000000"
+             oninput="this.value=this.value.replace(/\D/g,'')"
+             onblur="this.value=this.value.padStart(9,'0');validatePrintID()">
+      <div class="error-msg" id="print-id-err">נא להזין מספר ת.ז. תקין</div>
+    </div>
+    <div class="sig-field">
+      <label>שם מלא</label>
+      <input type="text" id="print-signame" value="{{CLIENT_NAME}}" placeholder="שם מלא">
+      <div class="error-msg" id="print-name-err">נא למלא שם</div>
+    </div>
+    <div class="sig-field">
+      <label>תאריך</label>
+      <input type="text" id="print-date" value="{{TODAY_DATE}}" readonly>
+    </div>
+  </div>
+
+  <div class="no-print" style="margin-bottom:10px">
+    <label style="font-size:8.5pt;color:#555;display:block;margin-bottom:5px">חתימה <span class="mandatory-star">*</span></label>
+    <div class="sig-canvas-wrap" id="printSigBox"><canvas id="printSigCanvas"></canvas></div>
+    <div class="error-msg" id="print-sig-err">נא לחתום</div>
+    <button class="clear-btn no-print" onclick="clearPrintSig()">נקה חתימה</button>
+  </div>
+
+  <div class="agree-row no-print">
+    <input type="checkbox" id="printAgree">
+    <label for="printAgree">קראתי את ההסכם, הבנתי את תנאיו ואני מאשר/ת את כל הפרטים. ידוע לי כי חתימה זו מהווה התחייבות משפטית.</label>
+  </div>
+
+  <button class="submit-btn no-print" onclick="submitPrintSig()">✅ אשר וחתום על ההסכם</button>
+
+  <!-- Print fallback lines -->
+  <div class="print-lines">
+    <div class="sig-lines-grid">
+      <div><div class="sig-line"></div><div class="sig-line-label">מספר ת.ז.</div></div>
+      <div><div class="sig-line"></div><div class="sig-line-label">שם מלא</div></div>
+      <div><div class="sig-line"></div><div class="sig-line-label">חתימת הלקוח</div></div>
+    </div>
+    <div class="sig-lines-grid2">
+      <div><div class="sig-line"></div><div class="sig-line-label">תאריך</div></div>
+      <div><div class="sig-line"></div><div class="sig-line-label">חותמת / חתימת החברה</div></div>
+    </div>
+  </div>
+</div>
+
+<footer>סמו א.ג.ס בע"מ | ח.פ. 515942282 | סביון 4, קריית טבעון | 052-5247272</footer>
+
+<script>
+// ── Signature canvas ──────────────────────────────────────────────────────
+var _pc, _pctx, _pd = false, _ph = false;
+
+function initPC() {
+  _pc = document.getElementById('printSigCanvas');
+  if (!_pc) return;
+  var box = document.getElementById('printSigBox');
+  _pc.width  = box.offsetWidth  || 500;
+  _pc.height = box.offsetHeight || 88;
+  _pctx = _pc.getContext('2d');
+  _pctx.strokeStyle = '#111';
+  _pctx.lineWidth   = 2;
+  _pctx.lineCap     = 'round';
+  _pctx.lineJoin    = 'round';
+
+  function pos(e) {
+    var r = _pc.getBoundingClientRect();
+    var s = e.touches ? e.touches[0] : e;
+    return { x: (s.clientX - r.left) * (_pc.width / r.width), y: (s.clientY - r.top) * (_pc.height / r.height) };
+  }
+  _pc.addEventListener('mousedown',  function(e) { _pd = true; _pctx.beginPath(); var p = pos(e); _pctx.moveTo(p.x, p.y); });
+  _pc.addEventListener('mousemove',  function(e) { if (!_pd) return; var p = pos(e); _pctx.lineTo(p.x, p.y); _pctx.stroke(); _ph = true; });
+  _pc.addEventListener('mouseup',    function()  { _pd = false; });
+  _pc.addEventListener('mouseleave', function()  { _pd = false; });
+  _pc.addEventListener('touchstart', function(e) { e.preventDefault(); _pd = true; _pctx.beginPath(); var p = pos(e); _pctx.moveTo(p.x, p.y); }, { passive: false });
+  _pc.addEventListener('touchmove',  function(e) { e.preventDefault(); if (!_pd) return; var p = pos(e); _pctx.lineTo(p.x, p.y); _pctx.stroke(); _ph = true; }, { passive: false });
+  _pc.addEventListener('touchend',   function()  { _pd = false; });
+}
+
+function clearPrintSig() {
+  if (_pctx) _pctx.clearRect(0, 0, _pc.width, _pc.height);
+  _ph = false;
+}
+
+// ── ID validation (Israeli Luhn) ──────────────────────────────────────────
+function validatePrintID() {
+  var v   = document.getElementById('print-idnum').value.replace(/\D/g, '').padStart(9, '0');
+  var sum = 0;
+  for (var i = 0; i < 9; i++) {
+    var d = parseInt(v[i]) * (i % 2 === 0 ? 1 : 2);
+    if (d > 9) d -= 9;
+    sum += d;
+  }
+  var ok = v.length === 9 && sum % 10 === 0;
+  document.getElementById('print-id-err').style.display = ok ? 'none' : 'block';
+  document.getElementById('print-idnum').classList.toggle('error', !ok);
+  return ok;
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────
+function submitPrintSig() {
+  var ok = true;
+  var n  = document.getElementById('print-signame').value.trim();
+  if (n.length < 2) {
+    document.getElementById('print-name-err').style.display = 'block';
+    document.getElementById('print-signame').classList.add('error');
+    ok = false;
+  } else {
+    document.getElementById('print-name-err').style.display = 'none';
+    document.getElementById('print-signame').classList.remove('error');
+  }
+  if (!validatePrintID()) ok = false;
+  if (!_ph) {
+    document.getElementById('print-sig-err').style.display = 'block';
+    document.getElementById('printSigBox').style.border = '1.5px solid #dc2626';
+    ok = false;
+  } else {
+    document.getElementById('print-sig-err').style.display = 'none';
+    document.getElementById('printSigBox').style.border = '1.5px solid #333';
+  }
+  if (!document.getElementById('printAgree').checked) {
+    alert('נא לאשר את ההסכם');
+    ok = false;
+  }
+  if (!ok) return;
+
+  document.getElementById('printSigBlock').innerHTML =
+    '<div style="text-align:center;padding:22px;background:#f0fff4;border:1px solid #86efac;border-radius:10px">' +
+    '<div style="font-size:26pt">✅</div>' +
+    '<div style="font-size:13pt;font-weight:700;color:#166534;margin-top:8px">ההסכם נחתם!</div>' +
+    '<div style="font-size:9pt;color:#555;margin-top:5px">המסמך מוכן להדפסה</div>' +
+    '<button onclick="window.print()" style="margin-top:12px;background:#1a3a5c;color:white;border:none;border-radius:8px;padding:9px 22px;font-size:11pt;cursor:pointer">🖨 הדפס / PDF</button>' +
+    '</div>';
+
+  setTimeout(function() { window.print(); }, 300);
+}
+
+// ── Quote reference ID ────────────────────────────────────────────────────
+var rid = 'SA-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+document.getElementById('refTagEl').textContent = 'מס\' הצעה: ' + rid;
+
+window.addEventListener('load', initPC);
+</script>
+</body>
+</html>
