@@ -853,6 +853,112 @@ class QuoteUI {
     <p class="vat-note">* לכל הסכומים הנ"ל יצורף מע"מ כחוק (סה"כ כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))})</p>
   </div>
 
+  <!-- PRICE BREAKDOWN -->
+  <div class="sec">
+    <div class="sec-title"><span class="bar"></span>פירוט מחיר ההצעה</div>
+    <ul class="spec-list" style="list-style:none;padding:0">
+      <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מערכת סולארית ${d.dcKW} קו"ט (${d.panelCount} פאנלים × ${d.panelW}W)</span><strong>₪${fmt(d.dcKW * d.ppkw)}</strong></li>
+      ${concreteLine ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>תוספת גג בטון</span><strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong></li>` : ''}
+      ${d.batt > 0 ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מצברי אגירה ${d.batt * 5} קו"ט (${d.batt} יח')</span><strong>₪${fmt(d.batteryPrice)}</strong></li>` : ''}
+      ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
+      <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ (לא כולל מע"מ)</span><span>₪${fmt(d.price)}</span></li>
+      <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span>₪${fmt(Math.round(d.price * VAT))}</span></li>
+    </ul>
+  </div>
+
+  ${selectedExtras.length > 0 ? `
+  <!-- EXTRAS -->
+  <div class="sec">
+    <div class="sec-title"><span class="bar"></span>תוספות ושדרוגים (אופציונלי)</div>
+    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">הפריטים הבאים נבחרו כתוספות לפרויקט — אינם כלולים במחיר הבסיסי:</div>
+    <ul class="spec-list" style="list-style:none;padding:0">
+      ${selectedExtras.map(e => `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
+      <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-weight:700"><span>סה"כ תוספות</span><span>₪${fmt(selectedExtras.reduce((s, e) => s + e.price, 0))}</span></li>
+    </ul>
+    <div style="background:#eef3f9;border:1px solid #b8d4f0;border-radius:10px;padding:14px;margin-top:12px;text-align:center">
+      <div style="font-size:12px;color:var(--gray)">סה"כ עלות הפרויקט (מערכת + תוספות, לא כולל מע"מ)</div>
+      <div style="font-size:20px;font-weight:900;color:var(--sky);margin-top:4px">₪${fmt(totalWithExtras)}</div>
+    </div>
+  </div>` : ''}
+
+  <!-- EQUIPMENT & WARRANTY -->
+  <div class="sec">
+    <div class="sec-title"><span class="bar"></span>מפרט ציוד ואחריות</div>
+    <div class="warranty-grid">
+      <div class="warranty-card">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div class="warranty-icon">☀️</div>
+          <div>
+            <div class="warranty-title">פאנלים סולאריים</div>
+            <div class="warranty-desc">${d.panelCount} פאנלים × ${d.panelW}W — Tier 1<br>אחריות יצרן: <strong>30 שנה</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="warranty-card">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div class="warranty-icon">⚡</div>
+          <div>
+            <div class="warranty-title">ממיר (אינוורטר)</div>
+            <div class="warranty-desc">${d.inv}<br>אחריות יצרן: <strong>10 שנים</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="warranty-card">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div class="warranty-icon">🔧</div>
+          <div>
+            <div class="warranty-title">עבודת התקנה</div>
+            <div class="warranty-desc">התקנה מקצועית על ידי צוות מוסמך<br>אחריות: <strong>5 שנים</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="warranty-card">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div class="warranty-icon">🛡️</div>
+          <div>
+            <div class="warranty-title">קונסטרוקציה ותשתיות</div>
+            <div class="warranty-desc">נירוסטה, ברגים אירופאים, הגנות ברקים DC<br>ציוד מיתוג ABB (שוויץ)</div>
+          </div>
+        </div>
+      </div>
+      ${d.batt > 0 ? `<div class="warranty-card">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div class="warranty-icon">🔋</div>
+          <div>
+            <div class="warranty-title">מצברי אגירה</div>
+            <div class="warranty-desc">${d.batt} × 5 קו"ט (${d.batt * 5} קו"ט סה"כ)<br>אחריות יצרן: <strong>10 שנים</strong></div>
+          </div>
+        </div>
+      </div>` : ''}
+    </div>
+  </div>
+
+  <!-- INSTALLATION PROCESS -->
+  <div class="sec">
+    <div class="sec-title"><span class="bar"></span>תהליך ההתקנה</div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">חתימה על ההסכם</div><div class="step-desc">חתימה דיגיטלית, תשלום מקדמה ותחילת הליך הרישוי</div></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">תכנון הנדסי</div><div class="step-desc">סקר גג, הדמיה תלת-ממדית ותוכניות ביצוע מפורטות</div></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">רישוי ואישורים</div><div class="step-desc">הגשת בקשה לרשות החשמל, אישור חיבור מחברת החשמל</div></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">התקנה</div><div class="step-desc">התקנת קונסטרוקציה, פאנלים, אינוורטר וחיווט — יום עבודה אחד</div></div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">בדיקות וחיבור</div><div class="step-desc">בדיקת חשמלאי, חיבור לרשת החשמל והפעלת מערכת הניטור</div></div></div>
+    </div>
+    <div style="font-size:12px;color:var(--gray);margin-top:10px">* לוח זמנים צפוי: עד 60 ימי עסקים מחתימת ההסכם</div>
+  </div>
+
+  <!-- GENERAL TERMS -->
+  <div class="sec" style="font-size:13px;color:var(--gray);line-height:1.8">
+    <div class="sec-title"><span class="bar"></span>תנאים כלליים</div>
+    <div>
+      1. הצעה זו בתוקף למשך 14 יום מתאריך הנפקתה.<br>
+      2. לכל הסכומים יצורף מע"מ כחוק (18%).<br>
+      3. כל שינוי בהסכם ייעשה בכתב ובהסכמת שני הצדדים.<br>
+      4. הסכם זה כפוף לדין הישראלי וסמכות השיפוט לבתי המשפט בישראל.<br>
+      5. על הלקוח לוודא גישה תקינה לגג וחיבור חשמלי תקני.<br>
+      6. ההצעה אינה כוללת: עבודות חשמל בלוח הראשי (ככל שנדרשות), חיזוק גג, גידור או פיגומים חיצוניים.
+    </div>
+  </div>
+
   ${noteBox}
 
   <!-- CTA TO SIGN -->
