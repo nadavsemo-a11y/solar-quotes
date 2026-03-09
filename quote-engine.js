@@ -177,16 +177,19 @@ const QuoteEngine = (() => {
    * מחשב מחיר סופי של ההצעה לפי כל הפרמטרים.
    * @returns {number} מחיר ללא מע"מ
    */
-  function calcPrice({ dcKW, roof, batt, inv, evCharger, needsMeter, extras,
-                        ppkw, battUnitPrice, sePrice, concretePerKw,
-                        meterPanelPrice, evPrice }) {
+  function calcBatteryPrice(batt, battFirstPrice, battExtraPrice) {
+    if (batt <= 0) return 0;
+    return battFirstPrice + Math.max(0, batt - 1) * battExtraPrice;
+  }
+
+  function calcPrice({ dcKW, roof, batt, needsMeter,
+                        ppkw, battFirstPrice, battExtraPrice, concretePerKw,
+                        meterPanelPrice }) {
     let price = dcKW * ppkw;
-    if (roof === 'בטון')      price += dcKW * concretePerKw;
-    if (batt > 0)             price += batt * battUnitPrice;
-    if (inv === 'Solaredge')  price += sePrice;
-    if (evCharger === 'כן')   price += evPrice;
-    if (needsMeter)           price += meterPanelPrice;
-    // Extras are NOT included in the quote price — shown as separate potential costs
+    if (roof === 'בטון')  price += dcKW * concretePerKw;
+    if (batt > 0)         price += calcBatteryPrice(batt, battFirstPrice, battExtraPrice);
+    if (needsMeter)       price += meterPanelPrice;
+    // Extras/upgrades are NOT included — shown separately as options for the customer
     return price;
   }
 
@@ -219,29 +222,31 @@ const QuoteEngine = (() => {
     const {
       dcKW, acKW, hours = DEFAULT_HOURS,
       ppkw, batt = 0, roof, inv,
-      panelW, panelCount, roofArea,
+      customInvModel = '',
+      panelW = 640, roofArea,
       city, hasUrbanPremium = false,
       planKey, inflationPct = 2.5,
-      battUnitPrice = 12000,
-      hybridInvPrice = 10100,
+      battFirstPrice = 8900,
+      battExtraPrice = 6500,
+      hybridInvPrice = 8900,
       hybridFullPrice = 37100,
-      sePrice = 12000,
       premiumPanel = 100,
-      monitoringPrice = 1500,
+      usdRate = 3.65,
       concretePerKw = 50,
       meterPanelPrice = 2500,
-      evCharger = 'לא',
-      evPrice = 4500,
-      evModel = '',
       extras = [],
     } = params;
 
     const needsMeter       = acKW > 15;
     const effectivePlanKey = (planKey === 'green' && acKW > 15) ? 'regular' : planKey;
+    const panelCount       = panelW > 0 ? Math.ceil((dcKW * 1000) / panelW) : 0;
+    const batteryPrice     = calcBatteryPrice(batt, battFirstPrice, battExtraPrice);
+    const premiumPanelNIS  = Math.round(premiumPanel * usdRate * dcKW);
+    const invDisplay       = inv === 'אחר' && customInvModel ? customInvModel : inv;
 
-    const price       = calcPrice({ dcKW, roof, batt, inv, evCharger, needsMeter, extras,
-                                     ppkw, battUnitPrice, sePrice, concretePerKw,
-                                     meterPanelPrice, evPrice });
+    const price       = calcPrice({ dcKW, roof, batt, needsMeter,
+                                     ppkw, battFirstPrice, battExtraPrice, concretePerKw,
+                                     meterPanelPrice });
     const priceVAT    = Math.round(price * VAT);
     const annualKwh   = dcKW * (hours || DEFAULT_HOURS);
     const panelArea   = panelCount * 2.42;
@@ -253,14 +258,16 @@ const QuoteEngine = (() => {
 
     return {
       // קלט מעובד
-      dcKW, acKW, hours, ppkw, batt, roof, inv,
+      dcKW, acKW, hours, ppkw, batt, roof, inv: invDisplay,
+      customInvModel,
       panelW, panelCount, roofArea, panelArea,
       city, hasUrbanPremium,
       planKey, effectivePlanKey, inflationPct,
-      needsMeter, evCharger, evPrice, evModel,
+      needsMeter,
       extras, extrasTotal,
       // תוצאות מחיר
-      price, priceVAT,
+      price, priceVAT, batteryPrice,
+      premiumPanelNIS, premiumPanel, usdRate,
       // תוצאות טכניות
       annualKwh, breaker,
       // שלבי תשלום
@@ -268,8 +275,8 @@ const QuoteEngine = (() => {
       // תוצאות פיננסיות לפי מסלול
       plan,
       // מחירים להפניה
-      battUnitPrice, hybridInvPrice, hybridFullPrice,
-      sePrice, premiumPanel, monitoringPrice,
+      battFirstPrice, battExtraPrice,
+      hybridInvPrice, hybridFullPrice,
       concretePerKw, meterPanelPrice,
     };
   }
