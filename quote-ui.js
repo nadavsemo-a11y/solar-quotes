@@ -246,7 +246,7 @@ class QuoteUI {
     document.getElementById('quote-output').style.display = 'block';
     window.scrollTo(0, 0);
 
-    if (clientMode) this._showSigSection(d, vals);
+    if (clientMode) this._prepareSigSection(d, vals);
 
     // ROI bar animation
     const roiW = Math.min(d.plan.roi * 100 * 2, 94).toFixed(1);
@@ -407,10 +407,11 @@ class QuoteUI {
   // SIGNATURE SECTION
   // ══════════════════════════════════════════════════════════════════════
 
-  _showSigSection(d, vals) {
+  _prepareSigSection(d, vals) {
     const sec = document.getElementById('sig-section');
     if (!sec) return;
-    sec.style.display = 'block';
+    // Keep hidden — will be revealed by CTA button click
+    sec.style.display = 'none';
 
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     set('sqs-name',  vals.name  || '—');
@@ -802,11 +803,11 @@ class QuoteUI {
   ${noteBox}
 
   <!-- CTA TO SIGN -->
-  <div style="background:linear-gradient(135deg,#0A1628,#1a3a5c);padding:40px 24px;text-align:center;border-radius:${clientMode ? '20px' : '0'}">
+  <div id="cta-sign-block" style="background:linear-gradient(135deg,#0A1628,#1a3a5c);padding:40px 24px;text-align:center;border-radius:${clientMode ? '20px' : '0'}">
     <div style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">הצעה בתוקף ל-14 יום</div>
     <div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;line-height:1.35">${vals.name} יקר/ה,<br>${clientMode ? 'מוכן/ה לצאת לדרך?' : 'מוכן/ה לאשר את ההצעה?'}</div>
-    <div style="font-size:15px;color:rgba(255,255,255,0.6);margin-bottom:16px">${clientMode ? 'בואו נחתום ונתקדם — ההצעה מחכה לאישורך' : ''}</div>
-    <button onclick="document.getElementById('sig-section').scrollIntoView({behavior:'smooth'})" style="padding:14px 32px;background:var(--sun);color:white;font-size:16px;font-weight:800;border:none;border-radius:12px;cursor:pointer;box-shadow:0 4px 20px rgba(244,162,0,0.4);transition:all 0.2s">✍️ ${clientMode ? 'חתום על ההצעה' : 'חתום על ההצעה'}</button>
+    ${clientMode ? '<div style="font-size:15px;color:rgba(255,255,255,0.6);margin-bottom:16px">בואו נחתום ונתקדם — ההצעה מחכה לאישורך</div>' : ''}
+    <button onclick="var s=document.getElementById('sig-section');if(s){s.style.display='block';s.scrollIntoView({behavior:'smooth'});}document.getElementById('cta-sign-block').style.display='none'" style="padding:14px 32px;background:var(--sun);color:white;font-size:16px;font-weight:800;border:none;border-radius:12px;cursor:pointer;box-shadow:0 4px 20px rgba(244,162,0,0.4);transition:all 0.2s">✍️ חתום על ההצעה</button>
   </div>`;
   }
 
