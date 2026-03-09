@@ -801,12 +801,12 @@ class QuoteUI {
 
   ${noteBox}
 
-  <!-- CTA TO SIGN -->
-  <div style="background:linear-gradient(135deg,#0A1628,#1a3a5c);padding:40px 24px;text-align:center">
+  <!-- CTA TO SIGN (portal mode only) -->
+  ${clientMode ? '' : `<div style="background:linear-gradient(135deg,#0A1628,#1a3a5c);padding:40px 24px;text-align:center">
     <div style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">הצעה בתוקף ל-14 יום</div>
     <div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;line-height:1.35">${vals.name} יקר/ה,<br>מוכן/ה לאשר את ההצעה?</div>
-    ${clientMode ? '' : `<button onclick="document.getElementById('sig-section').scrollIntoView({behavior:'smooth'})" style="margin-top:16px;padding:14px 32px;background:var(--sun);color:white;font-size:16px;font-weight:800;border:none;border-radius:12px;cursor:pointer">✍️ חתום על ההצעה</button>`}
-  </div>`;
+    <button onclick="document.getElementById('sig-section').scrollIntoView({behavior:'smooth'})" style="margin-top:16px;padding:14px 32px;background:var(--sun);color:white;font-size:16px;font-weight:800;border:none;border-radius:12px;cursor:pointer">✍️ חתום על ההצעה</button>
+  </div>`}`;
   }
 
   /** טוען את ה-template HTML חיצוני (קורא fetch) */
