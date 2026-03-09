@@ -357,24 +357,53 @@ function submitPrintSig() {
   }
   if (!ok) return;
 
-  // Capture signature image from canvas
+  // Capture signature data
   var sigDataUrl = _pc ? _pc.toDataURL('image/png') : '';
   var sigName    = document.getElementById('print-signame').value.trim();
   var sigId      = document.getElementById('print-idnum').value.trim();
   var sigDate    = document.getElementById('print-date').value;
 
+  // Generate unique confirmation ID and timestamp
+  var now       = new Date();
+  var timestamp = now.toLocaleDateString('he-IL') + ' ' + now.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  var confirmId = 'SA-' + rid.split('-')[1] + '-' + now.getTime().toString(36).toUpperCase();
+
+  // Collect client details from the document
+  var clientPhone   = document.querySelector('.field .val:nth-child(2)')?.textContent || '';
+  var clientAddress = '';
+  var clientCity    = '';
+  var fields = document.querySelectorAll('.field');
+  fields.forEach(function(f) {
+    var lbl = f.querySelector('.label');
+    var val = f.querySelector('.val');
+    if (lbl && val) {
+      if (lbl.textContent.indexOf('טלפון') >= 0) clientPhone = val.textContent;
+      if (lbl.textContent.indexOf('כתובת') >= 0) clientAddress = val.textContent;
+      if (lbl.textContent.indexOf('עיר') >= 0)    clientCity = val.textContent;
+    }
+  });
+
   document.getElementById('printSigBlock').innerHTML =
     '<h2>חתימה ואישור</h2>' +
-    '<div style="background:#f0fff4;border:1px solid #86efac;border-radius:8px;padding:14px;margin-bottom:14px">' +
-    '<div style="font-size:10pt;font-weight:700;color:#166534;margin-bottom:8px">✅ ההסכם נחתם דיגיטלית</div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:9pt;margin-bottom:12px">' +
+    '<div style="background:#f0fff4;border:1px solid #86efac;border-radius:8px;padding:16px;margin-bottom:14px">' +
+    '<div style="font-size:10pt;font-weight:700;color:#166534;margin-bottom:10px">✅ ההסכם נחתם דיגיטלית</div>' +
+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:9pt;margin-bottom:14px">' +
     '<div><span style="color:#555">שם החותם:</span><br><strong>' + sigName + '</strong></div>' +
     '<div><span style="color:#555">ת.ז.:</span><br><strong>' + sigId + '</strong></div>' +
-    '<div><span style="color:#555">תאריך:</span><br><strong>' + sigDate + '</strong></div>' +
+    '<div><span style="color:#555">טלפון:</span><br><strong>' + clientPhone + '</strong></div>' +
+    '<div><span style="color:#555">כתובת:</span><br><strong>' + clientAddress + (clientCity ? ', ' + clientCity : '') + '</strong></div>' +
+    '<div><span style="color:#555">חותמת זמן:</span><br><strong>' + timestamp + '</strong></div>' +
+    '<div><span style="color:#555">מזהה אישור:</span><br><strong style="font-family:monospace;letter-spacing:0.5px">' + confirmId + '</strong></div>' +
     '</div>' +
+
     '<div style="margin-top:8px">' +
     '<div style="font-size:8pt;color:#555;margin-bottom:4px">חתימת הלקוח:</div>' +
     '<img src="' + sigDataUrl + '" style="max-width:280px;height:80px;border:1px solid #ddd;border-radius:4px;background:white;object-fit:contain" alt="חתימה">' +
+    '</div>' +
+
+    '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #c6efce;font-size:7.5pt;color:#888">' +
+    'מסמך זה נחתם דיגיטלית באמצעות מערכת SEMO AGS. מזהה: ' + confirmId +
     '</div>' +
     '</div>' +
     '<button class="no-print" onclick="window.print()" style="margin-top:12px;background:#1a3a5c;color:white;border:none;border-radius:8px;padding:9px 22px;font-size:11pt;cursor:pointer;display:block;margin-left:auto;margin-right:auto">🖨 הדפס / PDF</button>';
