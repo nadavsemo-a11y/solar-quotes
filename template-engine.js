@@ -39,10 +39,8 @@ const TemplateEngine = (() => {
     const rows = [];
     rows.push([`מערכת סולארית ${d.dcKW} קו"ט`, `₪${fmt(d.dcKW * d.ppkw)}`]);
     if (d.roof === 'בטון') rows.push(['תוספת גג בטון', `₪${fmt(d.dcKW * d.concretePerKw)}`]);
-    if (d.batt > 0)        rows.push([`מצברי אגירה ${d.batt} × 5 קו"ט`, `₪${fmt(d.batt * d.battUnitPrice)}`]);
-    if (d.inv === 'Solaredge') rows.push(['תוספת ממיר SolarEdge', `₪${fmt(d.sePrice)}`]);
-    if (d.evCharger === 'כן')  rows.push([`עמדת טעינה EV${d.evModel ? ' — ' + d.evModel : ''}`, `₪${fmt(d.evPrice)}`]);
-    if (d.needsMeter)          rows.push(['לוח מונה ייצור', `₪${fmt(d.meterPanelPrice)}`]);
+    if (d.batt > 0)        rows.push([`מצברי אגירה ${d.batt} × 5 קו"ט`, `₪${fmt(d.batteryPrice)}`]);
+    if (d.needsMeter)       rows.push(['לוח מונה ייצור', `₪${fmt(d.meterPanelPrice)}`]);
     return rows.map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join('\n    ');
   }
 
@@ -59,20 +57,30 @@ const TemplateEngine = (() => {
   }
 
   // ── עלויות נוספות אפשריות ─────────────────────────────────────────────
-  function buildExtrasSection(extras) {
+  function buildExtrasSection(extras, basePrice) {
     const checked = (extras || []).filter(e => e.checked);
     if (checked.length === 0) return '';
+    const extrasTotal = checked.reduce((s, e) => s + e.price, 0);
+    const projectTotal = basePrice + extrasTotal;
     const rows = checked.map(e =>
       `<tr><td>${e.label}</td><td class="num">₪${fmt(e.price)}</td></tr>`
     ).join('\n    ');
     return `
 <div class="section">
-  <h2>עלויות נוספות אפשריות</h2>
-  <div class="extras-note">הפריטים הבאים אינם כלולים במחיר ההצעה — ייתכן שיידרשו בהתאם לתנאי השטח.</div>
+  <h2>תוספות ושדרוגים</h2>
+  <div class="extras-note">הפריטים הבאים נבחרו כתוספות לפרויקט:</div>
   <table>
     <tr><th>פריט</th><th style="text-align:left">עלות</th></tr>
     ${rows}
+    <tr class="total-row">
+      <td><strong>סה"כ תוספות</strong></td>
+      <td class="num"><strong>₪${fmt(extrasTotal)}</strong></td>
+    </tr>
   </table>
+  <div style="background:#eef3f9;border:1px solid #b8d4f0;border-radius:8px;padding:12px 14px;margin-top:10px;text-align:center">
+    <div style="font-size:8pt;color:#555">סה"כ עלות הפרויקט (מערכת + תוספות, לא כולל מע"מ)</div>
+    <div style="font-size:14pt;font-weight:800;color:#1a3a5c;margin-top:4px">₪${fmt(projectTotal)}</div>
+  </div>
 </div>`;
   }
 
@@ -144,7 +152,7 @@ const TemplateEngine = (() => {
       '{{SPEC_SECTION_HTML}}':       '',  // ימולא על ידי ה-UI אם נדרש
       '{{STEPS_SECTION_HTML}}':      '',
       '{{EXCLUSIONS_SECTION_HTML}}': '',
-      '{{EXTRAS_SECTION_HTML}}':     buildExtrasSection(d.extras),
+      '{{EXTRAS_SECTION_HTML}}':     buildExtrasSection(d.extras, d.price),
       '{{NOTE_SECTION_HTML}}':       buildNoteSection(client.note),
 
       // לוגו — ניתן לשנות ל-URL חיצוני
