@@ -37,9 +37,40 @@ class QuoteUI {
   init() {
     this._initCitySearch();
     this._bindInputListeners();
+    this._initInverterToggle();
+    this._initBatteryValidation();
+    this._updatePanelCount();
     this._updatePreview();
     this.signature.init();
     this._tryLoadFromUrl();
+  }
+
+  _initInverterToggle() {
+    document.querySelectorAll('input[name="inv"]').forEach(el => {
+      el.addEventListener('change', () => {
+        const field = document.getElementById('customInvField');
+        if (field) field.style.display = el.value === 'אחר' && el.checked ? 'block' : 'none';
+      });
+    });
+  }
+
+  _initBatteryValidation() {
+    const battEl = document.getElementById('batteries');
+    if (!battEl) return;
+    battEl.addEventListener('change', () => {
+      const v = parseInt(battEl.value) || 0;
+      if (v === 1) { battEl.value = 2; }
+      if (v < 0)   { battEl.value = 0; }
+    });
+  }
+
+  _updatePanelCount() {
+    const dcKW   = parseFloat(document.getElementById('sysKW')?.value) || 0;
+    const panelW = parseInt(document.getElementById('panelW')?.value) || 640;
+    const countEl = document.getElementById('panelCount');
+    if (countEl && panelW > 0) {
+      countEl.value = Math.ceil((dcKW * 1000) / panelW);
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -52,6 +83,11 @@ class QuoteUI {
     const radio = name => document.querySelector(`input[name="${name}"]:checked`)?.value ?? '';
     const chk  = id => document.getElementById(id)?.checked ?? false;
 
+    const dcKW    = parseFloat(get('sysKW')) || 0;
+    const panelW  = parseInt(get('panelW')) || 640;
+    const premiumPanel = parseFloat(get('premiumPanelPrice')) || 0;
+    const usdRate      = parseFloat(get('usdRate')) || 3.65;
+
     return {
       // לקוח
       name:    get('clientName'),
@@ -63,48 +99,50 @@ class QuoteUI {
       city:    this.selectedCity || get('citySearch'),
 
       // מערכת
-      kw:       parseFloat(get('sysKW'))       || 0,
+      kw:       dcKW,
       acKW:     parseFloat(get('sysAC'))       || 0,
       ppkw:     parseFloat(get('ppkw'))        || 0,
       batt:     parseInt(get('batteries'))     || 0,
-      panelW:   parseInt(get('panelW'))        || 0,
-      panelCount: parseInt(get('panelCount')) || 0,
+      panelW:   panelW,
+      panelCount: panelW > 0 ? Math.ceil((dcKW * 1000) / panelW) : 0,
       roofArea: parseFloat(get('roofArea'))    || 0,
       hours:    parseFloat(get('hoursPerKw'))  || 0,
       roof:     radio('roof'),
       inv:      radio('inv'),
+      customInvModel: get('customInvModel'),
       plan:     radio('planRadio') || 'green',
       inflation: parseFloat(get('inflationPct')) || 2.5,
 
       // מחירי יחידה
-      battUnitPrice:   parseFloat(get('battUnitPrice'))    || 0,
+      battFirstPrice:  parseFloat(get('battFirstPrice'))   || 8900,
+      battExtraPrice:  parseFloat(get('battExtraPrice'))   || 6500,
       hybridInvPrice:  parseFloat(get('hybridInvPrice'))   || 0,
       hybridFullPrice: parseFloat(get('hybridFullPrice'))  || 0,
-      sePrice:         parseFloat(get('sePrice'))          || 0,
-      premiumPanel:    parseFloat(get('premiumPanelPrice'))|| 0,
-      monitoringPrice: parseFloat(get('monitoringPrice'))  || 0,
+      premiumPanel,
+      usdRate,
       concretePerKw:   parseFloat(get('concretePerKw'))    || 0,
       meterPanelPrice: parseFloat(get('meterPanelPrice'))  || 0,
-      evCharger:       radio('evCharger') || 'לא',
-      evPrice:         parseFloat(get('evPrice'))          || 0,
       evModel:         get('evModel'),
 
       // תוספות
-      extras: this._getExtras(),
+      extras: this._getExtras(dcKW, premiumPanel, usdRate),
     };
   }
 
   /** מחזיר רשימת extras עם מצב checked ומחיר */
-  _getExtras() {
+  _getExtras(dcKW, premiumPanel, usdRate) {
     const items = [
-      { id: 'drilling', label: 'קידוח ומעבר קיר בטון / בלוק' },
-      { id: 'wifi',     label: 'התקנת מגביר טווח אלחוטי (WiFi Extender)' },
-      { id: 'support',  label: 'קריאת שירות לשינויים בהגדרות האינטרנט' },
-      { id: 'inspector',label: 'ביקור חשמלאי בודק לפני ההתקנה' },
+      { id: 'ev',         label: 'עמדת טעינה לרכב חשמלי' },
+      { id: 'monitoring', label: 'ניטור ובקרה מרחוק (שנתי)' },
+      { id: 'premium',    label: 'שדרוג לפאנל פרמיום שחור', calcPrice: () => Math.round(premiumPanel * usdRate * dcKW) },
+      { id: 'drilling',   label: 'קידוח ומעבר קיר בטון / בלוק' },
+      { id: 'wifi',       label: 'התקנת מגביר טווח אלחוטי (WiFi Extender)' },
+      { id: 'support',    label: 'קריאת שירות לשינויים בהגדרות האינטרנט' },
+      { id: 'inspector',  label: 'ביקור חשמלאי בודק לפני ההתקנה' },
     ];
     return items.map(item => {
       const checked = document.getElementById('chk-' + item.id)?.checked || false;
-      const price   = parseFloat(document.getElementById('price-' + item.id)?.value) || 0;
+      const price   = item.calcPrice ? item.calcPrice() : (parseFloat(document.getElementById('price-' + item.id)?.value) || 0);
       const row     = document.getElementById('ex-' + item.id);
       if (row) row.classList.toggle('selected', checked);
       return { id: item.id, label: item.label, checked, price };
@@ -155,10 +193,10 @@ class QuoteUI {
 
   _bindInputListeners() {
     document.querySelectorAll('input,select,textarea').forEach(el => {
-      el.addEventListener('input', () => this._updatePreview());
+      el.addEventListener('input', () => { this._updatePanelCount(); this._updatePreview(); });
     });
     document.querySelectorAll('input[type=radio]').forEach(el => {
-      el.addEventListener('change', () => this._updatePreview());
+      el.addEventListener('change', () => { this._updatePanelCount(); this._updatePreview(); });
     });
   }
 
@@ -586,14 +624,14 @@ class QuoteUI {
 
     const meterLine   = d.needsMeter ? `<li>לוח מונה ייצור — <strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : '';
     const meterInc    = d.needsMeter ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">לוח מונה ייצור</div></div>` : '';
-    const battLine    = d.batt > 0 ? `<li>תוספת עבור מצברי אגירה ${d.batt*5} קו"ט (${d.batt} יח') — <strong>₪${fmt(d.batt*d.battUnitPrice)}</strong></li>` : '';
-    const seLine      = d.inv === 'Solaredge' ? `<li>תוספת עבור ממיר SolarEdge — <strong>₪${fmt(d.sePrice)}</strong></li>` : '';
-    const seLine2     = d.inv === 'Solaredge' ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">אופטימייזרים לכל פאנל (SolarEdge)</div></div>` : '';
+    const battLine    = d.batt > 0 ? `<li>מצברי אגירה ${d.batt*5} קו"ט (${d.batt} יח') — <strong>₪${fmt(d.batteryPrice)}</strong></li>` : '';
     const battInc     = d.batt > 0 ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">${d.batt} מצברי 5 קו"ט לגיבוי אנרגיה</div></div>` : '';
-    const evInc       = d.evCharger === 'כן' ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">עמדת טעינה לרכב חשמלי${d.evModel ? ' — ' + d.evModel : ''}</div></div>` : '';
-    const evLine      = d.evCharger === 'כן' ? `<li>עמדת טעינה לרכב חשמלי${d.evModel ? ' (' + d.evModel + ')' : ''} — <strong>₪${fmt(d.evPrice)}</strong></li>` : '';
     const noteBox     = vals.note ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--sky-mid);display:flex;gap:10px;"><span style="font-size:18px;flex-shrink:0">💬</span><span>${vals.note}</span></div>` : '';
     const concreteLine = d.roof === 'בטון' ? `<li>תוספת גג בטון — <strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong> כלולה במחיר</li>` : '';
+    // Extras summary for quote
+    const selectedExtras = (d.extras || []).filter(e => e.checked);
+    const extrasLines = selectedExtras.map(e => `<li>${e.label} — <strong>₪${fmt(e.price)}</strong></li>`).join('');
+    const totalWithExtras = d.price + selectedExtras.reduce((s, e) => s + e.price, 0);
 
     const fastPlanHTML = d.planKey === 'fast' ? `
       <div id="qf-fastplan" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
@@ -679,7 +717,7 @@ class QuoteUI {
       <div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">תכנון הנדסי מקצועי ומפורט + הדמיה ממוחשבת</div></div>
       <div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">התקנה מהירה וקפדנית על איכות ונראות</div></div>
       <div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">אפליקציה לניטור ביצועי המערכת בסמארטפון</div></div>
-      ${seLine2}${battInc}${evInc}${meterInc}
+      ${battInc}${meterInc}
     </div>
   </div>
 
