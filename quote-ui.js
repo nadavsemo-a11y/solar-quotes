@@ -289,7 +289,7 @@ class QuoteUI {
     this.quoteInflation = inf;
 
     const effectivePK = (this.quotePlanKey === 'green' && d.acKW > 15) ? 'regular' : this.quotePlanKey;
-    const p = QuoteEngine.calcPlanIncome(d.kw, d.acKW, d.price, effectivePK, inf, d.hasUrbanPremium, d.HOURS);
+    const p = QuoteEngine.calcPlanIncome({ dcKW: d.dcKW, acKW: d.acKW, price: d.price, planKey: effectivePK, inflationPct: inf, hasUrbanPremium: d.hasUrbanPremium, hours: d.hours });
 
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     set('qp-name',          p.planName);
@@ -592,13 +592,13 @@ class QuoteUI {
     const evInc       = d.evCharger === 'כן' ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">עמדת טעינה לרכב חשמלי${d.evModel ? ' — ' + d.evModel : ''}</div></div>` : '';
     const evLine      = d.evCharger === 'כן' ? `<li>עמדת טעינה לרכב חשמלי${d.evModel ? ' (' + d.evModel + ')' : ''} — <strong>₪${fmt(d.evPrice)}</strong></li>` : '';
     const noteBox     = vals.note ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--sky-mid);display:flex;gap:10px;"><span style="font-size:18px;flex-shrink:0">💬</span><span>${vals.note}</span></div>` : '';
-    const concreteLine = d.roof === 'בטון' ? `<li>תוספת גג בטון — <strong>₪${fmt(d.kw * d.concretePerKw)}</strong> כלולה במחיר</li>` : '';
+    const concreteLine = d.roof === 'בטון' ? `<li>תוספת גג בטון — <strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong> כלולה במחיר</li>` : '';
 
     const fastPlanHTML = d.planKey === 'fast' ? `
       <div id="qf-fastplan" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
         <div style="background:rgba(244,162,0,0.15);border-radius:9px;padding:10px 14px">
           <div style="font-weight:800;color:var(--sun-light);margin-bottom:4px">שנות 1–5</div>
-          <div>60 אג׳ על ${Math.min(d.kw,15)} kW ראשונים${d.kw>15 ? ' | 48 אג׳ על '+(d.kw-15).toFixed(1)+' kW נוספים' : ''}</div>
+          <div>60 אג׳ על ${Math.min(d.dcKW,15)} kW ראשונים${d.dcKW>15 ? ' | 48 אג׳ על '+(d.dcKW-15).toFixed(1)+' kW נוספים' : ''}</div>
           <div style="font-weight:800;color:var(--sun-light);margin-top:4px" id="qf-fast-yr1">₪${fmt(p.yearlyBreakdown[0].inc)} / שנה</div>
         </div>
         <div style="background:rgba(255,255,255,0.08);border-radius:9px;padding:10px 14px">
@@ -647,7 +647,7 @@ class QuoteUI {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;text-align:center;">
       <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">סוג מערכת</div><div style="font-size:17px;font-weight:800;color:var(--sky)">מערכת סולארית ביתית</div></div>
       <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">סוג גג</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${d.roof}</div></div>
-      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">הספק מערכת</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${d.kw} קילו-וואט</div></div>
+      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">הספק מערכת</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${d.dcKW} קילו-וואט</div></div>
     </div>
   </div>
 
@@ -662,7 +662,7 @@ class QuoteUI {
 
   <!-- STATS -->
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-icon ic-y">⚡</div><span class="stat-val">${d.kw}</span><div class="stat-unit">קו"ט DC</div><div class="stat-label">הספק המערכת</div></div>
+    <div class="stat-card"><div class="stat-icon ic-y">⚡</div><span class="stat-val">${d.dcKW}</span><div class="stat-unit">קו"ט DC</div><div class="stat-label">הספק המערכת</div></div>
     <div class="stat-card"><div class="stat-icon" style="background:rgba(99,102,241,0.1)">🔋</div><span class="stat-val">${d.acKW}</span><div class="stat-unit">קו"ט AC</div><div class="stat-label">הספק ממיר (קובע תעריף)</div></div>
     <div class="stat-card"><div class="stat-icon" style="background:rgba(239,68,68,0.1)">⚡</div><span class="stat-val" style="font-size:18px">3×${d.breaker.size}A</span><div class="stat-unit" style="font-size:10px;color:var(--gray)">${d.breaker.current}A נומינלי</div><div class="stat-label">גודל חיבור מינימלי</div></div>
     <div class="stat-card"><div class="stat-icon ic-g">🔆</div><span class="stat-val">${fmt(d.annualKwh)}</span><div class="stat-unit">קו"ט לשנה</div><div class="stat-label">ייצור אנרגיה</div></div>
