@@ -254,7 +254,8 @@ const QuoteEngine = (() => {
     const plan        = calcPlanIncome({ dcKW, acKW, price, planKey: effectivePlanKey,
                                           inflationPct, hasUrbanPremium, hours });
     const payments    = calcPaymentStages(price);
-    const extrasTotal = (extras || []).filter(e => e.checked).reduce((s, e) => s + e.price, 0);
+    // Only upgrades affect price; potential costs are informational only
+    const extrasTotal = (extras || []).filter(e => e.checked && e.category !== 'potential').reduce((s, e) => s + e.price, 0);
 
     return {
       // קלט מעובד
