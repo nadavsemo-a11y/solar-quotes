@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>עורך תוכן הצעה — SEMO AGS</title>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Assistant', sans-serif; background: #f1f5f9; color: #1a1a2e; padding: 20px; }
+h1 { text-align: center; color: #0A1628; margin-bottom: 6px; }
+.subtitle { text-align: center; color: #6B7280; font-size: 14px; margin-bottom: 24px; }
+.section-group { background: white; border-radius: 16px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.section-group h2 { font-size: 16px; color: #0A1628; border-right: 4px solid #F4A200; padding-right: 10px; margin-bottom: 14px; }
+.para-item { display: flex; gap: 12px; padding: 10px 8px; border-bottom: 1px solid #f1f5f9; align-items: flex-start; transition: background 0.15s; }
+.para-item:hover { background: #f8fafc; }
+.para-item:last-child { border-bottom: none; }
+.para-item input[type=checkbox] { margin-top: 4px; width: 18px; height: 18px; accent-color: #F4A200; flex-shrink: 0; cursor: pointer; }
+.para-item label { cursor: pointer; font-size: 14px; line-height: 1.7; color: #333; flex: 1; }
+.para-item.checked { background: #fffbeb; }
+.para-item.checked label { color: #0A1628; font-weight: 600; }
+.actions { position: sticky; bottom: 0; background: white; border-radius: 16px; padding: 16px 24px; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 20px; }
+.btn { padding: 12px 28px; border: none; border-radius: 10px; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.btn-primary { background: #F4A200; color: white; }
+.btn-primary:hover { background: #e09500; }
+.btn-secondary { background: #e2e8f0; color: #0A1628; }
+.btn-secondary:hover { background: #cbd5e1; }
+.count-badge { font-size: 13px; color: #6B7280; }
+.select-all { font-size: 13px; color: #3B82F6; cursor: pointer; text-decoration: underline; margin-right: 8px; }
+</style>
+</head>
+<body>
+
+<h1>עורך תוכן הצעת מחיר</h1>
+<div class="subtitle">סמן את הפסקאות שברצונך לכלול בהצעת המחיר הדיגיטלית. לחץ "ייצא JSON" כדי לשמור את הבחירה.</div>
+
+<!-- ═══════ SECTION 1: מבוא ═══════ -->
+<div class="section-group">
+  <h2>מבוא — הסיבה להתקנת מערכת סולארית</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="intro-1">
+    <input type="checkbox" id="c-intro-1" onchange="updateItem(this)">
+    <label for="c-intro-1">ברכות על הבחירה להצטרף לייצור אנרגיה סולארית. אנו נשמח לעבוד על הפרויקט יחד איתכם.</label>
+  </div>
+
+  <div class="para-item" data-id="intro-2">
+    <input type="checkbox" id="c-intro-2" onchange="updateItem(this)">
+    <label for="c-intro-2">בעידן שבו העולם צמא לאנרגיה ממקורות מתחדשים, להפיק חשמל נקי מזיהום, מאנרגיית השמש זה הדבר הנכון לעשות. כבעלי גג, יש לכם הזדמנות לעשות בו שימוש כדי לקדם מטרה שחשובה למדינה ולאנושות.</label>
+  </div>
+
+  <div class="para-item" data-id="intro-3">
+    <input type="checkbox" id="c-intro-3" onchange="updateItem(this)">
+    <label for="c-intro-3">כדי לתרום למאמץ, מדינת ישראל, באמצעות רשות החשמל, יצרה אסדרות בזכותן החשמל שתייצרו באמצעות המערכת הסולארית שתותקן על הגג שלכם ישמש להתקזזות מול עלויות צריכת החשמל ואף תוכלו למכור את עודפי ייצור החשמל לחברת החשמל. האסדרה מבטיחה את זכאותכם לתשלומים מול חברת החשמל למשך 25 שנה.</label>
+  </div>
+
+  <div class="para-item" data-id="intro-4">
+    <input type="checkbox" id="c-intro-4" onchange="updateItem(this)">
+    <label for="c-intro-4">באופן זה המערכת הסולארית תיצור עבורכם חיסכון והכנסות מעבר לעלותה, ובכך תניב לכם תשואה נאה, ותתרום לרווחתכם וביטחונכם הכלכלי.</label>
+  </div>
+</div>
+
+<!-- ═══════ SECTION 2: שירות אישי ═══════ -->
+<div class="section-group">
+  <h2>שירות אישי ומקצועי</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="service-1">
+    <input type="checkbox" id="c-service-1" onchange="updateItem(this)">
+    <label for="c-service-1">אצלנו הכל מתחיל באנשים. מובילי החברה הם מוותיק התחום הסולארי בארץ ונותנים דגש מתמשך על מקצועיות ואיכות, בדגש על תשומת לב אישית. תוכלו להנות מהקשר האישי והגישה המקצועית.</label>
+  </div>
+
+  <div class="para-item" data-id="service-2">
+    <input type="checkbox" id="c-service-2" onchange="updateItem(this)">
+    <label for="c-service-2">נפעל כדי שהמערכת שלכם תשרת אתכם נאמנה שנים ארוכות ותהליך הפרויקט יהיה ברור ופשוט עבורכם.</label>
+  </div>
+</div>
+
+<!-- ═══════ SECTION 3: דגשים ═══════ -->
+<div class="section-group">
+  <h2>דגשים מקצועיים</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="focus-1">
+    <input type="checkbox" id="c-focus-1" onchange="updateItem(this)">
+    <label for="c-focus-1"><strong>תכנון מקצועי:</strong> כל פרויקט מתחיל בסקר השטח שיבוצע ע"י אחד מהיועצים המנוסים שלנו הכולל צילום תמונות רחפן, בדיקת הגג, ולוח החשמל. אנו נטפל בנדרש בצורה אישית כדי להבטיח התקנה ברמה הגבוהה ביותר.</label>
+  </div>
+
+  <div class="para-item" data-id="focus-2">
+    <input type="checkbox" id="c-focus-2" onchange="updateItem(this)">
+    <label for="c-focus-2"><strong>ההצעה מפרטת הכל:</strong> אין תוספות לא צפויות או אותיות קטנות. אנחנו לוקחים את מלוא האחריות על כל התהליך, כולל הגשת אישורים לרשויות השונות, תכנון העמדה, והתקנת המערכת. נפעל ככל האפשר, למנוע מכם הפתעות.</label>
+  </div>
+
+  <div class="para-item" data-id="focus-3">
+    <input type="checkbox" id="c-focus-3" onchange="updateItem(this)">
+    <label for="c-focus-3"><strong>ניהול פרויקט מקצועי:</strong> תקבלו מאיתנו עדכונים שוטפים והנחיות, בכדי שתוכלו להיות עם ראש שקט ולהנות מהתהליך.</label>
+  </div>
+</div>
+
+<!-- ═══════ SECTION 4: התועלת לסביבה ═══════ -->
+<div class="section-group">
+  <h2>התועלת לסביבה</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="env-1">
+    <input type="checkbox" id="c-env-1" onchange="updateItem(this)">
+    <label for="c-env-1">{{annualKwh}} קווט"ש חשמל נקי, שמערכת הסולארית שלכם תייצר כל שנה.</label>
+  </div>
+
+  <div class="para-item" data-id="env-2">
+    <input type="checkbox" id="c-env-2" onchange="updateItem(this)">
+    <label for="c-env-2">{{co2Tons}} טון פליטות פחמן דו-חמצני, שלא חייבים לייצר עכשיו מדלק מזהם. (כל קווט"ש ייצור סולארי מונע כ-0.75 ק"ג פליטות בשנה)</label>
+  </div>
+
+  <div class="para-item" data-id="env-3">
+    <input type="checkbox" id="c-env-3" onchange="updateItem(this)">
+    <label for="c-env-3">{{forestDunam}} דונם יער, שצריך לשתול כחלופה להפחתת הזיהום של המערכת הסולארית ({{treeCount}} שווה ערך בכמות עצים). (כל מגה-ווט"ש ייצור סולארי שקול לכ-3.5 דונם יער)</label>
+  </div>
+
+  <div class="para-item" data-id="env-4">
+    <input type="checkbox" id="c-env-4" onchange="updateItem(this)">
+    <label for="c-env-4">{{carKm}} ק"מ נסיעה ברכב, שצריך לצמצם כדי להשתוות לתועלת לסביבה של המערכת הסולארית. (כל קווט"ש ייצור סולארי שקול לכ-3.8 ק"מ נסיעה ברכב)</label>
+  </div>
+</div>
+
+<!-- ═══════ SECTION 5: מפרט ═══════ -->
+<div class="section-group">
+  <h2>מפרט טכני</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="spec-1">
+    <input type="checkbox" id="c-spec-1" onchange="updateItem(this)">
+    <label for="c-spec-1">פאנל מיצרן בדרג TIER 1 בהספק {{panelW}} וואט. יצרן הפאנל וההספק הסופי יקבעו בסיום התכנון.</label>
+  </div>
+
+  <div class="para-item" data-id="spec-2">
+    <input type="checkbox" id="c-spec-2" onchange="updateItem(this)">
+    <label for="c-spec-2">ממיר זרם תוצרת {{inv}} או שווה ערך.</label>
+  </div>
+
+  <div class="para-item" data-id="spec-3">
+    <input type="checkbox" id="c-spec-3" onchange="updateItem(this)">
+    <label for="c-spec-3">קונסטרוקציה מאלומיניום. ברגי נירוסטה.</label>
+  </div>
+
+  <div class="para-item" data-id="spec-4">
+    <input type="checkbox" id="c-spec-4" onchange="updateItem(this)">
+    <label for="c-spec-4">מחברים PV PLUGS מתוצרת אירופאית/אמריקאית.</label>
+  </div>
+
+  <div class="para-item" data-id="spec-5">
+    <input type="checkbox" id="c-spec-5" onchange="updateItem(this)">
+    <label for="c-spec-5">ציוד מיתוג — תוצרת ABB שוויץ או שווה ערך.</label>
+  </div>
+
+  <div class="para-item" data-id="spec-6">
+    <input type="checkbox" id="c-spec-6" onchange="updateItem(this)">
+    <label for="c-spec-6">חיווט בתוך תעלות רשת מכוסות / צינורות.</label>
+  </div>
+
+  <div class="para-item" data-id="spec-7">
+    <input type="checkbox" id="c-spec-7" onchange="updateItem(this)">
+    <label for="c-spec-7">אפליקציה לניטור ביצועי המערכת בסמארטפון ובמחשב.</label>
+  </div>
+
+  <div class="para-item" data-id="spec-8">
+    <input type="checkbox" id="c-spec-8" onchange="updateItem(this)">
+    <label for="c-spec-8">הגנות ברקים DC + הגנה מרכזית למערכת.</label>
+  </div>
+</div>
+
+<!-- ═══════ SECTION 6: בנוסף ═══════ -->
+<div class="section-group">
+  <h2>פרטים נוספים על הפרויקט</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="add-1">
+    <input type="checkbox" id="c-add-1" onchange="updateItem(this)">
+    <label for="c-add-1">עיצוב ותכנון המערכת במלואה כולל הדמיה ממוחשבת.</label>
+  </div>
+
+  <div class="para-item" data-id="add-2">
+    <input type="checkbox" id="c-add-2" onchange="updateItem(this)">
+    <label for="c-add-2">יוזמן אישור מהנדס מבנה/קונסטרוקטור למערכת על המבנה ע"פ הצורך.</label>
+  </div>
+
+  <div class="para-item" data-id="add-3">
+    <input type="checkbox" id="c-add-3" onchange="updateItem(this)">
+    <label for="c-add-3">הספק הפאנלים יקבע ע"פ כמות השטח בפועל ובהתאם לשיקולים מקצועיים. הפנלים המוצעים מאושרים להתקנה על ידי חח"י.</label>
+  </div>
+
+  <div class="para-item" data-id="add-4">
+    <input type="checkbox" id="c-add-4" onchange="updateItem(this)">
+    <label for="c-add-4">יסופקו ויותקנו מהפכים/ממיר מתח המאושרים על ידי חברת חשמל. מיקום המהפכים ייקבע ע"פ תנאי השטח, תוך התחשבות באופי המבנה וכיווני זרימת האוויר.</label>
+  </div>
+
+  <div class="para-item" data-id="add-5">
+    <input type="checkbox" id="c-add-5" onchange="updateItem(this)">
+    <label for="c-add-5">הקונסטרוקציה תיבנה על פי צרכי המתקן בשטח.</label>
+  </div>
+
+  <div class="para-item" data-id="add-6">
+    <input type="checkbox" id="c-add-6" onchange="updateItem(this)">
+    <label for="c-add-6">ציוד עזר וחומרים נלווים: המחיר כולל בתוכו כבלים לזרם DC עמיד UV בעלי בידוד כפול, מוליכים, מובילים להנחת הכבלים, הארקות נדרשות, מפסקים וכל ציוד עזר הנדרש להפעלה מלאה של המערכת.</label>
+  </div>
+
+  <div class="para-item" data-id="add-7">
+    <input type="checkbox" id="c-add-7" onchange="updateItem(this)">
+    <label for="c-add-7">פיקוח הנדסי: העבודה כולה תתבצע תחת פיקוח הנדסי צמוד, וכל שלב יאושר על ידי הגורם המוסמך לכך.</label>
+  </div>
+
+  <div class="para-item" data-id="add-8">
+    <input type="checkbox" id="c-add-8" onchange="updateItem(this)">
+    <label for="c-add-8">במידה ונדרשת הגדלת חיבור, העבודה כוללת: עבודה בירוקרטית מול חברת החשמל, תכנון הנדסי, חפירת תוואי, הנחת כבל, התקנת גומחת בטון וארונות חשמל, העברת בדיקה.</label>
+  </div>
+</div>
+
+<!-- ═══════ SECTION 7: עקרונות תכנון ═══════ -->
+<div class="section-group">
+  <h2>עקרונות התכנון</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="design-1">
+    <input type="checkbox" id="c-design-1" onchange="updateItem(this)">
+    <label for="c-design-1"><strong>יצירת מעברים תפעוליים:</strong> גישה נוחה ובטוחה לתחזוקת המערכת לאורך השנים למיקסום תפוקה.</label>
+  </div>
+
+  <div class="para-item" data-id="design-2">
+    <input type="checkbox" id="c-design-2" onchange="updateItem(this)">
+    <label for="c-design-2"><strong>מרחק ממערכות נוספות:</strong> נשמור על מרחק מאובייקטים שונים על הגג כמו מזגן, דוד שמש וצלחות לווין כדי לאפשר גישה נוחה למערכות נוספות ולהימנע מהצללה על הפאנלים.</label>
+  </div>
+
+  <div class="para-item" data-id="design-3">
+    <input type="checkbox" id="c-design-3" onchange="updateItem(this)">
+    <label for="c-design-3"><strong>מרחק מארובה:</strong> הפיח והחום הנפלטים מארובה עלולים להזיק למערכת. נשמור על מרחק כדי לשמור על הפאנלים, אחריות היצרן ויכולת הייצור לאורך זמן.</label>
+  </div>
+
+  <div class="para-item" data-id="design-4">
+    <input type="checkbox" id="c-design-4" onchange="updateItem(this)">
+    <label for="c-design-4"><strong>צמצום הצללות:</strong> הצללות משפיעות באופן משמעותי על התפוקה וההכנסות מהמערכת, ונוצרות מאובייקטים כמו קירות, מבנים סמוכים וצמחיה. לכן נימנע מהצבת פאנלים במיקומים בעלי פוטנציאל הצללה גבוה.</label>
+  </div>
+
+  <div class="para-item" data-id="design-5">
+    <input type="checkbox" id="c-design-5" onchange="updateItem(this)">
+    <label for="c-design-5"><strong>רעפים:</strong> וידוא מרחק ביטחון מרוכב הגג, כדי לשמור על שלמות הרעפים וטיב האיטום.</label>
+  </div>
+
+  <div class="para-item" data-id="design-6">
+    <input type="checkbox" id="c-design-6" onchange="updateItem(this)">
+    <label for="c-design-6"><strong>מרחק בין שורות (גג בטון):</strong> שמירה על מרווח נכון בין השורות מונעת הצללות ומגדילה את הרווחים מהמערכת.</label>
+  </div>
+
+  <div class="para-item" data-id="design-7">
+    <input type="checkbox" id="c-design-7" onchange="updateItem(this)">
+    <label for="c-design-7"><strong>זווית הפאנלים:</strong> מתוכננת למאפייני הגג שלכם, כדי למקסם את החשיפה לשמש ותפוקת המערכת.</label>
+  </div>
+
+  <div class="para-item" data-id="design-8">
+    <input type="checkbox" id="c-design-8" onchange="updateItem(this)">
+    <label for="c-design-8"><strong>אסתטיקה:</strong> נבחר זווית התקנה אופטימלית לתפוקה של הפאנלים על פי המתאפשר בגג. נקפיד על תכנון התקנה מכאנית והולכות חשמל אטרקטיבית ככל הניתן.</label>
+  </div>
+</div>
+
+<!-- ═══════ SECTION 8: אחריות ═══════ -->
+<div class="section-group">
+  <h2>אחריות</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="warranty-1">
+    <input type="checkbox" id="c-warranty-1" onchange="updateItem(this)">
+    <label for="c-warranty-1">חברת סמו א.ג.ס בע"מ אחראית על ביצוע העבודה מתחילתה ועד סופה.</label>
+  </div>
+
+  <div class="para-item" data-id="warranty-2">
+    <input type="checkbox" id="c-warranty-2" onchange="updateItem(this)">
+    <label for="c-warranty-2">ממירים: אחריות יצרן במשך 10 שנים.</label>
+  </div>
+
+  <div class="para-item" data-id="warranty-3">
+    <input type="checkbox" id="c-warranty-3" onchange="updateItem(this)">
+    <label for="c-warranty-3">פאנלים פוטו-וולטאים: אחריות יצרן במשך 30 שנה.</label>
+  </div>
+
+  <div class="para-item" data-id="warranty-4">
+    <input type="checkbox" id="c-warranty-4" onchange="updateItem(this)">
+    <label for="c-warranty-4">התקנה ועבודה: אחריות למשך 5 שנים ממועד סיום ההתקנה.</label>
+  </div>
+
+  <div class="para-item" data-id="warranty-5">
+    <input type="checkbox" id="c-warranty-5" onchange="updateItem(this)">
+    <label for="c-warranty-5">האחריות אינה כוללת משלוח, פירוק, והרכבה לפאנלים תקולים.</label>
+  </div>
+</div>
+
+<!-- ═══════ SECTION 9: סדר פעולות ═══════ -->
+<div class="section-group">
+  <h2>סדר הפעולות לאחר חתימת ההסכם</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="steps-1">
+    <input type="checkbox" id="c-steps-1" onchange="updateItem(this)">
+    <label for="c-steps-1">הגשת בקשה עקרונית לחברת חשמל לחיבור מערכת פוטו וולטאית + בקשה להגדלת חיבור / הזמנת חיבור חדש (במקרה של מבנה חדש).</label>
+  </div>
+
+  <div class="para-item" data-id="steps-2">
+    <input type="checkbox" id="c-steps-2" onchange="updateItem(this)">
+    <label for="c-steps-2">הגשת תוכניות ואישורן על ידי חברת חשמל.</label>
+  </div>
+
+  <div class="para-item" data-id="steps-3">
+    <input type="checkbox" id="c-steps-3" onchange="updateItem(this)">
+    <label for="c-steps-3">אישור פריסת הפאנלים וההספק הסופי ע"י הלקוח, קביעת הספק סופי + הפקת הזמנת עבודה מותאמת למפרט המוסכם ולהספק המדויק.</label>
+  </div>
+
+  <div class="para-item" data-id="steps-4">
+    <input type="checkbox" id="c-steps-4" onchange="updateItem(this)">
+    <label for="c-steps-4">התקנת המערכת הסולארית על כל רכיביה (לרבות קולטים וממירים).</label>
+  </div>
+
+  <div class="para-item" data-id="steps-5">
+    <input type="checkbox" id="c-steps-5" onchange="updateItem(this)">
+    <label for="c-steps-5">בדיקת המערכת ע"י חשמלאי בודק.</label>
+  </div>
+
+  <div class="para-item" data-id="steps-6">
+    <input type="checkbox" id="c-steps-6" onchange="updateItem(this)">
+    <label for="c-steps-6">התקנת מונים ע"י חברת חשמל וחיבור לרשת החשמל הארצית.</label>
+  </div>
+</div>
+
+<!-- ═══════ SECTION 10: הערות / אינם כוללים ═══════ -->
+<div class="section-group">
+  <h2>הערות והגבלות</h2>
+  <span class="select-all" onclick="toggleAll(this)">סמן/בטל הכל</span>
+
+  <div class="para-item" data-id="note-1">
+    <input type="checkbox" id="c-note-1" onchange="updateItem(this)">
+    <label for="c-note-1"><strong>ההצעה איננה כוללת:</strong> תשלום לרשויות ולחברת החשמל בגין אגרות (כ-1,200 ₪ + מע"מ).</label>
+  </div>
+
+  <div class="para-item" data-id="note-2">
+    <input type="checkbox" id="c-note-2" onchange="updateItem(this)">
+    <label for="c-note-2">אמצעי עלייה לגג (כגון סולמות), קיר ו/או כלוב להתקנת הממירים.</label>
+  </div>
+
+  <div class="para-item" data-id="note-3">
+    <input type="checkbox" id="c-note-3" onchange="updateItem(this)">
+    <label for="c-note-3">חיזוקי מבנה שיש לבצע על פי הנחיית קונסטרוקטור/מהנדס.</label>
+  </div>
+
+  <div class="para-item" data-id="note-4">
+    <input type="checkbox" id="c-note-4" onchange="updateItem(this)">
+    <label for="c-note-4">תיקונים ושיפורים להארקת המבנה, ארונות חשמל ומערכת החשמל.</label>
+  </div>
+
+  <div class="para-item" data-id="note-5">
+    <input type="checkbox" id="c-note-5" onchange="updateItem(this)">
+    <label for="c-note-5">חפירות והנחת מוליכים באדמה, תיקוני טייח, תיקוני אספלט ובטון לחפירה.</label>
+  </div>
+
+  <div class="para-item" data-id="note-6">
+    <input type="checkbox" id="c-note-6" onchange="updateItem(this)">
+    <label for="c-note-6">על הלקוח לוודא הימצאות היתר בניה וטופס 4 למבנה שעליו מוקמת המערכת.</label>
+  </div>
+
+  <div class="para-item" data-id="note-7">
+    <input type="checkbox" id="c-note-7" onchange="updateItem(this)">
+    <label for="c-note-7">באחריות הלקוח לדאוג לנקודת תקשורת אלחוטית או קווית במקום בו יותקן הממיר.</label>
+  </div>
+
+  <div class="para-item" data-id="note-8">
+    <input type="checkbox" id="c-note-8" onchange="updateItem(this)">
+    <label for="c-note-8">חברת סמו א.ג.ס בע"מ איננה אחראית למקרה של סירוב חברת החשמל, הרשות המקומית, רמ"י או כל גורם שלישי אחר אשר עלול שלא לאשר ו/או לעכב את הקמת המתקן.</label>
+  </div>
+
+  <div class="para-item" data-id="note-9">
+    <input type="checkbox" id="c-note-9" onchange="updateItem(this)">
+    <label for="c-note-9">חברת סמו א.ג.ס בע"מ איננה אחראית לתעריף ייצור החשמל שיקבע לצרכן.</label>
+  </div>
+
+  <div class="para-item" data-id="note-10">
+    <input type="checkbox" id="c-note-10" onchange="updateItem(this)">
+    <label for="c-note-10">שווי הפאנלים צמוד לשער הדולר ביום ההצעה.</label>
+  </div>
+
+  <div class="para-item" data-id="note-11">
+    <input type="checkbox" id="c-note-11" onchange="updateItem(this)">
+    <label for="c-note-11">הזמנת העבודה שתופק מהווה אישרור להסכם לעלות הפרויקט המדויקת בהתאם לפריסת הפאנלים המאושרת והמפרט המוסכם ועל בסיס המחיר שמפורט בהצעת המחיר.</label>
+  </div>
+
+  <div class="para-item" data-id="note-12">
+    <input type="checkbox" id="c-note-12" onchange="updateItem(this)">
+    <label for="c-note-12">תוקף ההצעה — 14 יום.</label>
+  </div>
+</div>
+
+<!-- ═══════ ACTIONS ═══════ -->
+<div class="actions">
+  <span class="count-badge" id="countBadge">0 פסקאות נבחרו</span>
+  <button class="btn btn-secondary" onclick="selectAllItems()">סמן הכל</button>
+  <button class="btn btn-secondary" onclick="clearAllItems()">נקה הכל</button>
+  <button class="btn btn-primary" onclick="exportJSON()">📋 ייצא JSON</button>
+  <button class="btn btn-primary" onclick="copyJSON()">📋 העתק ללוח</button>
+</div>
+
+<script>
+function updateItem(cb) {
+  const item = cb.closest('.para-item');
+  item.classList.toggle('checked', cb.checked);
+  updateCount();
+}
+
+function updateCount() {
+  const checked = document.querySelectorAll('.para-item input[type=checkbox]:checked');
+  document.getElementById('countBadge').textContent = checked.length + ' פסקאות נבחרו';
+}
+
+function toggleAll(link) {
+  const group = link.closest('.section-group');
+  const boxes = group.querySelectorAll('input[type=checkbox]');
+  const allChecked = Array.from(boxes).every(b => b.checked);
+  boxes.forEach(b => { b.checked = !allChecked; updateItem(b); });
+}
+
+function selectAllItems() {
+  document.querySelectorAll('.para-item input[type=checkbox]').forEach(b => { b.checked = true; updateItem(b); });
+}
+
+function clearAllItems() {
+  document.querySelectorAll('.para-item input[type=checkbox]').forEach(b => { b.checked = false; updateItem(b); });
+}
+
+function getSelectedData() {
+  const result = {};
+  document.querySelectorAll('.para-item').forEach(item => {
+    const id = item.dataset.id;
+    const cb = item.querySelector('input[type=checkbox]');
+    const label = item.querySelector('label').textContent.trim();
+    if (cb.checked) {
+      result[id] = label;
+    }
+  });
+  return result;
+}
+
+function exportJSON() {
+  const data = getSelectedData();
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'quote-content-selection.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function copyJSON() {
+  const data = getSelectedData();
+  const json = JSON.stringify(data, null, 2);
+  try {
+    await navigator.clipboard.writeText(json);
+    const btn = event.target;
+    btn.textContent = '✔ הועתק!';
+    setTimeout(() => btn.textContent = '📋 העתק ללוח', 2000);
+  } catch(e) {
+    prompt('העתק ידנית:', json);
+  }
+}
+
+// Load saved state from localStorage
+function loadState() {
+  try {
+    const saved = localStorage.getItem('semo-quote-content');
+    if (!saved) return;
+    const ids = JSON.parse(saved);
+    ids.forEach(id => {
+      const item = document.querySelector(`.para-item[data-id="${id}"]`);
+      if (item) {
+        const cb = item.querySelector('input[type=checkbox]');
+        cb.checked = true;
+        item.classList.add('checked');
+      }
+    });
+    updateCount();
+  } catch(e) {}
+}
+
+// Auto-save on change
+document.addEventListener('change', () => {
+  const checked = Array.from(document.querySelectorAll('.para-item input:checked'))
+    .map(cb => cb.closest('.para-item').dataset.id);
+  localStorage.setItem('semo-quote-content', JSON.stringify(checked));
+});
+
+loadState();
+</script>
+</body>
+</html>
