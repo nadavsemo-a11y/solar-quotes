@@ -230,23 +230,47 @@ class QuoteUI {
     };
   }
 
-  /** מחזיר רשימת extras עם מצב checked ומחיר */
+  /**
+   * Returns extras config — reads category assignments from localStorage
+   * (set by extras-manager.html). Falls back to defaults if not configured.
+   */
+  _getExtrasConfig() {
+    try {
+      const saved = localStorage.getItem('semo-extras-config');
+      if (saved) return JSON.parse(saved);
+    } catch (e) { /* use default */ }
+    return {
+      upgrades: [
+        { id: 'ev', label: 'עמדת טעינה לרכב חשמלי', defaultPrice: 4500 },
+        { id: 'monitoring', label: 'ניטור ובקרה מרחוק (שנתי)', defaultPrice: 1500 },
+        { id: 'premium', label: 'שדרוג לפאנל פרמיום שחור', defaultPrice: 0, calcType: 'premium' },
+        { id: 'drilling', label: 'קידוח ומעבר קיר בטון / בלוק', defaultPrice: 500 },
+        { id: 'wifi', label: 'התקנת מגביר טווח אלחוטי (WiFi Extender)', defaultPrice: 450 },
+        { id: 'support', label: 'קריאת שירות לשינויים בהגדרות האינטרנט', defaultPrice: 450 },
+        { id: 'inspector', label: 'ביקור חשמלאי בודק לפני ההתקנה', defaultPrice: 850 },
+      ],
+      potential: []
+    };
+  }
+
+  /** מחזיר רשימת extras (upgrades + potential) עם מצב checked ומחיר */
   _getExtras(dcKW, premiumPanel, usdRate) {
-    const items = [
-      { id: 'ev',         label: 'עמדת טעינה לרכב חשמלי' },
-      { id: 'monitoring', label: 'ניטור ובקרה מרחוק (שנתי)' },
-      { id: 'premium',    label: 'שדרוג לפאנל פרמיום שחור', calcPrice: () => Math.round(premiumPanel * usdRate * dcKW) },
-      { id: 'drilling',   label: 'קידוח ומעבר קיר בטון / בלוק' },
-      { id: 'wifi',       label: 'התקנת מגביר טווח אלחוטי (WiFi Extender)' },
-      { id: 'support',    label: 'קריאת שירות לשינויים בהגדרות האינטרנט' },
-      { id: 'inspector',  label: 'ביקור חשמלאי בודק לפני ההתקנה' },
+    const cfg = this._getExtrasConfig();
+    const allItems = [
+      ...(cfg.upgrades || []).map(i => ({ ...i, category: 'upgrade' })),
+      ...(cfg.potential || []).map(i => ({ ...i, category: 'potential' })),
     ];
-    return items.map(item => {
+    return allItems.map(item => {
       const checked = document.getElementById('chk-' + item.id)?.checked || false;
-      const price   = item.calcPrice ? item.calcPrice() : (parseFloat(document.getElementById('price-' + item.id)?.value) || 0);
-      const row     = document.getElementById('ex-' + item.id);
+      let price;
+      if (item.calcType === 'premium') {
+        price = Math.round(premiumPanel * usdRate * dcKW);
+      } else {
+        price = parseFloat(document.getElementById('price-' + item.id)?.value) || item.defaultPrice || 0;
+      }
+      const row = document.getElementById('ex-' + item.id);
       if (row) row.classList.toggle('selected', checked);
-      return { id: item.id, label: item.label, checked, price };
+      return { id: item.id, label: item.label, checked, price, category: item.category };
     });
   }
 
@@ -802,10 +826,15 @@ class QuoteUI {
     const battInc     = d.batt > 0 ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">${d.batt} מצברי 5 קו"ט לגיבוי אנרגיה</div></div>` : '';
     const noteBox     = vals.note ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--sky-mid);display:flex;gap:10px;"><span style="font-size:18px;flex-shrink:0">💬</span><span>${vals.note}</span></div>` : '';
     const concreteLine = d.roof === 'בטון' ? `<li>תוספת גג בטון — <strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong> כלולה במחיר</li>` : '';
-    // Extras summary for quote
-    const selectedExtras = (d.extras || []).filter(e => e.checked);
-    const extrasLines = selectedExtras.map(e => `<li>${e.label} — <strong>₪${fmt(e.price)}</strong></li>`).join('');
-    const totalWithExtras = d.price + selectedExtras.reduce((s, e) => s + e.price, 0);
+    // Split extras into upgrades vs potential costs
+    const allExtras = (d.extras || []);
+    const selectedUpgrades = allExtras.filter(e => e.checked && e.category === 'upgrade');
+    const selectedPotential = allExtras.filter(e => e.checked && e.category === 'potential');
+    // Backward compat: extras without category are treated as upgrades
+    const uncategorizedExtras = allExtras.filter(e => e.checked && !e.category);
+    const allUpgrades = [...selectedUpgrades, ...uncategorizedExtras];
+    const upgradesTotal = allUpgrades.reduce((s, e) => s + e.price, 0);
+    const totalWithUpgrades = d.price + upgradesTotal;
 
     const fastPlanHTML = d.planKey === 'fast' ? `
       <div id="qf-fastplan" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
@@ -1028,19 +1057,50 @@ class QuoteUI {
     </ul>
   </div>
 
-  ${selectedExtras.length > 0 ? `
-  <!-- EXTRAS -->
+  ${allUpgrades.length > 0 ? `
+  <!-- UPGRADES — customer can toggle -->
   <div class="sec">
-    <div class="sec-title"><span class="bar"></span>תוספות ושדרוגים (אופציונלי)</div>
-    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">הפריטים הבאים נבחרו כתוספות לפרויקט — אינם כלולים במחיר הבסיסי:</div>
-    <ul class="spec-list" style="list-style:none;padding:0">
-      ${selectedExtras.map(e => `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
-      <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-weight:700"><span>סה"כ תוספות</span><span>₪${fmt(selectedExtras.reduce((s, e) => s + e.price, 0))}</span></li>
-    </ul>
-    <div style="background:#eef3f9;border:1px solid #b8d4f0;border-radius:10px;padding:14px;margin-top:12px;text-align:center">
-      <div style="font-size:12px;color:var(--gray)">סה"כ עלות הפרויקט (מערכת + תוספות, לא כולל מע"מ)</div>
-      <div style="font-size:20px;font-weight:900;color:var(--sky);margin-top:4px">₪${fmt(totalWithExtras)}</div>
+    <div class="sec-title"><span class="bar"></span>שדרוגים (אופציונלי)</div>
+    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:</div>
+    <div id="upgrades-list">
+      ${allUpgrades.map(e => `
+      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;flex:1">
+          <label class="toggle-switch" style="position:relative;width:44px;height:24px;flex-shrink:0">
+            <input type="checkbox" checked data-upgrade-toggle="${e.id}" onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
+            <span style="position:absolute;cursor:pointer;inset:0;background:#22c55e;border-radius:24px;transition:0.3s"></span>
+            <span style="position:absolute;top:3px;right:3px;width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
+          </label>
+          <span style="font-size:14px;font-weight:600;color:var(--sky)">${e.label}</span>
+        </div>
+        <strong style="font-size:14px;color:var(--sky)">₪${fmt(e.price)}</strong>
+      </div>`).join('')}
     </div>
+    <div style="display:flex;justify-content:space-between;padding:12px 14px;font-weight:800;font-size:15px;color:var(--sky)">
+      <span>סה"כ שדרוגים</span>
+      <span id="upgrades-total">₪${fmt(upgradesTotal)}</span>
+    </div>
+    <div style="background:#eef3f9;border:1px solid #b8d4f0;border-radius:10px;padding:14px;margin-top:12px;text-align:center">
+      <div style="font-size:12px;color:var(--gray)">סה"כ עלות הפרויקט (מערכת + שדרוגים, לא כולל מע"מ)</div>
+      <div style="font-size:20px;font-weight:900;color:var(--sky);margin-top:4px" id="project-total-display">₪${fmt(totalWithUpgrades)}</div>
+    </div>
+  </div>` : ''}
+
+  ${selectedPotential.length > 0 ? `
+  <!-- POTENTIAL ADDITIONAL COSTS — informational only -->
+  <div class="sec">
+    <div class="sec-title"><span class="bar"></span>הוצאות פוטנציאליות נוספות</div>
+    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">הוצאות אלו עשויות להידרש בהתאם לתנאי השטח. הן <strong>אינן כלולות</strong> בעלות הפרויקט:</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:right;padding:8px 10px;border-bottom:2px solid var(--border);font-size:13px;color:var(--gray)">פריט</th>
+        <th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);font-size:13px;color:var(--gray)">עלות משוערת</th>
+      </tr></thead>
+      <tbody>
+        ${selectedPotential.map(e => `<tr><td style="padding:10px;border-bottom:1px solid var(--border);font-size:14px">${e.label}</td><td style="padding:10px;border-bottom:1px solid var(--border);font-size:14px;text-align:left;font-weight:600">₪${fmt(e.price)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="font-size:11px;color:var(--gray);margin-top:8px;font-style:italic">* הסכומים הם הערכה בלבד ויקבעו סופית לאחר סקר שטח</div>
   </div>` : ''}
 
   <!-- EQUIPMENT & WARRANTY -->
@@ -1248,6 +1308,33 @@ class QuoteUI {
   // ══════════════════════════════════════════════════════════════════════
   // UTILS
   // ══════════════════════════════════════════════════════════════════════
+
+  /** Called when customer toggles an upgrade on/off in the quote view */
+  _onUpgradeToggle() {
+    const fmt = n => Math.round(n).toLocaleString('he-IL');
+    const basePrice = this.quoteData?.price || 0;
+    let upgradesTotal = 0;
+    document.querySelectorAll('[data-upgrade-toggle]').forEach(cb => {
+      const row = cb.closest('.upgrade-toggle-row');
+      if (!row) return;
+      const price = parseFloat(row.dataset.upgradePrice) || 0;
+      const slider = row.querySelectorAll('.toggle-switch span');
+      if (cb.checked) {
+        upgradesTotal += price;
+        if (slider[0]) slider[0].style.background = '#22c55e';
+        if (slider[1]) slider[1].style.right = '3px';
+        row.style.opacity = '1';
+      } else {
+        if (slider[0]) slider[0].style.background = '#cbd5e1';
+        if (slider[1]) slider[1].style.right = '20px';
+        row.style.opacity = '0.5';
+      }
+    });
+    const totalEl = document.getElementById('upgrades-total');
+    if (totalEl) totalEl.textContent = '₪' + fmt(upgradesTotal);
+    const projectEl = document.getElementById('project-total-display');
+    if (projectEl) projectEl.textContent = '₪' + fmt(basePrice + upgradesTotal);
+  }
 
   _fmt(n)  { return Math.round(n).toLocaleString('he-IL'); }
   _fmtD(n) { return Number(n).toFixed(1); }
