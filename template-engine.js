@@ -104,7 +104,7 @@ const TemplateEngine = (() => {
    * @param {object} client        — { name, phone, address, city, cid, date, note }
    * @returns {string}             — HTML מוכן
    */
-  function render(templateHtml, d, client) {
+  function render(templateHtml, d, client, contentSections) {
     const p        = d.plan;
     const profit   = Math.round(p.totalInc - d.price);
     const today    = new Date().toLocaleDateString('he-IL');
@@ -148,10 +148,10 @@ const TemplateEngine = (() => {
       '{{PRICE_ROWS}}':        buildPriceRows(d),
       '{{BATTERY_WARRANTY_ROW}}': buildBatteryWarrantyRow(d),
 
-      // סקציות אופציונליות (מוזרקות מה-UI)
-      '{{SPEC_SECTION_HTML}}':       '',  // ימולא על ידי ה-UI אם נדרש
-      '{{STEPS_SECTION_HTML}}':      '',
-      '{{EXCLUSIONS_SECTION_HTML}}': '',
+      // סקציות אופציונליות (מוזרקות מה-UI / content editor)
+      '{{SPEC_SECTION_HTML}}':       (contentSections && contentSections.spec) || '',
+      '{{STEPS_SECTION_HTML}}':      (contentSections && contentSections.steps) || '',
+      '{{EXCLUSIONS_SECTION_HTML}}': (contentSections && contentSections.exclusions) || '',
       '{{EXTRAS_SECTION_HTML}}':     buildExtrasSection(d.extras, d.price),
       '{{NOTE_SECTION_HTML}}':       buildNoteSection(client.note),
 
