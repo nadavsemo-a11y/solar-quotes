@@ -732,11 +732,12 @@ class QuoteUI {
    */
   _buildContentSections(d) {
     const fmt = n => Math.round(n).toLocaleString('he-IL');
-    let selectedIds = [];
+    const allIds = Object.keys(QuoteUI.CONTENT_PARAGRAPHS);
+    let selectedIds = allIds; // default: all selected
     try {
       const saved = localStorage.getItem('semo-quote-content');
       if (saved) selectedIds = JSON.parse(saved);
-    } catch (e) { /* no selections */ }
+    } catch (e) { /* use default */ }
 
     if (selectedIds.length === 0) return '';
 
@@ -1154,11 +1155,12 @@ class QuoteUI {
    */
   _buildPrintContentSections(d) {
     const fmt = n => Math.round(n).toLocaleString('he-IL');
-    let selectedIds = [];
+    const allIds = Object.keys(QuoteUI.CONTENT_PARAGRAPHS);
+    let selectedIds = allIds; // default: all selected
     try {
       const saved = localStorage.getItem('semo-quote-content');
       if (saved) selectedIds = JSON.parse(saved);
-    } catch (e) { /* no selections */ }
+    } catch (e) { /* use default */ }
 
     if (selectedIds.length === 0) return null;
 
