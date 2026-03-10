@@ -31,6 +31,107 @@ class QuoteUI {
   }
 
   // ══════════════════════════════════════════════════════════════════════
+  // CONTENT PARAGRAPHS — from Excel "הצעה גרפית" tab
+  // Used by _buildContentSections() to inject user-selected paragraphs
+  // ══════════════════════════════════════════════════════════════════════
+
+  static CONTENT_PARAGRAPHS = {
+    // Section 1: מבוא
+    'intro-1': { section: 'מבוא', text: 'ברכות על הבחירה להצטרף לייצור אנרגיה סולארית. אנו נשמח לעבוד על הפרויקט יחד איתכם.' },
+    'intro-2': { section: 'מבוא', text: 'בעידן שבו העולם צמא לאנרגיה ממקורות מתחדשים, להפיק חשמל נקי מזיהום, מאנרגיית השמש זה הדבר הנכון לעשות. כבעלי גג, יש לכם הזדמנות לעשות בו שימוש כדי לקדם מטרה שחשובה למדינה ולאנושות.' },
+    'intro-3': { section: 'מבוא', text: 'כדי לתרום למאמץ, מדינת ישראל, באמצעות רשות החשמל, יצרה אסדרות בזכותן החשמל שתייצרו באמצעות המערכת הסולארית שתותקן על הגג שלכם ישמש להתקזזות מול עלויות צריכת החשמל ואף תוכלו למכור את עודפי ייצור החשמל לחברת החשמל. האסדרה מבטיחה את זכאותכם לתשלומים מול חברת החשמל למשך 25 שנה.' },
+    'intro-4': { section: 'מבוא', text: 'באופן זה המערכת הסולארית תיצור עבורכם חיסכון והכנסות מעבר לעלותה, ובכך תניב לכם תשואה נאה, ותתרום לרווחתכם וביטחונכם הכלכלי.' },
+
+    // Section 2: שירות אישי
+    'service-1': { section: 'שירות אישי ומקצועי', text: 'אצלנו הכל מתחיל באנשים. מובילי החברה הם מוותיק התחום הסולארי בארץ ונותנים דגש מתמשך על מקצועיות ואיכות, בדגש על תשומת לב אישית. תוכלו להנות מהקשר האישי והגישה המקצועית.' },
+    'service-2': { section: 'שירות אישי ומקצועי', text: 'נפעל כדי שהמערכת שלכם תשרת אתכם נאמנה שנים ארוכות ותהליך הפרויקט יהיה ברור ופשוט עבורכם.' },
+
+    // Section 3: דגשים
+    'focus-1': { section: 'דגשים מקצועיים', text: '<strong>תכנון מקצועי:</strong> כל פרויקט מתחיל בסקר השטח שיבוצע ע"י אחד מהיועצים המנוסים שלנו הכולל צילום תמונות רחפן, בדיקת הגג, ולוח החשמל. אנו נטפל בנדרש בצורה אישית כדי להבטיח התקנה ברמה הגבוהה ביותר.' },
+    'focus-2': { section: 'דגשים מקצועיים', text: '<strong>ההצעה מפרטת הכל:</strong> אין תוספות לא צפויות או אותיות קטנות. אנחנו לוקחים את מלוא האחריות על כל התהליך, כולל הגשת אישורים לרשויות השונות, תכנון העמדה, והתקנת המערכת. נפעל ככל האפשר, למנוע מכם הפתעות.' },
+    'focus-3': { section: 'דגשים מקצועיים', text: '<strong>ניהול פרויקט מקצועי:</strong> תקבלו מאיתנו עדכונים שוטפים והנחיות, בכדי שתוכלו להיות עם ראש שקט ולהנות מהתהליך.' },
+
+    // Section 4: סביבה
+    'env-1': { section: 'התועלת לסביבה', text: '{{annualKwh}} קווט"ש חשמל נקי, שמערכת הסולארית שלכם תייצר כל שנה.' },
+    'env-2': { section: 'התועלת לסביבה', text: '{{co2Tons}} טון פליטות פחמן דו-חמצני, שלא חייבים לייצר עכשיו מדלק מזהם. (כל קווט"ש ייצור סולארי מונע כ-0.75 ק"ג פליטות בשנה)' },
+    'env-3': { section: 'התועלת לסביבה', text: '{{forestDunam}} דונם יער, שצריך לשתול כחלופה להפחתת הזיהום של המערכת הסולארית ({{treeCount}} שווה ערך בכמות עצים). (כל מגה-ווט"ש ייצור סולארי שקול לכ-3.5 דונם יער)' },
+    'env-4': { section: 'התועלת לסביבה', text: '{{carKm}} ק"מ נסיעה ברכב, שצריך לצמצם כדי להשתוות לתועלת לסביבה של המערכת הסולארית. (כל קווט"ש ייצור סולארי שקול לכ-3.8 ק"מ נסיעה ברכב)' },
+
+    // Section 5: מפרט
+    'spec-1': { section: 'מפרט טכני', text: 'פאנל מיצרן בדרג TIER 1 בהספק {{panelW}} וואט. יצרן הפאנל וההספק הסופי יקבעו בסיום התכנון.' },
+    'spec-2': { section: 'מפרט טכני', text: 'ממיר זרם תוצרת {{inv}} או שווה ערך.' },
+    'spec-3': { section: 'מפרט טכני', text: 'קונסטרוקציה מאלומיניום. ברגי נירוסטה.' },
+    'spec-4': { section: 'מפרט טכני', text: 'מחברים PV PLUGS מתוצרת אירופאית/אמריקאית.' },
+    'spec-5': { section: 'מפרט טכני', text: 'ציוד מיתוג — תוצרת ABB שוויץ או שווה ערך.' },
+    'spec-6': { section: 'מפרט טכני', text: 'חיווט בתוך תעלות רשת מכוסות / צינורות.' },
+    'spec-7': { section: 'מפרט טכני', text: 'אפליקציה לניטור ביצועי המערכת בסמארטפון ובמחשב.' },
+    'spec-8': { section: 'מפרט טכני', text: 'הגנות ברקים DC + הגנה מרכזית למערכת.' },
+
+    // Section 6: פרטים נוספים
+    'add-1': { section: 'פרטים נוספים על הפרויקט', text: 'עיצוב ותכנון המערכת במלואה כולל הדמיה ממוחשבת.' },
+    'add-2': { section: 'פרטים נוספים על הפרויקט', text: 'יוזמן אישור מהנדס מבנה/קונסטרוקטור למערכת על המבנה ע"פ הצורך.' },
+    'add-3': { section: 'פרטים נוספים על הפרויקט', text: 'הספק הפאנלים יקבע ע"פ כמות השטח בפועל ובהתאם לשיקולים מקצועיים. הפנלים המוצעים מאושרים להתקנה על ידי חח"י.' },
+    'add-4': { section: 'פרטים נוספים על הפרויקט', text: 'יסופקו ויותקנו מהפכים/ממיר מתח המאושרים על ידי חברת חשמל. מיקום המהפכים ייקבע ע"פ תנאי השטח, תוך התחשבות באופי המבנה וכיווני זרימת האוויר.' },
+    'add-5': { section: 'פרטים נוספים על הפרויקט', text: 'הקונסטרוקציה תיבנה על פי צרכי המתקן בשטח.' },
+    'add-6': { section: 'פרטים נוספים על הפרויקט', text: 'ציוד עזר וחומרים נלווים: המחיר כולל בתוכו כבלים לזרם DC עמיד UV בעלי בידוד כפול, מוליכים, מובילים להנחת הכבלים, הארקות נדרשות, מפסקים וכל ציוד עזר הנדרש להפעלה מלאה של המערכת.' },
+    'add-7': { section: 'פרטים נוספים על הפרויקט', text: 'פיקוח הנדסי: העבודה כולה תתבצע תחת פיקוח הנדסי צמוד, וכל שלב יאושר על ידי הגורם המוסמך לכך.' },
+    'add-8': { section: 'פרטים נוספים על הפרויקט', text: 'במידה ונדרשת הגדלת חיבור, העבודה כוללת: עבודה בירוקרטית מול חברת החשמל, תכנון הנדסי, חפירת תוואי, הנחת כבל, התקנת גומחת בטון וארונות חשמל, העברת בדיקה.' },
+
+    // Section 7: עקרונות תכנון
+    'design-1': { section: 'עקרונות התכנון', text: '<strong>יצירת מעברים תפעוליים:</strong> גישה נוחה ובטוחה לתחזוקת המערכת לאורך השנים למיקסום תפוקה.' },
+    'design-2': { section: 'עקרונות התכנון', text: '<strong>מרחק ממערכות נוספות:</strong> נשמור על מרחק מאובייקטים שונים על הגג כמו מזגן, דוד שמש וצלחות לווין כדי לאפשר גישה נוחה למערכות נוספות ולהימנע מהצללה על הפאנלים.' },
+    'design-3': { section: 'עקרונות התכנון', text: '<strong>מרחק מארובה:</strong> הפיח והחום הנפלטים מארובה עלולים להזיק למערכת. נשמור על מרחק כדי לשמור על הפאנלים, אחריות היצרן ויכולת הייצור לאורך זמן.' },
+    'design-4': { section: 'עקרונות התכנון', text: '<strong>צמצום הצללות:</strong> הצללות משפיעות באופן משמעותי על התפוקה וההכנסות מהמערכת, ונוצרות מאובייקטים כמו קירות, מבנים סמוכים וצמחיה. לכן נימנע מהצבת פאנלים במיקומים בעלי פוטנציאל הצללה גבוה.' },
+    'design-5': { section: 'עקרונות התכנון', text: '<strong>רעפים:</strong> וידוא מרחק ביטחון מרוכב הגג, כדי לשמור על שלמות הרעפים וטיב האיטום.' },
+    'design-6': { section: 'עקרונות התכנון', text: '<strong>מרחק בין שורות (גג בטון):</strong> שמירה על מרווח נכון בין השורות מונעת הצללות ומגדילה את הרווחים מהמערכת.' },
+    'design-7': { section: 'עקרונות התכנון', text: '<strong>זווית הפאנלים:</strong> מתוכננת למאפייני הגג שלכם, כדי למקסם את החשיפה לשמש ותפוקת המערכת.' },
+    'design-8': { section: 'עקרונות התכנון', text: '<strong>אסתטיקה:</strong> נבחר זווית התקנה אופטימלית לתפוקה של הפאנלים על פי המתאפשר בגג. נקפיד על תכנון התקנה מכאנית והולכות חשמל אטרקטיבית ככל הניתן.' },
+
+    // Section 8: אחריות
+    'warranty-1': { section: 'אחריות', text: 'חברת סמו א.ג.ס בע"מ אחראית על ביצוע העבודה מתחילתה ועד סופה.' },
+    'warranty-2': { section: 'אחריות', text: 'ממירים: אחריות יצרן במשך 10 שנים.' },
+    'warranty-3': { section: 'אחריות', text: 'פאנלים פוטו-וולטאים: אחריות יצרן במשך 30 שנה.' },
+    'warranty-4': { section: 'אחריות', text: 'התקנה ועבודה: אחריות למשך 5 שנים ממועד סיום ההתקנה.' },
+    'warranty-5': { section: 'אחריות', text: 'האחריות אינה כוללת משלוח, פירוק, והרכבה לפאנלים תקולים.' },
+
+    // Section 9: סדר פעולות
+    'steps-1': { section: 'סדר הפעולות לאחר חתימת ההסכם', text: 'הגשת בקשה עקרונית לחברת חשמל לחיבור מערכת פוטו וולטאית + בקשה להגדלת חיבור / הזמנת חיבור חדש (במקרה של מבנה חדש).' },
+    'steps-2': { section: 'סדר הפעולות לאחר חתימת ההסכם', text: 'הגשת תוכניות ואישורן על ידי חברת חשמל.' },
+    'steps-3': { section: 'סדר הפעולות לאחר חתימת ההסכם', text: 'אישור פריסת הפאנלים וההספק הסופי ע"י הלקוח, קביעת הספק סופי + הפקת הזמנת עבודה מותאמת למפרט המוסכם ולהספק המדויק.' },
+    'steps-4': { section: 'סדר הפעולות לאחר חתימת ההסכם', text: 'התקנת המערכת הסולארית על כל רכיביה (לרבות קולטים וממירים).' },
+    'steps-5': { section: 'סדר הפעולות לאחר חתימת ההסכם', text: 'בדיקת המערכת ע"י חשמלאי בודק.' },
+    'steps-6': { section: 'סדר הפעולות לאחר חתימת ההסכם', text: 'התקנת מונים ע"י חברת חשמל וחיבור לרשת החשמל הארצית.' },
+
+    // Section 10: הערות
+    'note-1':  { section: 'הערות והגבלות', text: '<strong>ההצעה איננה כוללת:</strong> תשלום לרשויות ולחברת החשמל בגין אגרות (כ-1,200 ₪ + מע"מ).' },
+    'note-2':  { section: 'הערות והגבלות', text: 'אמצעי עלייה לגג (כגון סולמות), קיר ו/או כלוב להתקנת הממירים.' },
+    'note-3':  { section: 'הערות והגבלות', text: 'חיזוקי מבנה שיש לבצע על פי הנחיית קונסטרוקטור/מהנדס.' },
+    'note-4':  { section: 'הערות והגבלות', text: 'תיקונים ושיפורים להארקת המבנה, ארונות חשמל ומערכת החשמל.' },
+    'note-5':  { section: 'הערות והגבלות', text: 'חפירות והנחת מוליכים באדמה, תיקוני טייח, תיקוני אספלט ובטון לחפירה.' },
+    'note-6':  { section: 'הערות והגבלות', text: 'על הלקוח לוודא הימצאות היתר בניה וטופס 4 למבנה שעליו מוקמת המערכת.' },
+    'note-7':  { section: 'הערות והגבלות', text: 'באחריות הלקוח לדאוג לנקודת תקשורת אלחוטית או קווית במקום בו יותקן הממיר.' },
+    'note-8':  { section: 'הערות והגבלות', text: 'חברת סמו א.ג.ס בע"מ איננה אחראית למקרה של סירוב חברת החשמל, הרשות המקומית, רמ"י או כל גורם שלישי אחר אשר עלול שלא לאשר ו/או לעכב את הקמת המתקן.' },
+    'note-9':  { section: 'הערות והגבלות', text: 'חברת סמו א.ג.ס בע"מ איננה אחראית לתעריף ייצור החשמל שיקבע לצרכן.' },
+    'note-10': { section: 'הערות והגבלות', text: 'שווי הפאנלים צמוד לשער הדולר ביום ההצעה.' },
+    'note-11': { section: 'הערות והגבלות', text: 'הזמנת העבודה שתופק מהווה אישרור להסכם לעלות הפרויקט המדויקת בהתאם לפריסת הפאנלים המאושרת והמפרט המוסכם ועל בסיס המחיר שמפורט בהצעת המחיר.' },
+    'note-12': { section: 'הערות והגבלות', text: 'תוקף ההצעה — 14 יום.' },
+  };
+
+  // Section display order
+  static CONTENT_SECTION_ORDER = [
+    'מבוא',
+    'שירות אישי ומקצועי',
+    'דגשים מקצועיים',
+    'התועלת לסביבה',
+    'מפרט טכני',
+    'פרטים נוספים על הפרויקט',
+    'עקרונות התכנון',
+    'אחריות',
+    'סדר הפעולות לאחר חתימת ההסכם',
+    'הערות והגבלות',
+  ];
+
+  // ══════════════════════════════════════════════════════════════════════
   // INIT
   // ══════════════════════════════════════════════════════════════════════
 
@@ -625,6 +726,63 @@ class QuoteUI {
   // HTML BUILDER (delegating to TemplateEngine when template is loaded)
   // ══════════════════════════════════════════════════════════════════════
 
+  /**
+   * Reads selected paragraph IDs from localStorage (set by quote-content-editor.html),
+   * replaces template placeholders with actual quote data, and returns HTML sections.
+   */
+  _buildContentSections(d) {
+    const fmt = n => Math.round(n).toLocaleString('he-IL');
+    let selectedIds = [];
+    try {
+      const saved = localStorage.getItem('semo-quote-content');
+      if (saved) selectedIds = JSON.parse(saved);
+    } catch (e) { /* no selections */ }
+
+    if (selectedIds.length === 0) return '';
+
+    // Template placeholder values
+    const co2Tons = ((d.annualKwh * 0.75) / 1000).toFixed(1);
+    const forestDunam = ((d.annualKwh / 1000) * 3.5).toFixed(1);
+    const treeCount = Math.round(parseFloat(forestDunam) * 10);
+    const carKm = fmt(Math.round(d.annualKwh * 3.8));
+    const placeholders = {
+      '{{annualKwh}}': fmt(d.annualKwh),
+      '{{co2Tons}}': co2Tons,
+      '{{forestDunam}}': forestDunam,
+      '{{treeCount}}': String(treeCount),
+      '{{carKm}}': carKm,
+      '{{panelW}}': String(d.panelW),
+      '{{inv}}': d.inv,
+    };
+
+    // Group selected paragraphs by section
+    const grouped = {};
+    for (const id of selectedIds) {
+      const para = QuoteUI.CONTENT_PARAGRAPHS[id];
+      if (!para) continue;
+      if (!grouped[para.section]) grouped[para.section] = [];
+      let text = para.text;
+      for (const [ph, val] of Object.entries(placeholders)) {
+        text = text.split(ph).join(val);
+      }
+      grouped[para.section].push(text);
+    }
+
+    // Build HTML in section order
+    let html = '';
+    for (const sectionName of QuoteUI.CONTENT_SECTION_ORDER) {
+      const paras = grouped[sectionName];
+      if (!paras || paras.length === 0) continue;
+      const items = paras.map(t => `<div style="padding:6px 0;line-height:1.8;font-size:13px;color:#334155;border-bottom:1px solid var(--border)">${t}</div>`).join('');
+      html += `
+  <div class="sec">
+    <div class="sec-title"><span class="bar"></span>${sectionName}</div>
+    ${items}
+  </div>`;
+    }
+    return html;
+  }
+
   _buildQuoteHTML(d, vals, clientMode) {
     const p    = d.plan;
     const fmt  = n => Math.round(n).toLocaleString('he-IL');
@@ -853,6 +1011,9 @@ class QuoteUI {
     <p class="vat-note">* לכל הסכומים הנ"ל יצורף מע"מ כחוק (סה"כ כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))})</p>
   </div>
 
+  <!-- DYNAMIC CONTENT from content editor -->
+  ${this._buildContentSections(d)}
+
   <!-- PRICE BREAKDOWN -->
   <div class="sec">
     <div class="sec-title"><span class="bar"></span>פירוט מחיר ההצעה</div>
@@ -984,6 +1145,72 @@ class QuoteUI {
   // PRINT DOCUMENT
   // ══════════════════════════════════════════════════════════════════════
 
+  /**
+   * Build content sections for the print template from localStorage selections.
+   * Maps content editor sections to template placeholders:
+   *   SPEC_SECTION_HTML ← מפרט טכני, פרטים נוספים, עקרונות התכנון, אחריות, מבוא, שירות, דגשים, סביבה
+   *   STEPS_SECTION_HTML ← סדר הפעולות
+   *   EXCLUSIONS_SECTION_HTML ← הערות והגבלות
+   */
+  _buildPrintContentSections(d) {
+    const fmt = n => Math.round(n).toLocaleString('he-IL');
+    let selectedIds = [];
+    try {
+      const saved = localStorage.getItem('semo-quote-content');
+      if (saved) selectedIds = JSON.parse(saved);
+    } catch (e) { /* no selections */ }
+
+    if (selectedIds.length === 0) return null;
+
+    // Template placeholder values
+    const co2Tons = ((d.annualKwh * 0.75) / 1000).toFixed(1);
+    const forestDunam = ((d.annualKwh / 1000) * 3.5).toFixed(1);
+    const treeCount = Math.round(parseFloat(forestDunam) * 10);
+    const carKm = fmt(Math.round(d.annualKwh * 3.8));
+    const placeholders = {
+      '{{annualKwh}}': fmt(d.annualKwh),
+      '{{co2Tons}}': co2Tons,
+      '{{forestDunam}}': forestDunam,
+      '{{treeCount}}': String(treeCount),
+      '{{carKm}}': carKm,
+      '{{panelW}}': String(d.panelW),
+      '{{inv}}': d.inv,
+    };
+
+    // Group selected paragraphs by section
+    const grouped = {};
+    for (const id of selectedIds) {
+      const para = QuoteUI.CONTENT_PARAGRAPHS[id];
+      if (!para) continue;
+      if (!grouped[para.section]) grouped[para.section] = [];
+      let text = para.text;
+      for (const [ph, val] of Object.entries(placeholders)) {
+        text = text.split(ph).join(val);
+      }
+      grouped[para.section].push(text);
+    }
+
+    // Build section HTML helper
+    const buildSection = (title, paras) => {
+      if (!paras || paras.length === 0) return '';
+      const items = paras.map(t => `<div style="margin-bottom:4px;font-size:9pt;line-height:1.7">${t}</div>`).join('');
+      return `<div class="section"><h2>${title}</h2>${items}</div>`;
+    };
+
+    // Map to template placeholders
+    const specSections = ['מבוא', 'שירות אישי ומקצועי', 'דגשים מקצועיים', 'התועלת לסביבה',
+      'מפרט טכני', 'פרטים נוספים על הפרויקט', 'עקרונות התכנון', 'אחריות'];
+    const stepsSections = ['סדר הפעולות לאחר חתימת ההסכם'];
+    const exclSections = ['הערות והגבלות'];
+
+    let spec = '', steps = '', exclusions = '';
+    for (const s of specSections)  spec += buildSection(s, grouped[s]);
+    for (const s of stepsSections) steps += buildSection(s, grouped[s]);
+    for (const s of exclSections)  exclusions += buildSection(s, grouped[s]);
+
+    return { spec, steps, exclusions };
+  }
+
   openPrintDocument() {
     const vals = this._getFormValues();
     const d    = this.quoteData || QuoteEngine.calculate({
@@ -999,6 +1226,7 @@ class QuoteUI {
       return;
     }
 
+    const contentSections = this._buildPrintContentSections(d);
     const html = TemplateEngine.render(this._templateHtml, d, {
       name:    vals.name,
       phone:   vals.phone,
@@ -1007,7 +1235,7 @@ class QuoteUI {
       cid:     vals.cid,
       date:    vals.date,
       note:    vals.note,
-    });
+    }, contentSections);
 
     const win = window.open('', '_blank');
     win.document.open();
