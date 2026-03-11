@@ -1394,6 +1394,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   await _quoteUI.loadTemplate('solar-quote-template.html');
   _quoteUI.init();
 
+  // Fetch current USD/ILS rate
+  try {
+    const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const data = await res.json();
+    const rate = data.rates?.ILS;
+    if (rate && document.getElementById('usdRate')) {
+      document.getElementById('usdRate').value = rate.toFixed(2);
+    }
+  } catch (e) { /* keep default */ }
+
   // Close tips on outside click
   document.addEventListener('click', () => {
     document.querySelectorAll('.tip-popup.active').forEach(p => p.classList.remove('active'));
