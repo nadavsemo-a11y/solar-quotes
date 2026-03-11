@@ -114,9 +114,12 @@ h1 { text-align: center; color: #0A1628; margin-bottom: 6px; }
 // ═══════ DEFAULT CONFIG ═══════
 const DEFAULT_CONFIG = {
   upgrades: [
+    { id: 'hybrid-inv', label: 'שדרוג לממיר היברידי', defaultPrice: 8900, calcType: 'fixed' },
+    { id: 'batteries', label: 'מצברי אגירה (בטריות)', defaultPrice: 0, calcType: 'batteries', note: 'מינימום 2 בטריות. ראשונה 8,900₪, כל נוספת 6,500₪' },
+    { id: 'premium', label: 'שדרוג לפאנל פרמיום שחור', defaultPrice: 0, calcType: 'premium', note: '100$ לקילו-וואט DC × שער דולר' },
+    { id: 'solaredge', label: 'תוספת ממיר SolarEdge', defaultPrice: 0, calcType: 'solaredge', note: '270₪ × מספר פאנלים' },
     { id: 'ev', label: 'עמדת טעינה לרכב חשמלי', defaultPrice: 4500 },
     { id: 'monitoring', label: 'ניטור ובקרה מרחוק (שנתי)', defaultPrice: 1500 },
-    { id: 'premium', label: 'שדרוג לפאנל פרמיום שחור', defaultPrice: 0, calcType: 'premium' },
     { id: 'drilling', label: 'קידוח ומעבר קיר בטון / בלוק', defaultPrice: 500 },
     { id: 'wifi', label: 'התקנת מגביר טווח אלחוטי (WiFi Extender)', defaultPrice: 450 },
     { id: 'support', label: 'קריאת שירות לשינויים בהגדרות האינטרנט', defaultPrice: 450 },
@@ -177,7 +180,7 @@ function renderList(category) {
 
     const otherCat = category === 'upgrades' ? 'potential' : 'upgrades';
     const moveLabel = category === 'upgrades' ? '← להוצאות' : 'לשדרוגים →';
-    const priceText = item.calcType === 'premium' ? 'חישוב אוטומטי' : `₪${item.defaultPrice.toLocaleString('he-IL')}`;
+    const priceText = item.calcType && item.calcType !== 'fixed' ? (item.note || 'חישוב אוטומטי') : `₪${item.defaultPrice.toLocaleString('he-IL')}`;
 
     card.innerHTML = `
       <div class="drag-handle">⠿</div>
