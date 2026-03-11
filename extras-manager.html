@@ -68,7 +68,7 @@ h1 { text-align: center; color: #0A1628; margin-bottom: 6px; }
 <body>
 
 <h1>ניהול תוספות ושדרוגים</h1>
-<div class="subtitle">גרור פריטים בין העמודות או לחץ על החץ להעברה. הוסף והסר פריטים בחופשיות.</div>
+<div class="subtitle">גרור פריטים בין העמודות או לחץ על החץ להעברה. הוסף והסר פריטים בחופשיות. <span style="font-size:10px;color:#94a3b8">(v3)</span></div>
 
 <div class="columns">
   <!-- UPGRADES COLUMN -->
@@ -193,7 +193,7 @@ function renderList(category) {
 
     const otherCat = category === 'upgrades' ? 'potential' : 'upgrades';
     const moveLabel = category === 'upgrades' ? '← להוצאות' : 'לשדרוגים →';
-    const priceText = item.calcType && item.calcType !== 'fixed' ? (item.note || 'חישוב אוטומטי') : `₪${item.defaultPrice.toLocaleString('he-IL')}`;
+    const priceText = item.calcType && item.calcType !== 'fixed' ? (item.note || 'חישוב אוטומטי') : `₪${(item.defaultPrice || 0).toLocaleString('he-IL')}`;
 
     card.innerHTML = `
       <div class="drag-handle">⠿</div>
@@ -250,27 +250,27 @@ function deleteItem(category, index) {
 }
 
 function addItem(category) {
-  console.log('addItem called with:', category);
-  const labelId = 'new-' + category + '-label';
-  const priceId = 'new-' + category + '-price';
-  console.log('Looking for:', labelId, priceId);
-  const labelInput = document.getElementById(labelId);
-  const priceInput = document.getElementById(priceId);
-  console.log('Found elements:', !!labelInput, !!priceInput);
-  if (!labelInput) { alert('שגיאה: שדה קלט לא נמצא — ' + labelId); return; }
-  const label = labelInput.value.trim();
-  const price = parseInt(priceInput?.value) || 0;
-  console.log('Label:', label, 'Price:', price);
+  try {
+    const labelInput = document.getElementById('new-' + category + '-label');
+    const priceInput = document.getElementById('new-' + category + '-price');
+    if (!labelInput) { alert('שגיאה: שדה "new-' + category + '-label" לא נמצא'); return; }
+    const label = labelInput.value.trim();
+    const price = parseInt(priceInput?.value) || 0;
 
-  if (!label) { labelInput.focus(); return; }
+    if (!label) { labelInput.focus(); alert('נא להזין שם פריט'); return; }
 
-  const id = label.replace(/[^א-תa-zA-Z0-9]/g, '-').replace(/-+/g, '-').substring(0, 20) + '-' + Date.now().toString(36);
+    const id = label.replace(/[^א-תa-zA-Z0-9]/g, '-').replace(/-+/g, '-').substring(0, 20) + '-' + Date.now().toString(36);
 
-  config[category].push({ id, label, defaultPrice: price });
-  labelInput.value = '';
-  priceInput.value = '';
-  render();
-  autoSave();
+    config[category].push({ id, label, defaultPrice: price });
+    labelInput.value = '';
+    if (priceInput) priceInput.value = '';
+    render();
+    autoSave();
+    showToast('הפריט "' + label + '" נוסף בהצלחה');
+  } catch (err) {
+    alert('שגיאה בהוספת פריט: ' + err.message);
+    console.error('addItem error:', err);
+  }
 }
 
 function autoSave() {
