@@ -250,10 +250,17 @@ function deleteItem(category, index) {
 }
 
 function addItem(category) {
-  const labelInput = document.getElementById('new-' + category + '-label');
-  const priceInput = document.getElementById('new-' + category + '-price');
+  console.log('addItem called with:', category);
+  const labelId = 'new-' + category + '-label';
+  const priceId = 'new-' + category + '-price';
+  console.log('Looking for:', labelId, priceId);
+  const labelInput = document.getElementById(labelId);
+  const priceInput = document.getElementById(priceId);
+  console.log('Found elements:', !!labelInput, !!priceInput);
+  if (!labelInput) { alert('שגיאה: שדה קלט לא נמצא — ' + labelId); return; }
   const label = labelInput.value.trim();
-  const price = parseInt(priceInput.value) || 0;
+  const price = parseInt(priceInput?.value) || 0;
+  console.log('Label:', label, 'Price:', price);
 
   if (!label) { labelInput.focus(); return; }
 
