@@ -241,9 +241,12 @@ class QuoteUI {
     } catch (e) { /* use default */ }
     return {
       upgrades: [
+        { id: 'hybrid-inv', label: 'שדרוג לממיר היברידי', defaultPrice: 8900, calcType: 'fixed' },
+        { id: 'batteries', label: 'מצברי אגירה (בטריות)', defaultPrice: 0, calcType: 'batteries' },
+        { id: 'premium', label: 'שדרוג לפאנל פרמיום שחור', defaultPrice: 0, calcType: 'premium' },
+        { id: 'solaredge', label: 'תוספת ממיר SolarEdge', defaultPrice: 0, calcType: 'solaredge' },
         { id: 'ev', label: 'עמדת טעינה לרכב חשמלי', defaultPrice: 4500 },
         { id: 'monitoring', label: 'ניטור ובקרה מרחוק (שנתי)', defaultPrice: 1500 },
-        { id: 'premium', label: 'שדרוג לפאנל פרמיום שחור', defaultPrice: 0, calcType: 'premium' },
         { id: 'drilling', label: 'קידוח ומעבר קיר בטון / בלוק', defaultPrice: 500 },
         { id: 'wifi', label: 'התקנת מגביר טווח אלחוטי (WiFi Extender)', defaultPrice: 450 },
         { id: 'support', label: 'קריאת שירות לשינויים בהגדרות האינטרנט', defaultPrice: 450 },
@@ -256,6 +259,11 @@ class QuoteUI {
   /** מחזיר רשימת extras (upgrades + potential) עם מצב checked ומחיר */
   _getExtras(dcKW, premiumPanel, usdRate) {
     const cfg = this._getExtrasConfig();
+    const panelCount = parseInt(document.getElementById('panelCount')?.value) || 0;
+    const batt = parseInt(document.getElementById('batteries')?.value) || 0;
+    const battFirstPrice = parseFloat(document.getElementById('battFirstPrice')?.value) || 8900;
+    const battExtraPrice = parseFloat(document.getElementById('battExtraPrice')?.value) || 6500;
+
     const allItems = [
       ...(cfg.upgrades || []).map(i => ({ ...i, category: 'upgrade' })),
       ...(cfg.potential || []).map(i => ({ ...i, category: 'potential' })),
@@ -263,14 +271,32 @@ class QuoteUI {
     return allItems.map(item => {
       const checked = document.getElementById('chk-' + item.id)?.checked || false;
       let price;
-      if (item.calcType === 'premium') {
-        price = Math.round(premiumPanel * usdRate * dcKW);
-      } else {
-        price = parseFloat(document.getElementById('price-' + item.id)?.value) || item.defaultPrice || 0;
+      let displayNote = '';
+      switch (item.calcType) {
+        case 'premium':
+          price = Math.round(premiumPanel * usdRate * dcKW);
+          displayNote = `$100 × ${dcKW} קו"ט × ${usdRate}$`;
+          break;
+        case 'solaredge':
+          price = Math.round(270 * panelCount);
+          displayNote = `270₪ × ${panelCount} פאנלים`;
+          break;
+        case 'batteries':
+          if (batt >= 2) {
+            price = battFirstPrice + (batt - 1) * battExtraPrice;
+          } else if (batt === 1) {
+            price = battFirstPrice;
+          } else {
+            price = 0;
+          }
+          displayNote = batt > 0 ? `${batt} בטריות` : 'לא נבחרו בטריות';
+          break;
+        default:
+          price = parseFloat(document.getElementById('price-' + item.id)?.value) || item.defaultPrice || 0;
       }
       const row = document.getElementById('ex-' + item.id);
       if (row) row.classList.toggle('selected', checked);
-      return { id: item.id, label: item.label, checked, price, category: item.category };
+      return { id: item.id, label: item.label, checked, price, category: item.category, calcType: item.calcType, displayNote };
     });
   }
 
