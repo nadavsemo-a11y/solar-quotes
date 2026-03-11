@@ -1062,40 +1062,8 @@ class QuoteUI {
     </div>
   </div>
 
-  <!-- PAYMENT -->
-  <div class="sec">
-    <div class="sec-title"><span class="bar"></span>תנאי תשלום</div>
-    <table class="payment-table">
-      <thead><tr><th>שלב התשלום</th><th>תיאור</th><th>סכום (₪)</th></tr></thead>
-      <tbody>
-        <tr><td>מקדמה</td><td>בחתימת ההסכם</td><td class="amount-col">₪${fmt(d.dep)}</td></tr>
-        <tr><td>השלמה ל-35%</td><td>בקבלת תוכניות ביצוע</td><td class="amount-col">₪${fmt(d.p2)}</td></tr>
-        <tr><td>השלמה ל-95%</td><td>7 ימי עסקים בטרם אספקת פאנלים לאתר</td><td class="amount-col">₪${fmt(d.p3)}</td></tr>
-        <tr><td>5% אחרון</td><td>ביום החיבור לחברת החשמל</td><td class="amount-col">₪${fmt(d.p4)}</td></tr>
-        <tr class="total-row"><td colspan="2"><strong>סה"כ</strong></td><td class="amount-col"><strong>₪${fmt(d.price)}</strong></td></tr>
-      </tbody>
-    </table>
-    <p class="vat-note">* לכל הסכומים הנ"ל יצורף מע"מ כחוק (סה"כ כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))})</p>
-  </div>
-
-  <!-- DYNAMIC CONTENT from content editor -->
-  ${this._buildContentSections(d)}
-
-  <!-- PRICE BREAKDOWN -->
-  <div class="sec">
-    <div class="sec-title"><span class="bar"></span>פירוט מחיר ההצעה</div>
-    <ul class="spec-list" style="list-style:none;padding:0">
-      <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מערכת סולארית ${d.dcKW} קו"ט (${d.panelCount} פאנלים × ${d.panelW}W)</span><strong>₪${fmt(d.dcKW * d.ppkw)}</strong></li>
-      ${concreteLine ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>תוספת גג בטון</span><strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong></li>` : ''}
-      ${d.batt > 0 ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מצברי אגירה ${d.batt * 5} קו"ט (${d.batt} יח')</span><strong>₪${fmt(d.batteryPrice)}</strong></li>` : ''}
-      ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
-      <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ (לא כולל מע"מ)</span><span>₪${fmt(d.price)}</span></li>
-      <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span>₪${fmt(Math.round(d.price * VAT))}</span></li>
-    </ul>
-  </div>
-
   ${allUpgrades.length > 0 ? `
-  <!-- UPGRADES — customer can toggle -->
+  <!-- UPGRADES — customer can toggle (near plan selector) -->
   <div class="sec">
     <div class="sec-title"><span class="bar"></span>שדרוגים (אופציונלי)</div>
     <div style="font-size:13px;color:var(--gray);margin-bottom:12px">ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:</div>
@@ -1117,17 +1085,46 @@ class QuoteUI {
       <span>סה"כ שדרוגים</span>
       <span id="upgrades-total">₪${fmt(upgradesTotal)}</span>
     </div>
-    <div style="background:#eef3f9;border:1px solid #b8d4f0;border-radius:10px;padding:14px;margin-top:12px;text-align:center">
-      <div style="font-size:12px;color:var(--gray)">סה"כ עלות הפרויקט (מערכת + שדרוגים, לא כולל מע"מ)</div>
-      <div style="font-size:20px;font-weight:900;color:var(--sky);margin-top:4px" id="project-total-display">₪${fmt(totalWithUpgrades)}</div>
-    </div>
   </div>` : ''}
 
+  <!-- DYNAMIC CONTENT from content editor -->
+  ${this._buildContentSections(d)}
+
+  <!-- PRICE BREAKDOWN -->
+  <div class="sec">
+    <div class="sec-title"><span class="bar"></span>פירוט מחיר ההצעה</div>
+    <ul class="spec-list" style="list-style:none;padding:0">
+      <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מערכת סולארית ${d.dcKW} קו"ט (${d.panelCount} פאנלים × ${d.panelW}W)</span><strong>₪${fmt(d.dcKW * d.ppkw)}</strong></li>
+      ${concreteLine ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>תוספת גג בטון</span><strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong></li>` : ''}
+      ${d.batt > 0 ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מצברי אגירה ${d.batt * 5} קו"ט (${d.batt} יח')</span><strong>₪${fmt(d.batteryPrice)}</strong></li>` : ''}
+      ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
+      ${allUpgrades.length > 0 ? allUpgrades.map(e => `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('') : ''}
+      <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(totalWithUpgrades)}</span></li>
+      <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span>₪${fmt(Math.round(totalWithUpgrades * VAT))}</span></li>
+    </ul>
+  </div>
+
+  <!-- PAYMENT -->
+  <div class="sec">
+    <div class="sec-title"><span class="bar"></span>תנאי תשלום</div>
+    <table class="payment-table">
+      <thead><tr><th>שלב התשלום</th><th>תיאור</th><th>סכום (₪)</th></tr></thead>
+      <tbody>
+        <tr><td>מקדמה</td><td>בחתימת ההסכם</td><td class="amount-col">₪${fmt(d.dep)}</td></tr>
+        <tr><td>השלמה ל-35%</td><td>בקבלת תוכניות ביצוע</td><td class="amount-col">₪${fmt(d.p2)}</td></tr>
+        <tr><td>השלמה ל-95%</td><td>7 ימי עסקים בטרם אספקת פאנלים לאתר</td><td class="amount-col">₪${fmt(d.p3)}</td></tr>
+        <tr><td>5% אחרון</td><td>ביום החיבור לחברת החשמל</td><td class="amount-col">₪${fmt(d.p4)}</td></tr>
+        <tr class="total-row"><td colspan="2"><strong>סה"כ</strong></td><td class="amount-col"><strong>₪${fmt(d.price)}</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="vat-note">* לכל הסכומים הנ"ל יצורף מע"מ כחוק (סה"כ כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))})</p>
+  </div>
+
   ${selectedPotential.length > 0 ? `
-  <!-- POTENTIAL ADDITIONAL COSTS — informational only -->
+  <!-- POTENTIAL ADDITIONAL COSTS — informational only, NOT in project total -->
   <div class="sec">
     <div class="sec-title"><span class="bar"></span>הוצאות פוטנציאליות נוספות</div>
-    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">הוצאות אלו עשויות להידרש בהתאם לתנאי השטח. הן <strong>אינן כלולות</strong> בעלות הפרויקט:</div>
+    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">הוצאות אלו עשויות להידרש בהתאם לתנאי השטח. <strong>אינן כלולות בעלות הפרויקט</strong> — במידה ויידרש, הלקוח יחויב בהתאם:</div>
     <table style="width:100%;border-collapse:collapse">
       <thead><tr>
         <th style="text-align:right;padding:8px 10px;border-bottom:2px solid var(--border);font-size:13px;color:var(--gray)">פריט</th>
