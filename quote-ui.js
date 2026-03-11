@@ -281,7 +281,8 @@ class QuoteUI {
       ...(cfg.potential || []).map(i => ({ ...i, category: 'potential' })),
     ];
     return allItems.map(item => {
-      const checked = document.getElementById('chk-' + item.id)?.checked || false;
+      const el = document.getElementById('chk-' + item.id);
+      const checked = el ? el.checked : true; // if no checkbox in portal, include by default
       let price;
       let displayNote = '';
       switch (item.calcType) {
@@ -876,6 +877,8 @@ class QuoteUI {
     const allUpgrades = [...selectedUpgrades, ...uncategorizedExtras];
     const upgradesTotal = allUpgrades.reduce((s, e) => s + e.price, 0);
     const totalWithUpgrades = d.price + upgradesTotal;
+    // Capture digital signature preference at generation time (not at render time)
+    const showDigitalSig = clientMode || (document.getElementById('chk-digital-sig')?.checked ?? true);
 
     const fastPlanHTML = d.planKey === 'fast' ? `
       <div id="qf-fastplan" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
@@ -1076,12 +1079,12 @@ class QuoteUI {
     <div style="font-size:13px;color:var(--gray);margin-bottom:12px">ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:</div>
     <div id="upgrades-list">
       ${allUpgrades.map(e => `
-      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border)">
+      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:0.5">
         <div style="display:flex;align-items:center;gap:10px;flex:1">
           <label class="toggle-switch" style="position:relative;width:44px;height:24px;flex-shrink:0">
-            <input type="checkbox" checked data-upgrade-toggle="${e.id}" onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
-            <span style="position:absolute;cursor:pointer;inset:0;background:#22c55e;border-radius:24px;transition:0.3s"></span>
-            <span style="position:absolute;top:3px;right:3px;width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
+            <input type="checkbox" data-upgrade-toggle="${e.id}" onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
+            <span style="position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:24px;transition:0.3s"></span>
+            <span style="position:absolute;top:3px;right:20px;width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
           </label>
           <span style="font-size:14px;font-weight:600;color:var(--sky)">${e.label}</span>
         </div>
@@ -1090,7 +1093,7 @@ class QuoteUI {
     </div>
     <div style="display:flex;justify-content:space-between;padding:12px 14px;font-weight:800;font-size:15px;color:var(--sky)">
       <span>סה"כ שדרוגים</span>
-      <span id="upgrades-total">₪${fmt(upgradesTotal)}</span>
+      <span id="upgrades-total">₪0</span>
     </div>
   </div>` : ''}
 
@@ -1176,9 +1179,9 @@ class QuoteUI {
       ${concreteLine ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>תוספת גג בטון</span><strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong></li>` : ''}
       ${d.batt > 0 ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מצברי אגירה ${d.batt * 5} קו"ט (${d.batt} יח')</span><strong>₪${fmt(d.batteryPrice)}</strong></li>` : ''}
       ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
-      ${allUpgrades.length > 0 ? allUpgrades.map(e => `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('') : ''}
-      <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(totalWithUpgrades)}</span></li>
-      <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span>₪${fmt(Math.round(totalWithUpgrades * VAT))}</span></li>
+      ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:none;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
+      <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(d.price)}</span></li>
+      <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span id="project-total-vat-display">₪${fmt(Math.round(d.price * VAT))}</span></li>
     </ul>
   </div>
 
@@ -1205,14 +1208,14 @@ class QuoteUI {
     <table class="payment-table">
       <thead><tr><th>שלב התשלום</th><th>תיאור</th><th>סכום (₪)</th></tr></thead>
       <tbody>
-        <tr><td>מקדמה</td><td>בחתימת ההסכם</td><td class="amount-col">₪${fmt(d.dep)}</td></tr>
-        <tr><td>השלמה ל-35%</td><td>בקבלת תוכניות ביצוע</td><td class="amount-col">₪${fmt(d.p2)}</td></tr>
-        <tr><td>השלמה ל-95%</td><td>7 ימי עסקים בטרם אספקת פאנלים לאתר</td><td class="amount-col">₪${fmt(d.p3)}</td></tr>
-        <tr><td>5% אחרון</td><td>ביום החיבור לחברת החשמל</td><td class="amount-col">₪${fmt(d.p4)}</td></tr>
-        <tr class="total-row"><td colspan="2"><strong>סה"כ</strong></td><td class="amount-col"><strong>₪${fmt(d.price)}</strong></td></tr>
+        <tr><td>מקדמה</td><td>בחתימת ההסכם</td><td class="amount-col" id="pay-dep">₪${fmt(d.dep)}</td></tr>
+        <tr><td>השלמה ל-35%</td><td>בקבלת תוכניות ביצוע</td><td class="amount-col" id="pay-p2">₪${fmt(d.p2)}</td></tr>
+        <tr><td>השלמה ל-95%</td><td>7 ימי עסקים בטרם אספקת פאנלים לאתר</td><td class="amount-col" id="pay-p3">₪${fmt(d.p3)}</td></tr>
+        <tr><td>5% אחרון</td><td>ביום החיבור לחברת החשמל</td><td class="amount-col" id="pay-p4">₪${fmt(d.p4)}</td></tr>
+        <tr class="total-row"><td colspan="2"><strong>סה"כ</strong></td><td class="amount-col" id="pay-total"><strong>₪${fmt(d.price)}</strong></td></tr>
       </tbody>
     </table>
-    <p class="vat-note">* לכל הסכומים הנ"ל יצורף מע"מ כחוק (סה"כ כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))})</p>
+    <p class="vat-note" id="pay-vat-note">* לכל הסכומים הנ"ל יצורף מע"מ כחוק (סה"כ כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))})</p>
   </div>
 
   <!-- GENERAL TERMS -->
@@ -1231,7 +1234,7 @@ class QuoteUI {
   ${noteBox}
 
   <!-- CTA TO SIGN (only if digital signature enabled) -->
-  ${(clientMode || (document.getElementById('chk-digital-sig')?.checked ?? true)) ? `
+  ${showDigitalSig ? `
   <div id="cta-sign-block" style="background:linear-gradient(135deg,#0A1628,#1a3a5c);padding:40px 24px;text-align:center;border-radius:${clientMode ? '20px' : '0'}">
     <div style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">הצעה בתוקף ל-14 יום</div>
     <div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;line-height:1.35">${vals.name} יקר/ה,<br>${clientMode ? 'מוכן/ה לצאת לדרך?' : 'מוכן/ה לאשר את ההצעה?'}</div>
@@ -1360,13 +1363,18 @@ class QuoteUI {
   /** Called when customer toggles an upgrade on/off in the quote view */
   _onUpgradeToggle() {
     const fmt = n => Math.round(n).toLocaleString('he-IL');
+    const VAT = 1.18;
     const basePrice = this.quoteData?.price || 0;
     let upgradesTotal = 0;
+
     document.querySelectorAll('[data-upgrade-toggle]').forEach(cb => {
       const row = cb.closest('.upgrade-toggle-row');
       if (!row) return;
+      const id = cb.dataset.upgradeToggle;
       const price = parseFloat(row.dataset.upgradePrice) || 0;
       const slider = row.querySelectorAll('.toggle-switch span');
+
+      // Toggle visual state
       if (cb.checked) {
         upgradesTotal += price;
         if (slider[0]) slider[0].style.background = '#22c55e';
@@ -1377,11 +1385,42 @@ class QuoteUI {
         if (slider[1]) slider[1].style.right = '20px';
         row.style.opacity = '0.5';
       }
+
+      // Show/hide corresponding line in price breakdown
+      const priceLine = document.querySelector(`[data-upgrade-line="${id}"]`);
+      if (priceLine) priceLine.style.display = cb.checked ? 'flex' : 'none';
     });
+
+    const totalPrice = basePrice + upgradesTotal;
+
+    // Update upgrades total
     const totalEl = document.getElementById('upgrades-total');
     if (totalEl) totalEl.textContent = '₪' + fmt(upgradesTotal);
+
+    // Update price breakdown totals
     const projectEl = document.getElementById('project-total-display');
-    if (projectEl) projectEl.textContent = '₪' + fmt(basePrice + upgradesTotal);
+    if (projectEl) projectEl.textContent = '₪' + fmt(totalPrice);
+    const vatEl = document.getElementById('project-total-vat-display');
+    if (vatEl) vatEl.textContent = '₪' + fmt(Math.round(totalPrice * VAT));
+
+    // Update payment stages
+    const dep = 6000;
+    const p2 = Math.round(totalPrice * 0.35) - dep;
+    const p3 = Math.round(totalPrice * 0.95) - Math.round(totalPrice * 0.35);
+    const p4 = totalPrice - Math.round(totalPrice * 0.95);
+
+    const depEl = document.getElementById('pay-dep');
+    if (depEl) depEl.textContent = '₪' + fmt(dep);
+    const p2El = document.getElementById('pay-p2');
+    if (p2El) p2El.textContent = '₪' + fmt(p2);
+    const p3El = document.getElementById('pay-p3');
+    if (p3El) p3El.textContent = '₪' + fmt(p3);
+    const p4El = document.getElementById('pay-p4');
+    if (p4El) p4El.textContent = '₪' + fmt(p4);
+    const payTotalEl = document.getElementById('pay-total');
+    if (payTotalEl) payTotalEl.innerHTML = '<strong>₪' + fmt(totalPrice) + '</strong>';
+    const payVatEl = document.getElementById('pay-vat-note');
+    if (payVatEl) payVatEl.textContent = '* לכל הסכומים הנ"ל יצורף מע"מ כחוק (סה"כ כולל מע"מ: ₪' + fmt(Math.round(totalPrice * VAT)) + ')';
   }
 
   _fmt(n)  { return Math.round(n).toLocaleString('he-IL'); }
