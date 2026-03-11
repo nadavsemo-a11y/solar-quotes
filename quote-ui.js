@@ -235,11 +235,7 @@ class QuoteUI {
    * (set by extras-manager.html). Falls back to defaults if not configured.
    */
   _getExtrasConfig() {
-    try {
-      const saved = localStorage.getItem('semo-extras-config');
-      if (saved) return JSON.parse(saved);
-    } catch (e) { /* use default */ }
-    return {
+    const defaults = {
       upgrades: [
         { id: 'hybrid-inv', label: 'שדרוג לממיר היברידי', defaultPrice: 8900, calcType: 'fixed' },
         { id: 'batteries', label: 'מצברי אגירה (בטריות)', defaultPrice: 0, calcType: 'batteries' },
@@ -254,6 +250,21 @@ class QuoteUI {
       ],
       potential: []
     };
+    try {
+      const saved = localStorage.getItem('semo-extras-config');
+      if (saved) {
+        const cfg = JSON.parse(saved);
+        if (!cfg.upgrades) cfg.upgrades = [];
+        if (!cfg.potential) cfg.potential = [];
+        // Merge missing default items
+        const allIds = new Set([...cfg.upgrades.map(i=>i.id), ...cfg.potential.map(i=>i.id)]);
+        for (const item of defaults.upgrades) {
+          if (!allIds.has(item.id)) cfg.upgrades.push(item);
+        }
+        return cfg;
+      }
+    } catch (e) { /* use defaults */ }
+    return defaults;
   }
 
   /** מחזיר רשימת extras (upgrades + potential) עם מצב checked ומחיר */
