@@ -1370,6 +1370,42 @@ class QuoteUI {
     win.document.open();
     win.document.write(html);
     win.document.close();
+
+    // Send email copy to client + company
+    this._sendQuoteEmail(vals, d);
+  }
+
+  /** Send quote email via EmailService module */
+  async _sendQuoteEmail(vals, d) {
+    if (typeof EmailService === 'undefined') return;
+    const fmt = n => Math.round(n).toLocaleString('he-IL');
+    const quoteUrl = document.getElementById('share-url')?.value || '';
+    const clientEmail = vals.phone ? '' : ''; // client email from form — see below
+
+    // Try to get client email from form (if field exists)
+    const emailInput = document.getElementById('clientEmail');
+    const clientMail = emailInput?.value?.trim() || '';
+
+    try {
+      const result = await EmailService.sendQuoteEmail({
+        clientName:  vals.name,
+        clientEmail: clientMail,
+        quoteUrl:    quoteUrl,
+        systemKW:    String(d.dcKW),
+        totalPrice:  fmt(d.price),
+        quoteDate:   vals.date ? new Date(vals.date).toLocaleDateString('he-IL') : '',
+        city:        vals.city || d.city || '',
+      });
+
+      if (result.success) {
+        const recipients = result.sentTo.join(', ');
+        EmailService.showToast('📧 ההצעה נשלחה בהצלחה: ' + recipients);
+      } else {
+        EmailService.showToast('⚠️ שגיאה בשליחת מייל: ' + (result.error || ''), true);
+      }
+    } catch (err) {
+      console.error('Email send failed:', err);
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════
