@@ -137,9 +137,20 @@ function loadConfig() {
     const saved = localStorage.getItem('semo-extras-config');
     if (saved) {
       config = JSON.parse(saved);
-      // Ensure both arrays exist
       if (!config.upgrades) config.upgrades = [];
       if (!config.potential) config.potential = [];
+      // Merge missing default items that don't exist in saved config
+      const allSavedIds = new Set([...config.upgrades.map(i=>i.id), ...config.potential.map(i=>i.id)]);
+      for (const item of DEFAULT_CONFIG.upgrades) {
+        if (!allSavedIds.has(item.id)) {
+          config.upgrades.push(JSON.parse(JSON.stringify(item)));
+        }
+      }
+      for (const item of DEFAULT_CONFIG.potential) {
+        if (!allSavedIds.has(item.id)) {
+          config.potential.push(JSON.parse(JSON.stringify(item)));
+        }
+      }
     } else {
       config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
     }
@@ -147,6 +158,7 @@ function loadConfig() {
     config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   }
   render();
+  autoSave();
 }
 
 function saveConfig() {
