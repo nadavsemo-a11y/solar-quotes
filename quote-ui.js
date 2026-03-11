@@ -725,6 +725,8 @@ class QuoteUI {
       exEvP: get('price-ev'), exMonitorP: get('price-monitoring'),
       exDrillingP: get('price-drilling'), exWifiP: get('price-wifi'),
       exSupportP:  get('price-support'),  exInspectorP: get('price-inspector'),
+      // digital signature preference
+      digSig: document.getElementById('chk-digital-sig')?.checked ?? true,
     };
   }
 
@@ -767,6 +769,8 @@ class QuoteUI {
     set('price-ev', s.exEvP); set('price-monitoring', s.exMonitorP);
     set('price-drilling', s.exDrillingP); set('price-wifi', s.exWifiP);
     set('price-support',  s.exSupportP);  set('price-inspector', s.exInspectorP);
+    // Store digital signature preference for client mode
+    this._digitalSigPref = s.digSig !== undefined ? s.digSig : true;
   }
 
   _tryLoadFromUrl() {
@@ -877,8 +881,10 @@ class QuoteUI {
     const allUpgrades = [...selectedUpgrades, ...uncategorizedExtras];
     const upgradesTotal = allUpgrades.reduce((s, e) => s + e.price, 0);
     const totalWithUpgrades = d.price + upgradesTotal;
-    // Capture digital signature preference at generation time (not at render time)
-    const showDigitalSig = clientMode || (document.getElementById('chk-digital-sig')?.checked ?? true);
+    // Capture digital signature preference — in client mode use stored pref, in portal mode read checkbox
+    const showDigitalSig = clientMode
+      ? (this._digitalSigPref ?? true)
+      : (document.getElementById('chk-digital-sig')?.checked ?? true);
 
     const fastPlanHTML = d.planKey === 'fast' ? `
       <div id="qf-fastplan" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
@@ -1079,7 +1085,7 @@ class QuoteUI {
     <div style="font-size:13px;color:var(--gray);margin-bottom:12px">ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:</div>
     <div id="upgrades-list">
       ${allUpgrades.map(e => `
-      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:0.5">
+      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-batt-first="${d.battFirstPrice || 8900}" data-batt-extra="${d.battExtraPrice || 6500}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:0.5">
         <div style="display:flex;align-items:center;gap:10px;flex:1">
           <label class="toggle-switch" style="position:relative;width:44px;height:24px;flex-shrink:0">
             <input type="checkbox" data-upgrade-toggle="${e.id}" onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
@@ -1087,8 +1093,18 @@ class QuoteUI {
             <span style="position:absolute;top:3px;right:20px;width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
           </label>
           <span style="font-size:14px;font-weight:600;color:var(--sky)">${e.label}</span>
+          ${e.calcType === 'batteries' ? `
+          <span style="font-size:12px;color:var(--gray);margin-right:4px">כמות:</span>
+          <select data-batt-qty onchange="window._quoteUI._onUpgradeToggle()" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-weight:700;font-family:inherit;background:white;color:var(--sky)">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+          <span style="font-size:11px;color:var(--gray)">(מינימום 2)</span>` : ''}
         </div>
-        <strong style="font-size:14px;color:var(--sky)">₪${fmt(e.price)}</strong>
+        <strong class="upgrade-price-display" style="font-size:14px;color:var(--sky)">₪${fmt(e.price)}</strong>
       </div>`).join('')}
     </div>
     <div style="display:flex;justify-content:space-between;padding:12px 14px;font-weight:800;font-size:15px;color:var(--sky)">
@@ -1371,8 +1387,21 @@ class QuoteUI {
       const row = cb.closest('.upgrade-toggle-row');
       if (!row) return;
       const id = cb.dataset.upgradeToggle;
-      const price = parseFloat(row.dataset.upgradePrice) || 0;
+      let price = parseFloat(row.dataset.upgradePrice) || 0;
+      const calcType = row.dataset.calcType;
       const slider = row.querySelectorAll('.toggle-switch span');
+
+      // Recalculate battery price based on quantity
+      if (calcType === 'batteries') {
+        const qtySelect = row.querySelector('[data-batt-qty]');
+        const qty = parseInt(qtySelect?.value) || 2;
+        const battFirst = parseFloat(row.dataset.battFirst) || 8900;
+        const battExtra = parseFloat(row.dataset.battExtra) || 6500;
+        price = battFirst + (qty - 1) * battExtra;
+        row.dataset.upgradePrice = price;
+        const priceDisplay = row.querySelector('.upgrade-price-display');
+        if (priceDisplay) priceDisplay.textContent = '₪' + fmt(price);
+      }
 
       // Toggle visual state
       if (cb.checked) {
@@ -1388,7 +1417,13 @@ class QuoteUI {
 
       // Show/hide corresponding line in price breakdown
       const priceLine = document.querySelector(`[data-upgrade-line="${id}"]`);
-      if (priceLine) priceLine.style.display = cb.checked ? 'flex' : 'none';
+      if (priceLine) {
+        priceLine.style.display = cb.checked ? 'flex' : 'none';
+        if (cb.checked) {
+          const priceEl = priceLine.querySelector('strong');
+          if (priceEl) priceEl.textContent = '₪' + fmt(price);
+        }
+      }
     });
 
     const totalPrice = basePrice + upgradesTotal;
