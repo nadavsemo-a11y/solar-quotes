@@ -257,10 +257,13 @@ class QuoteUI {
         const cfg = JSON.parse(saved);
         if (!cfg.upgrades) cfg.upgrades = [];
         if (!cfg.potential) cfg.potential = [];
-        // Merge missing default items
+        // Merge missing default items (both upgrades and potential)
         const allIds = new Set([...cfg.upgrades.map(i=>i.id), ...cfg.potential.map(i=>i.id)]);
         for (const item of defaults.upgrades) {
           if (!allIds.has(item.id)) cfg.upgrades.push(item);
+        }
+        for (const item of defaults.potential) {
+          if (!allIds.has(item.id)) cfg.potential.push(item);
         }
         return cfg;
       }
