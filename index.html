@@ -742,6 +742,7 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
         <div class="form-grid">
           <div class="field"><label>שם לקוח</label><input id="clientName" type="text" value="שמעון כחלון"></div>
           <div class="field"><label>טלפון</label><input id="clientPhone" type="text" value="052-5247272"></div>
+          <div class="field"><label>אימייל לקוח</label><input id="clientEmail" type="email" placeholder="client@example.com"></div>
           <div class="field" style="position:relative">
             <label>ישוב <span id="urbanPremiumBadge" style="display:none;background:#f59e0b;color:white;font-size:10px;padding:2px 8px;border-radius:50px;font-weight:700;margin-right:6px">★ פרמייה אורבנית</span></label>
             <input id="citySearch" type="text" placeholder="הקלד שם ישוב..." autocomplete="off" value="מעגלים">
@@ -1092,6 +1093,7 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
 <script src="storage-service.js"></script>
 <script src="signature-service.js"></script>
 <script src="template-engine.js"></script>
+<script src="email-service.js"></script>
 <script src="quote-ui.js"></script>
 
 <!-- ==================== GLOBAL INLINE WRAPPERS ==================== -->
