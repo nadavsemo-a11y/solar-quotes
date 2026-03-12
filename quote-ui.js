@@ -727,6 +727,62 @@ class QuoteUI {
   }
 
   // ══════════════════════════════════════════════════════════════════════
+  // EXTRAS STATE — dynamic save/restore (no hardcoded IDs)
+  // ══════════════════════════════════════════════════════════════════════
+
+  /** Scans all extras from config, saves checked + price for each */
+  _buildExtrasState() {
+    const cfg = this._getExtrasConfig();
+    const all = [...(cfg.upgrades || []), ...(cfg.potential || [])];
+    const state = {};
+    for (const item of all) {
+      const chk = document.getElementById('chk-' + item.id);
+      const price = document.getElementById('price-' + item.id);
+      state[item.id] = {
+        checked: chk?.checked || false,
+        price: price?.value || '',
+      };
+    }
+    return state;
+  }
+
+  /** Restores extras checkboxes + prices from saved state */
+  _restoreExtrasState(extras) {
+    if (!extras) return;
+    // New format: { id: { checked, price } }
+    for (const [id, val] of Object.entries(extras)) {
+      const chk = document.getElementById('chk-' + id);
+      if (chk) chk.checked = val.checked || false;
+      const price = document.getElementById('price-' + id);
+      if (price && val.price) price.value = val.price;
+    }
+  }
+
+  /**
+   * Backward compat: converts old hardcoded state (exEv, exMonitor...)
+   * to new dynamic extras format. Called from _setFormFromState.
+   */
+  _migrateOldExtrasState(s) {
+    if (s.extras) return s.extras; // already new format
+    const map = {
+      ev:         { checked: s.exEv,        price: s.exEvP },
+      monitoring: { checked: s.exMonitor,   price: s.exMonitorP },
+      premium:    { checked: s.exPremium,   price: '' },
+      drilling:   { checked: s.exDrilling,  price: s.exDrillingP },
+      wifi:       { checked: s.exWifi,      price: s.exWifiP },
+      support:    { checked: s.exSupport,   price: s.exSupportP },
+      inspector:  { checked: s.exInspector, price: s.exInspectorP },
+    };
+    const result = {};
+    for (const [id, val] of Object.entries(map)) {
+      if (val.checked !== undefined) {
+        result[id] = { checked: val.checked || false, price: val.price || '' };
+      }
+    }
+    return Object.keys(result).length > 0 ? result : null;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
   // STATE ENCODE / LOAD
   // ══════════════════════════════════════════════════════════════════════
 
@@ -745,17 +801,8 @@ class QuoteUI {
       premP: get('premiumPanelPrice'), usdRate: get('usdRate'),
       concP: get('concretePerKw'), meterP: get('meterPanelPrice'),
       evM: get('evModel'),
-      // extras checkboxes + prices
-      exEv:        document.getElementById('chk-ev')?.checked         || false,
-      exMonitor:   document.getElementById('chk-monitoring')?.checked || false,
-      exPremium:   document.getElementById('chk-premium')?.checked    || false,
-      exDrilling:  document.getElementById('chk-drilling')?.checked   || false,
-      exWifi:      document.getElementById('chk-wifi')?.checked       || false,
-      exSupport:   document.getElementById('chk-support')?.checked    || false,
-      exInspector: document.getElementById('chk-inspector')?.checked  || false,
-      exEvP: get('price-ev'), exMonitorP: get('price-monitoring'),
-      exDrillingP: get('price-drilling'), exWifiP: get('price-wifi'),
-      exSupportP:  get('price-support'),  exInspectorP: get('price-inspector'),
+      // extras — dynamic: scans all items from config so new extras are auto-included
+      extras: this._buildExtrasState(),
       // digital signature preference
       digSig: document.getElementById('chk-digital-sig')?.checked ?? true,
     };
@@ -792,14 +839,8 @@ class QuoteUI {
       const field = document.getElementById('customInvField');
       if (field) field.style.display = 'block';
     }
-    const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val || false; };
-    setChk('chk-ev', s.exEv); setChk('chk-monitoring', s.exMonitor);
-    setChk('chk-premium', s.exPremium);
-    setChk('chk-drilling', s.exDrilling); setChk('chk-wifi', s.exWifi);
-    setChk('chk-support',  s.exSupport);  setChk('chk-inspector', s.exInspector);
-    set('price-ev', s.exEvP); set('price-monitoring', s.exMonitorP);
-    set('price-drilling', s.exDrillingP); set('price-wifi', s.exWifiP);
-    set('price-support',  s.exSupportP);  set('price-inspector', s.exInspectorP);
+    // extras — dynamic restore (with backward compat for old format)
+    this._restoreExtrasState(this._migrateOldExtrasState(s));
     // Store digital signature preference for client mode
     this._digitalSigPref = s.digSig !== undefined ? s.digSig : true;
   }
