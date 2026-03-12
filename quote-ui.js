@@ -685,7 +685,7 @@ class QuoteUI {
     // Post-signature flow: save → notify → confirm → lock
     const docId = window.location.pathname.split('/q/')[1]?.split('/')[0] || '';
     if (docId && typeof PostSignService !== 'undefined') {
-      const clientEmail = document.getElementById('clientEmail')?.value?.trim() || '';
+      const clientEmail = document.getElementById('clientEmail')?.value?.trim() || this._clientEmail || '';
       const postResult = await PostSignService.process({
         docType:   'quote',
         docId,
@@ -840,6 +840,7 @@ class QuoteUI {
     return {
       name: vals.name, phone: vals.phone, addr: vals.address,
       cid: vals.cid, date: vals.date, note: vals.note, city: vals.city,
+      email: document.getElementById('clientEmail')?.value?.trim() || '',
       kw: get('sysKW'), acKW: get('sysAC'), ppkw: get('ppkw'),
       batt: get('batteries'), panelW: get('panelW'), panelCt: get('panelCount'),
       roofArea: get('roofArea'), hours: get('hoursPerKw'), infl: get('inflationPct'),
@@ -875,6 +876,9 @@ class QuoteUI {
     set('premiumPanelPrice', s.premP); set('usdRate', s.usdRate);
     set('concretePerKw', s.concP); set('meterPanelPrice', s.meterP);
     set('evModel', s.evM);
+    set('clientEmail', s.email);
+    // Store email for client-side use (e.g. post-sign)
+    this._clientEmail = s.email || '';
     if (s.city) this._selectCity(s.city);
     const radio = (name, val) => {
       if (!val) return;
