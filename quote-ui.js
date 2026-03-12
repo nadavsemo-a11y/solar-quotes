@@ -681,7 +681,56 @@ class QuoteUI {
 
     this._clearSigErrors();
     this._showSigSuccess(result.signature);
-    // כאן אפשר לשלוח ל-Worker: await this.storage.saveSignature(result.signature);
+
+    // Post-signature flow: save → notify → confirm → lock
+    const docId = window.location.pathname.split('/q/')[1]?.split('/')[0] || '';
+    if (docId && typeof PostSignService !== 'undefined') {
+      const clientEmail = document.getElementById('clientEmail')?.value?.trim() || '';
+      const postResult = await PostSignService.process({
+        docType:   'quote',
+        docId,
+        signature: result.signature,
+        emailData: {
+          clientName:  vals.name,
+          clientEmail,
+          docUrl:      window.location.href,
+        },
+        onLock: () => this._lockDocument(),
+        onProgress: (step, ok, err) => {
+          if (step === 'save' && ok === false) {
+            EmailService.showToast('⚠️ שגיאה בשמירת החתימה: ' + (err || ''), true);
+          }
+        },
+      });
+
+      if (postResult.saved) {
+        EmailService.showToast('✅ החתימה נשמרה בהצלחה');
+      }
+    }
+  }
+
+  /** Lock document after signing — disable all interactive elements */
+  _lockDocument() {
+    // Disable upgrade toggles
+    document.querySelectorAll('[data-upgrade-toggle]').forEach(el => {
+      el.disabled = true;
+      el.closest('.upgrade-toggle-row')?.style.setProperty('pointer-events', 'none');
+    });
+    // Disable plan selector
+    document.querySelectorAll('#quotePlanSelector > div').forEach(el => {
+      el.style.pointerEvents = 'none';
+      el.style.opacity = '0.5';
+    });
+    // Hide signature form, show locked badge
+    const sigForm = document.getElementById('sigForm');
+    if (sigForm) sigForm.style.display = 'none';
+    const sigSection = document.getElementById('sig-section');
+    if (sigSection) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'text-align:center;padding:20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;margin-top:12px;';
+      badge.innerHTML = '<div style="font-size:28px;margin-bottom:8px">🔒</div><div style="font-size:16px;font-weight:800;color:#166534">מסמך זה נחתם ונעול</div>';
+      sigSection.appendChild(badge);
+    }
   }
 
   _showSigErrors(errors) {
@@ -851,6 +900,7 @@ class QuoteUI {
     this._setFormFromState(state);
     this._updatePreview();
     this.generateQuote(true); // client mode
+    this._checkIfSigned();
   }
 
   _tryLoadFromUrl2() {
@@ -859,6 +909,18 @@ class QuoteUI {
     this._setFormFromState(state);
     this._updatePreview();
     this.generateQuote(true);
+    this._checkIfSigned();
+  }
+
+  /** Check if this document was already signed and lock if so */
+  async _checkIfSigned() {
+    if (typeof PostSignService === 'undefined') return;
+    const docId = window.location.pathname.split('/q/')[1]?.split('/')[0] || '';
+    if (!docId) return;
+    const result = await PostSignService.checkSignature(docId);
+    if (result.signed) {
+      this._lockDocument();
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════
