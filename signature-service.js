@@ -31,6 +31,8 @@ class SignatureService {
     this._ctx        = null;
     this._drawing    = false;
     this._hasSig     = false;
+    this._lastPoint  = null;
+    this._points     = [];
 
     this._strokeColor = options.strokeColor || '#0A1628';
     this._lineWidth   = options.lineWidth   || 2.5;
@@ -90,21 +92,46 @@ class SignatureService {
 
   _onStart(e) {
     this._drawing = true;
-    this._ctx.beginPath();
     const p = this._getPos(e);
-    this._ctx.moveTo(p.x, p.y);
+    this._points = [p];
+    this._lastPoint = p;
   }
 
   _onMove(e) {
     if (!this._drawing) return;
     const p = this._getPos(e);
-    this._ctx.lineTo(p.x, p.y);
-    this._ctx.stroke();
+    this._points.push(p);
+
+    // Use quadratic curves for smooth interpolation
+    if (this._points.length >= 3) {
+      const ctx = this._ctx;
+      const len = this._points.length;
+      const p0 = this._points[len - 3];
+      const p1 = this._points[len - 2];
+      const p2 = this._points[len - 1];
+      const mid1 = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
+      const mid2 = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      ctx.beginPath();
+      ctx.moveTo(mid1.x, mid1.y);
+      ctx.quadraticCurveTo(p1.x, p1.y, mid2.x, mid2.y);
+      ctx.stroke();
+    } else if (this._points.length === 2) {
+      // First segment — simple line
+      const ctx = this._ctx;
+      ctx.beginPath();
+      ctx.moveTo(this._points[0].x, this._points[0].y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
+
+    this._lastPoint = p;
     this._hasSig = true;
   }
 
   _onEnd() {
     this._drawing = false;
+    this._points = [];
+    this._lastPoint = null;
   }
 
   // ── ממשק ציבורי ──────────────────────────────────────────────────────────
