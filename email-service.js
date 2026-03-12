@@ -6,7 +6,7 @@
 
 class EmailService {
 
-  static ENDPOINT = 'https://script.google.com/macros/s/AKfycbzPIhQe9LiK1fAgrfQ7ms2QjuyUlkrRVzKlRDq-I_xqbLe1Pt9gO69gt5eYy0FMloK7MQ/exec';
+  static ENDPOINT = 'https://s-a.gs/q/email';
   static COMPANY_EMAIL = 'nadav.s@s-a.gs';
 
   /**
@@ -38,14 +38,21 @@ class EmailService {
 
       const resp = await fetch(EmailService.ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' }, // Apps Script CORS workaround
-        body: JSON.stringify(payload),
-        mode: 'no-cors' // Apps Script doesn't support CORS headers
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
 
-      // no-cors means we can't read the response, but the request was sent
-      // If we need to verify, we'd need a CORS proxy or Apps Script JSONP
-      return { success: true, sentTo: [opts.clientEmail, EmailService.COMPANY_EMAIL].filter(Boolean) };
+      if (!resp.ok) {
+        return { success: false, error: `HTTP ${resp.status}` };
+      }
+
+      const result = await resp.json().catch(() => null);
+
+      if (result && result.success) {
+        return { success: true, sentTo: result.sentTo || [opts.clientEmail, EmailService.COMPANY_EMAIL].filter(Boolean) };
+      }
+
+      return { success: false, error: result?.error || 'תגובה לא תקינה מהשרת' };
 
     } catch (err) {
       console.error('EmailService: failed to send', err);
