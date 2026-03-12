@@ -946,12 +946,10 @@ class QuoteUI {
     const concreteLine = d.roof === 'בטון' ? `<li>תוספת גג בטון — <strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong> כלולה במחיר</li>` : '';
     // Split extras into upgrades vs potential costs
     const allExtras = (d.extras || []);
-    const selectedUpgrades = allExtras.filter(e => e.checked && e.category === 'upgrade');
+    // Show ALL upgrade-category items in quote (customer toggles on/off)
+    const allUpgrades = allExtras.filter(e => e.category === 'upgrade' || (!e.category && e.checked));
     const selectedPotential = allExtras.filter(e => e.checked && e.category === 'potential');
-    // Backward compat: extras without category are treated as upgrades
-    const uncategorizedExtras = allExtras.filter(e => e.checked && !e.category);
-    const allUpgrades = [...selectedUpgrades, ...uncategorizedExtras];
-    const upgradesTotal = allUpgrades.reduce((s, e) => s + e.price, 0);
+    const upgradesTotal = allUpgrades.filter(e => e.checked).reduce((s, e) => s + e.price, 0);
     const totalWithUpgrades = d.price + upgradesTotal;
     // Capture digital signature preference — in client mode use stored pref, in portal mode read checkbox
     const showDigitalSig = clientMode
@@ -1157,12 +1155,12 @@ class QuoteUI {
     <div style="font-size:13px;color:var(--gray);margin-bottom:12px">ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:</div>
     <div id="upgrades-list">
       ${allUpgrades.map(e => `
-      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-batt-first="${d.battFirstPrice || 8900}" data-batt-extra="${d.battExtraPrice || 6500}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:0.5">
+      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-batt-first="${d.battFirstPrice || 8900}" data-batt-extra="${d.battExtraPrice || 6500}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:${e.checked ? '1' : '0.5'}">
         <div style="display:flex;align-items:center;gap:10px;flex:1">
           <label class="toggle-switch" style="position:relative;width:44px;height:24px;flex-shrink:0">
-            <input type="checkbox" data-upgrade-toggle="${e.id}" onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
-            <span style="position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:24px;transition:0.3s"></span>
-            <span style="position:absolute;top:3px;right:20px;width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
+            <input type="checkbox" data-upgrade-toggle="${e.id}" ${e.checked ? 'checked' : ''} onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
+            <span style="position:absolute;cursor:pointer;inset:0;background:${e.checked ? '#F4A200' : '#cbd5e1'};border-radius:24px;transition:0.3s"></span>
+            <span style="position:absolute;top:3px;${e.checked ? 'right:3px' : 'right:20px'};width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
           </label>
           <span style="font-size:14px;font-weight:600;color:var(--sky)">${e.label}</span>
           ${e.calcType === 'batteries' ? `
@@ -1181,7 +1179,7 @@ class QuoteUI {
     </div>
     <div style="display:flex;justify-content:space-between;padding:12px 14px;font-weight:800;font-size:15px;color:var(--sky)">
       <span>סה"כ שדרוגים</span>
-      <span id="upgrades-total">₪0</span>
+      <span id="upgrades-total">₪${fmt(upgradesTotal)}</span>
     </div>
   </div>` : ''}
 
@@ -1267,7 +1265,7 @@ class QuoteUI {
       ${concreteLine ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>תוספת גג בטון</span><strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong></li>` : ''}
       ${d.batt > 0 ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מצברי אגירה ${d.batt * 5} קו"ט (${d.batt} יח')</span><strong>₪${fmt(d.batteryPrice)}</strong></li>` : ''}
       ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
-      ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:none;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
+      ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:${e.checked ? 'flex' : 'none'};justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
       <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(d.price)}</span></li>
       <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span id="project-total-vat-display">₪${fmt(Math.round(d.price * VAT))}</span></li>
     </ul>
