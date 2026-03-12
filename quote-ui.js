@@ -1503,8 +1503,7 @@ class QuoteUI {
     win.document.write(html);
     win.document.close();
 
-    // Send email copy to client + company
-    this._sendQuoteEmail(vals, d);
+    // Email is sent explicitly via "שלח במייל" button — not automatically on print
   }
 
   /** Send quote email via EmailService module */
