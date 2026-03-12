@@ -58,14 +58,23 @@ const TemplateEngine = (() => {
 
   // ── עלויות נוספות אפשריות ─────────────────────────────────────────────
   function buildExtrasSection(extras, basePrice) {
-    const checked = (extras || []).filter(e => e.checked);
-    if (checked.length === 0) return '';
-    const extrasTotal = checked.reduce((s, e) => s + e.price, 0);
-    const projectTotal = basePrice + extrasTotal;
-    const rows = checked.map(e =>
-      `<tr><td>${e.label}</td><td class="num">₪${fmt(e.price)}</td></tr>`
-    ).join('\n    ');
-    return `
+    // שדרוגים — רק פריטים שנבחרו ע"י הלקוח (לא פוטנציאליים)
+    const upgrades  = (extras || []).filter(e => e.checked && e.category !== 'potential');
+    // הוצאות פוטנציאליות — לידיעה בלבד, לא מתווספות למחיר
+    const potential = (extras || []).filter(e => e.checked && e.category === 'potential');
+
+    if (upgrades.length === 0 && potential.length === 0) return '';
+
+    let html = '';
+
+    // ── טבלת שדרוגים (מתווספים למחיר) ──
+    if (upgrades.length > 0) {
+      const upgradesTotal = upgrades.reduce((s, e) => s + e.price, 0);
+      const projectTotal  = basePrice + upgradesTotal;
+      const rows = upgrades.map(e =>
+        `<tr><td>${e.label}</td><td class="num">₪${fmt(e.price)}</td></tr>`
+      ).join('\n    ');
+      html += `
 <div class="section">
   <h2>תוספות ושדרוגים</h2>
   <div class="extras-note">הפריטים הבאים נבחרו כתוספות לפרויקט:</div>
@@ -74,7 +83,7 @@ const TemplateEngine = (() => {
     ${rows}
     <tr class="total-row">
       <td><strong>סה"כ תוספות</strong></td>
-      <td class="num"><strong>₪${fmt(extrasTotal)}</strong></td>
+      <td class="num"><strong>₪${fmt(upgradesTotal)}</strong></td>
     </tr>
   </table>
   <div style="background:#eef3f9;border:1px solid #b8d4f0;border-radius:8px;padding:12px 14px;margin-top:10px;text-align:center">
@@ -82,6 +91,25 @@ const TemplateEngine = (() => {
     <div style="font-size:14pt;font-weight:800;color:#1a3a5c;margin-top:4px">₪${fmt(projectTotal)}</div>
   </div>
 </div>`;
+    }
+
+    // ── טבלת הוצאות פוטנציאליות (לידיעה בלבד) ──
+    if (potential.length > 0) {
+      const potRows = potential.map(e =>
+        `<tr><td>${e.label}</td><td class="num">₪${fmt(e.price)}</td></tr>`
+      ).join('\n    ');
+      html += `
+<div class="section">
+  <h2>הוצאות פוטנציאליות</h2>
+  <div class="extras-note">העלויות הבאות עשויות לחול בהתאם לצורך בשטח — לידיעה בלבד, אינן כלולות במחיר ההצעה:</div>
+  <table>
+    <tr><th>פריט</th><th style="text-align:left">עלות משוערת</th></tr>
+    ${potRows}
+  </table>
+</div>`;
+    }
+
+    return html;
   }
 
   // ── הערה אישית ────────────────────────────────────────────────────────
