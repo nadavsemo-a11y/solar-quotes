@@ -601,11 +601,39 @@ class QuoteUI {
     window.open(waUrl, '_blank');
   }
 
-  shareEmail() {
-    const url    = document.getElementById('share-url')?.value;
-    const vals   = this._getFormValues();
-    const mailto = this.storage.buildEmailUrl(url, vals.name, vals.kw);
-    window.open(mailto, '_blank');
+  async shareEmail() {
+    const url  = document.getElementById('share-url')?.value;
+    const vals = this._getFormValues();
+    const clientMail = document.getElementById('clientEmail')?.value?.trim() || '';
+
+    if (!clientMail) {
+      EmailService.showToast('⚠️ יש למלא אימייל לקוח בטופס', true);
+      return;
+    }
+
+    const d = this.quoteData || {};
+    const fmt = n => Math.round(n).toLocaleString('he-IL');
+
+    try {
+      const result = await EmailService.sendQuoteEmail({
+        clientName:  vals.name,
+        clientEmail: clientMail,
+        quoteUrl:    url || '',
+        systemKW:    String(d.dcKW || vals.kw || ''),
+        totalPrice:  fmt(d.price || 0),
+        quoteDate:   vals.date ? new Date(vals.date).toLocaleDateString('he-IL') : '',
+        city:        vals.city || d.city || '',
+      });
+
+      if (result.success) {
+        EmailService.showToast('📧 ההצעה נשלחה ל-' + clientMail);
+      } else {
+        EmailService.showToast('⚠️ שגיאה בשליחה: ' + (result.error || ''), true);
+      }
+    } catch (err) {
+      console.error('shareEmail failed:', err);
+      EmailService.showToast('⚠️ שגיאה בשליחת מייל', true);
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1383,11 +1411,7 @@ class QuoteUI {
     if (typeof EmailService === 'undefined') return;
     const fmt = n => Math.round(n).toLocaleString('he-IL');
     const quoteUrl = document.getElementById('share-url')?.value || '';
-    const clientEmail = vals.phone ? '' : ''; // client email from form — see below
-
-    // Try to get client email from form (if field exists)
-    const emailInput = document.getElementById('clientEmail');
-    const clientMail = emailInput?.value?.trim() || '';
+    const clientMail = document.getElementById('clientEmail')?.value?.trim() || '';
 
     try {
       const result = await EmailService.sendQuoteEmail({
