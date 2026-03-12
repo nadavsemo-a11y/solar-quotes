@@ -285,7 +285,7 @@ class QuoteUI {
     ];
     return allItems.map(item => {
       const el = document.getElementById('chk-' + item.id);
-      const checked = el ? el.checked : true; // if no checkbox in portal, include by default
+      const checked = el ? el.checked : false; // no checkbox = not selected by client
       let price;
       let displayNote = '';
       switch (item.calcType) {
