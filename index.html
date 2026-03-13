@@ -1149,7 +1149,7 @@ function copyShareUrl()                { _quoteUI && _quoteUI.copyShareUrl(); }
 function openShareUrl()                { _quoteUI && _quoteUI.openShareUrl(); }
 function shareWhatsApp()               { _quoteUI && _quoteUI.shareWhatsApp(); }
 function shareEmail()                  { _quoteUI && _quoteUI.shareEmail(); }
-function submitSig()                   { _quoteUI && _quoteUI.submitSig(); }
+function submitSig()                   { _quoteUI && _quoteUI.submitSig().catch(e => { console.error('[SIG] uncaught:', e); alert('שגיאה: ' + e.message); }); }
 function clearSigCanvas()              { _quoteUI && _quoteUI.clearSigCanvas(); }
 function openPrintDocument()           { _quoteUI && _quoteUI.openPrintDocument(); }
 function selectCity(name)              { _quoteUI && _quoteUI._selectCity(name); }

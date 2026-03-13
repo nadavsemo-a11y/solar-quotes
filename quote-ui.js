@@ -661,6 +661,7 @@ class QuoteUI {
   }
 
   async submitSig() {
+    console.log('[SIG] submitSig() called');
     const name   = document.getElementById('sigName')?.value.trim()  || '';
     const idNum  = document.getElementById('sigID')?.value.trim()    || '';
     const agreed = document.getElementById('sigAgree')?.checked      || false;
@@ -674,6 +675,7 @@ class QuoteUI {
       clientData:    client,
     });
 
+    console.log('[SIG] collect result:', result.ok, result.errors);
     if (!result.ok) {
       this._showSigErrors(result.errors);
       return;
@@ -681,31 +683,45 @@ class QuoteUI {
 
     this._clearSigErrors();
     this._showSigSuccess(result.signature);
+    console.log('[SIG] showSigSuccess done');
 
     // Post-signature flow: save → notify → confirm → lock
     const docId = window.location.pathname.split('/q/')[1]?.split('/')[0] || '';
+    console.log('[SIG] docId:', docId, 'PostSignService:', typeof PostSignService);
     if (docId && typeof PostSignService !== 'undefined') {
-      const clientEmail = document.getElementById('clientEmail')?.value?.trim() || this._clientEmail || '';
-      const postResult = await PostSignService.process({
-        docType:   'quote',
-        docId,
-        signature: result.signature,
-        emailData: {
-          clientName:  vals.name,
-          clientEmail,
-          docUrl:      window.location.href,
-        },
-        onLock: () => this._lockDocument(),
-        onProgress: (step, ok, err) => {
-          if (step === 'save' && ok === false) {
-            EmailService.showToast('⚠️ שגיאה בשמירת החתימה: ' + (err || ''), true);
-          }
-        },
-      });
+      try {
+        const clientEmail = document.getElementById('clientEmail')?.value?.trim() || this._clientEmail || '';
+        console.log('[SIG] calling PostSignService.process, email:', clientEmail);
+        const postResult = await PostSignService.process({
+          docType:   'quote',
+          docId,
+          signature: result.signature,
+          emailData: {
+            clientName:  vals.name,
+            clientEmail,
+            docUrl:      window.location.href,
+          },
+          onLock: () => this._lockDocument(),
+          onProgress: (step, ok, err) => {
+            console.log(`[SIG] progress: ${step} ok=${ok}`, err || '');
+            if (ok === false) {
+              console.error(`PostSign ${step} failed:`, err);
+            }
+          },
+        });
 
-      if (postResult.saved) {
-        EmailService.showToast('✅ החתימה נשמרה בהצלחה');
+        console.log('[SIG] postResult:', JSON.stringify(postResult));
+        if (postResult.saved) {
+          EmailService.showToast('✅ החתימה נשמרה בהצלחה');
+        } else {
+          EmailService.showToast('⚠️ שגיאה בשמירת החתימה', true);
+        }
+      } catch (err) {
+        console.error('[SIG] PostSign error:', err);
+        EmailService.showToast('⚠️ שגיאה בתהליך החתימה: ' + err.message, true);
       }
+    } else {
+      console.warn('[SIG] PostSign skipped — docId:', docId, 'PostSignService:', typeof PostSignService);
     }
   }
 
