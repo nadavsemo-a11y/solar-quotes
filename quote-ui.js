@@ -661,7 +661,7 @@ class QuoteUI {
   }
 
   async submitSig() {
-    console.log('[SIG] submitSig() called');
+    alert('DEBUG 1: submitSig started');
     const name   = document.getElementById('sigName')?.value.trim()  || '';
     const idNum  = document.getElementById('sigID')?.value.trim()    || '';
     const agreed = document.getElementById('sigAgree')?.checked      || false;
@@ -675,7 +675,6 @@ class QuoteUI {
       clientData:    client,
     });
 
-    console.log('[SIG] collect result:', result.ok, result.errors);
     if (!result.ok) {
       this._showSigErrors(result.errors);
       return;
@@ -683,15 +682,16 @@ class QuoteUI {
 
     this._clearSigErrors();
     this._showSigSuccess(result.signature);
-    console.log('[SIG] showSigSuccess done');
+    alert('DEBUG 2: signature collected OK');
 
     // Post-signature flow: save → notify → confirm → lock
     const docId = window.location.pathname.split('/q/')[1]?.split('/')[0] || '';
-    console.log('[SIG] docId:', docId, 'PostSignService:', typeof PostSignService);
-    if (docId && typeof PostSignService !== 'undefined') {
+    const hasPSS = typeof PostSignService !== 'undefined';
+    alert('DEBUG 3: docId=' + docId + ' PostSignService=' + hasPSS);
+    if (docId && hasPSS) {
       try {
         const clientEmail = document.getElementById('clientEmail')?.value?.trim() || this._clientEmail || '';
-        console.log('[SIG] calling PostSignService.process, email:', clientEmail);
+        alert('DEBUG 4: calling PostSignService.process, email=' + clientEmail);
         const postResult = await PostSignService.process({
           docType:   'quote',
           docId,
@@ -704,20 +704,17 @@ class QuoteUI {
           onLock: () => this._lockDocument(),
           onProgress: (step, ok, err) => {
             console.log(`[SIG] progress: ${step} ok=${ok}`, err || '');
-            if (ok === false) {
-              console.error(`PostSign ${step} failed:`, err);
-            }
           },
         });
 
-        console.log('[SIG] postResult:', JSON.stringify(postResult));
+        alert('DEBUG 5: result=' + JSON.stringify(postResult));
         if (postResult.saved) {
           EmailService.showToast('✅ החתימה נשמרה בהצלחה');
         } else {
           EmailService.showToast('⚠️ שגיאה בשמירת החתימה', true);
         }
       } catch (err) {
-        console.error('[SIG] PostSign error:', err);
+        alert('DEBUG ERROR: ' + err.message);
         EmailService.showToast('⚠️ שגיאה בתהליך החתימה: ' + err.message, true);
       }
     } else {
