@@ -1109,22 +1109,8 @@ class QuoteUI {
     <div class="stat-card"><div class="stat-icon ic-g">🔆</div><span class="stat-val">${fmt(d.annualKwh)}</span><div class="stat-unit">קו"ט לשנה</div><div class="stat-label">ייצור אנרגיה</div></div>
   </div>
 
-  <!-- INCLUDES -->
-  <div class="sec">
-    <div class="sec-title"><span class="bar"></span>ההצעה כוללת</div>
-    <div class="inc-grid">
-      <div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">פאנלים Tier 1 בניצולת גבוהה עם אחריות 30 שנה</div></div>
-      <div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">ממיר ${d.inv} איכותי עם אחריות 10 שנים</div></div>
-      <div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">טיפול מלא ברישוי ובירוקרטיה מול הרשויות</div></div>
-      <div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">תכנון הנדסי מקצועי ומפורט + הדמיה ממוחשבת</div></div>
-      <div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">התקנה מהירה וקפדנית על איכות ונראות</div></div>
-      <div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">אפליקציה לניטור ביצועי המערכת בסמארטפון</div></div>
-      ${battInc}${meterInc}
-    </div>
-  </div>
-
-  <!-- CONTENT: מבוא, שירות אישי, דגשים, סביבה -->
-  ${this._buildContentSections(d, ['מבוא', 'שירות אישי ומקצועי', 'דגשים מקצועיים', 'התועלת לסביבה'])}
+  <!-- CONTENT: pre-financial sections (from ContentManager: includes + paragraphs) -->
+  ${ContentManager.renderRegion('pre-financial', d, { extraIncludeItems: (battInc || '') + (meterInc || '') })}
 
   <!-- FINANCIALS -->
   <div class="sec">
@@ -1230,8 +1216,8 @@ class QuoteUI {
   ${allUpgrades.length > 0 ? `
   <!-- UPGRADES — customer can toggle (near plan selector) -->
   <div class="sec">
-    <div class="sec-title"><span class="bar"></span>שדרוגים (אופציונלי)</div>
-    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:</div>
+    <div class="sec-title"><span class="bar"></span>${ContentManager.getInlineText('upgrades-intro', 'upgrades-title') || 'שדרוגים (אופציונלי)'}</div>
+    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">${ContentManager.getInlineText('upgrades-intro', 'upgrades-subtitle') || 'ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:'}</div>
     <div id="upgrades-list">
       ${allUpgrades.map(e => `
       <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-batt-first="${d.battFirstPrice || 8900}" data-batt-extra="${d.battExtraPrice || 6500}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:${e.checked ? '1' : '0.5'}">
@@ -1262,47 +1248,8 @@ class QuoteUI {
     </div>
   </div>` : ''}
 
-  <!-- EQUIPMENT & WARRANTY -->
-  <div class="sec">
-    <div class="sec-title"><span class="bar"></span>מפרט ציוד ואחריות</div>
-    <div class="warranty-grid">
-      <div class="warranty-card">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <div class="warranty-icon">☀️</div>
-          <div>
-            <div class="warranty-title">פאנלים סולאריים</div>
-            <div class="warranty-desc">${d.panelCount} פאנלים × ${d.panelW}W — Tier 1<br>אחריות יצרן: <strong>30 שנה</strong></div>
-          </div>
-        </div>
-      </div>
-      <div class="warranty-card">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <div class="warranty-icon">⚡</div>
-          <div>
-            <div class="warranty-title">ממיר (אינוורטר)</div>
-            <div class="warranty-desc">${d.inv}<br>אחריות יצרן: <strong>10 שנים</strong></div>
-          </div>
-        </div>
-      </div>
-      <div class="warranty-card">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <div class="warranty-icon">🔧</div>
-          <div>
-            <div class="warranty-title">עבודת התקנה</div>
-            <div class="warranty-desc">התקנה מקצועית על ידי צוות מוסמך<br>אחריות: <strong>5 שנים</strong></div>
-          </div>
-        </div>
-      </div>
-      <div class="warranty-card">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <div class="warranty-icon">🛡️</div>
-          <div>
-            <div class="warranty-title">קונסטרוקציה ותשתיות</div>
-            <div class="warranty-desc">נירוסטה, ברגים אירופאים, הגנות ברקים DC<br>ציוד מיתוג ABB (שוויץ)</div>
-          </div>
-        </div>
-      </div>
-      ${d.batt > 0 ? `<div class="warranty-card">
+  <!-- CONTENT: post-financial sections (warranty, spec, process, steps, etc. from ContentManager) -->
+  ${ContentManager.renderRegion('post-financial', d, { extraBatteryCard: d.batt > 0 ? `<div class="warranty-card">
         <div style="display:flex;align-items:flex-start;gap:12px">
           <div class="warranty-icon">🔋</div>
           <div>
@@ -1310,31 +1257,7 @@ class QuoteUI {
             <div class="warranty-desc">${d.batt} × 5 קו"ט (${d.batt * 5} קו"ט סה"כ)<br>אחריות יצרן: <strong>10 שנים</strong></div>
           </div>
         </div>
-      </div>` : ''}
-    </div>
-  </div>
-
-  <!-- CONTENT: מפרט טכני, פרטים נוספים, עקרונות התכנון -->
-  ${this._buildContentSections(d, ['מפרט טכני', 'פרטים נוספים על הפרויקט', 'עקרונות התכנון'])}
-
-  <!-- INSTALLATION PROCESS -->
-  <div class="sec">
-    <div class="sec-title"><span class="bar"></span>תהליך ההתקנה</div>
-    <div class="steps">
-      <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">חתימה על ההסכם</div><div class="step-desc">חתימה דיגיטלית, תשלום מקדמה ותחילת הליך הרישוי</div></div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">תכנון הנדסי</div><div class="step-desc">סקר גג, הדמיה תלת-ממדית ותוכניות ביצוע מפורטות</div></div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">רישוי ואישורים</div><div class="step-desc">הגשת בקשה לרשות החשמל, אישור חיבור מחברת החשמל</div></div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">התקנה</div><div class="step-desc">התקנת קונסטרוקציה, פאנלים, אינוורטר וחיווט — יום עבודה אחד</div></div></div>
-      <div class="step"><div class="step-num">5</div><div class="step-body"><div class="step-title">בדיקות וחיבור</div><div class="step-desc">בדיקת חשמלאי, חיבור לרשת החשמל והפעלת מערכת הניטור</div></div></div>
-    </div>
-    <div style="font-size:12px;color:var(--gray);margin-top:10px">* לוח זמנים צפוי: עד 60 ימי עסקים מחתימת ההסכם</div>
-  </div>
-
-  <!-- CONTENT: סדר הפעולות לאחר חתימת ההסכם -->
-  ${this._buildContentSections(d, ['סדר הפעולות לאחר חתימת ההסכם'])}
-
-  <!-- CONTENT: אחריות, הערות והגבלות -->
-  ${this._buildContentSections(d, ['אחריות', 'הערות והגבלות'])}
+      </div>` : '' })}
 
   <!-- PRICE BREAKDOWN -->
   <div class="sec">
@@ -1353,8 +1276,8 @@ class QuoteUI {
   ${selectedPotential.length > 0 ? `
   <!-- POTENTIAL ADDITIONAL COSTS — informational only, NOT in project total -->
   <div class="sec">
-    <div class="sec-title"><span class="bar"></span>הוצאות פוטנציאליות נוספות</div>
-    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">הוצאות אלו עשויות להידרש בהתאם לתנאי השטח. <strong>אינן כלולות בעלות הפרויקט</strong> — במידה ויידרש, הלקוח יחויב בהתאם:</div>
+    <div class="sec-title"><span class="bar"></span>${ContentManager.getInlineText('potential-intro', 'potential-title') || 'הוצאות פוטנציאליות נוספות'}</div>
+    <div style="font-size:13px;color:var(--gray);margin-bottom:12px">${ContentManager.getInlineText('potential-intro', 'potential-subtitle') || 'הוצאות אלו עשויות להידרש בהתאם לתנאי השטח. <strong>אינן כלולות בעלות הפרויקט</strong> — במידה ויידרש, הלקוח יחויב בהתאם:'}</div>
     <table style="width:100%;border-collapse:collapse">
       <thead><tr>
         <th style="text-align:right;padding:8px 10px;border-bottom:2px solid var(--border);font-size:13px;color:var(--gray)">פריט</th>
@@ -1373,28 +1296,18 @@ class QuoteUI {
     <table class="payment-table">
       <thead><tr><th>שלב התשלום</th><th>תיאור</th><th>סכום (₪)</th></tr></thead>
       <tbody>
-        <tr><td>מקדמה</td><td>בחתימת ההסכם</td><td class="amount-col" id="pay-dep">₪${fmt(d.dep)}</td></tr>
-        <tr><td>השלמה ל-35%</td><td>בקבלת תוכניות ביצוע</td><td class="amount-col" id="pay-p2">₪${fmt(d.p2)}</td></tr>
-        <tr><td>השלמה ל-95%</td><td>7 ימי עסקים בטרם אספקת פאנלים לאתר</td><td class="amount-col" id="pay-p3">₪${fmt(d.p3)}</td></tr>
-        <tr><td>5% אחרון</td><td>ביום החיבור לחברת החשמל</td><td class="amount-col" id="pay-p4">₪${fmt(d.p4)}</td></tr>
+        <tr><td>${(ContentManager.getPaymentDescriptions()['pay-1'] || {}).title || 'מקדמה'}</td><td>${(ContentManager.getPaymentDescriptions()['pay-1'] || {}).text || 'בחתימת ההסכם'}</td><td class="amount-col" id="pay-dep">₪${fmt(d.dep)}</td></tr>
+        <tr><td>${(ContentManager.getPaymentDescriptions()['pay-2'] || {}).title || 'השלמה ל-35%'}</td><td>${(ContentManager.getPaymentDescriptions()['pay-2'] || {}).text || 'בקבלת תוכניות ביצוע'}</td><td class="amount-col" id="pay-p2">₪${fmt(d.p2)}</td></tr>
+        <tr><td>${(ContentManager.getPaymentDescriptions()['pay-3'] || {}).title || 'השלמה ל-95%'}</td><td>${(ContentManager.getPaymentDescriptions()['pay-3'] || {}).text || '7 ימי עסקים בטרם אספקת פאנלים לאתר'}</td><td class="amount-col" id="pay-p3">₪${fmt(d.p3)}</td></tr>
+        <tr><td>${(ContentManager.getPaymentDescriptions()['pay-4'] || {}).title || '5% אחרון'}</td><td>${(ContentManager.getPaymentDescriptions()['pay-4'] || {}).text || 'ביום החיבור לחברת החשמל'}</td><td class="amount-col" id="pay-p4">₪${fmt(d.p4)}</td></tr>
         <tr class="total-row"><td colspan="2"><strong>סה"כ</strong></td><td class="amount-col" id="pay-total"><strong>₪${fmt(d.price)}</strong></td></tr>
       </tbody>
     </table>
     <p class="vat-note" id="pay-vat-note">* לכל הסכומים הנ"ל יצורף מע"מ כחוק (סה"כ כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))})</p>
   </div>
 
-  <!-- GENERAL TERMS -->
-  <div class="sec" style="font-size:13px;color:var(--gray);line-height:1.8">
-    <div class="sec-title"><span class="bar"></span>תנאים כלליים</div>
-    <div>
-      1. הצעה זו בתוקף למשך 14 יום מתאריך הנפקתה.<br>
-      2. לכל הסכומים יצורף מע"מ כחוק (18%).<br>
-      3. כל שינוי בהסכם ייעשה בכתב ובהסכמת שני הצדדים.<br>
-      4. הסכם זה כפוף לדין הישראלי וסמכות השיפוט לבתי המשפט בישראל.<br>
-      5. על הלקוח לוודא גישה תקינה לגג וחיבור חשמלי תקני.<br>
-      6. ההצעה אינה כוללת: עבודות חשמל בלוח הראשי (ככל שנדרשות), חיזוק גג, גידור או פיגומים חיצוניים.
-    </div>
-  </div>
+  <!-- GENERAL TERMS + post-payment sections (from ContentManager) -->
+  ${ContentManager.renderRegion('post-payment', d)}
 
   ${noteBox}
 
@@ -1430,61 +1343,33 @@ class QuoteUI {
    *   EXCLUSIONS_SECTION_HTML ← הערות והגבלות
    */
   _buildPrintContentSections(d) {
-    const fmt = n => Math.round(n).toLocaleString('he-IL');
-    const allIds = Object.keys(QuoteUI.CONTENT_PARAGRAPHS);
-    let selectedIds = allIds; // default: all selected
-    try {
-      const saved = localStorage.getItem('semo-quote-content');
-      if (saved) selectedIds = JSON.parse(saved);
-    } catch (e) { /* use default */ }
+    // Uses ContentManager to get content blocks for the print template
+    const data = ContentManager.load();
+    const paragraphSectionIds = ['intro', 'service', 'focus', 'environment',
+      'spec', 'project-details', 'design', 'warranty', 'steps', 'notes'];
 
-    if (selectedIds.length === 0) return null;
-
-    // Template placeholder values
-    const co2Tons = ((d.annualKwh * 0.75) / 1000).toFixed(1);
-    const forestDunam = ((d.annualKwh / 1000) * 3.5).toFixed(1);
-    const treeCount = Math.round(parseFloat(forestDunam) * 10);
-    const carKm = fmt(Math.round(d.annualKwh * 3.8));
-    const placeholders = {
-      '{{annualKwh}}': fmt(d.annualKwh),
-      '{{co2Tons}}': co2Tons,
-      '{{forestDunam}}': forestDunam,
-      '{{treeCount}}': String(treeCount),
-      '{{carKm}}': carKm,
-      '{{panelW}}': String(d.panelW),
-      '{{inv}}': d.inv,
-    };
-
-    // Group selected paragraphs by section
-    const grouped = {};
-    for (const id of selectedIds) {
-      const para = QuoteUI.CONTENT_PARAGRAPHS[id];
-      if (!para) continue;
-      if (!grouped[para.section]) grouped[para.section] = [];
-      let text = para.text;
-      for (const [ph, val] of Object.entries(placeholders)) {
-        text = text.split(ph).join(val);
-      }
-      grouped[para.section].push(text);
-    }
-
-    // Build section HTML helper
-    const buildSection = (title, paras) => {
-      if (!paras || paras.length === 0) return '';
-      const items = paras.map(t => `<div style="margin-bottom:4px;font-size:9pt;line-height:1.7">${t}</div>`).join('');
-      return `<div class="section"><h2>${title}</h2>${items}</div>`;
+    const buildSection = (sectionId) => {
+      const section = data.sections[sectionId];
+      if (!section || !section.enabled) return '';
+      const blocks = section.blocks.filter(b => b.enabled);
+      if (blocks.length === 0) return '';
+      const items = blocks.map(b => {
+        const text = ContentManager.replacePlaceholders(b.text, d);
+        return `<div style="margin-bottom:4px;font-size:9pt;line-height:1.7">${text}</div>`;
+      }).join('');
+      return `<div class="section"><h2>${section.title}</h2>${items}</div>`;
     };
 
     // Map to template placeholders
-    const specSections = ['מבוא', 'שירות אישי ומקצועי', 'דגשים מקצועיים', 'התועלת לסביבה',
-      'מפרט טכני', 'פרטים נוספים על הפרויקט', 'עקרונות התכנון', 'אחריות'];
-    const stepsSections = ['סדר הפעולות לאחר חתימת ההסכם'];
-    const exclSections = ['הערות והגבלות'];
+    const specSectionIds = ['intro', 'service', 'focus', 'environment',
+      'spec', 'project-details', 'design', 'warranty'];
+    const stepsSectionIds = ['steps'];
+    const exclSectionIds = ['notes'];
 
     let spec = '', steps = '', exclusions = '';
-    for (const s of specSections)  spec += buildSection(s, grouped[s]);
-    for (const s of stepsSections) steps += buildSection(s, grouped[s]);
-    for (const s of exclSections)  exclusions += buildSection(s, grouped[s]);
+    for (const sid of specSectionIds)  spec += buildSection(sid);
+    for (const sid of stepsSectionIds) steps += buildSection(sid);
+    for (const sid of exclSectionIds)  exclusions += buildSection(sid);
 
     return { spec, steps, exclusions };
   }
