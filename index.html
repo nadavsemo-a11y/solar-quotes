@@ -716,6 +716,12 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
   #share-bar button { width:100%; justify-content:center; }
 }
 </style>
+<script>
+// Hide portal immediately if loading a client quote (prevents flash)
+if (window.__QUOTE_DATA__ || location.hash.length > 2) {
+  document.write('<style>#portal{display:none!important}</style>');
+}
+</script>
 </head>
 <body>
 
@@ -728,7 +734,10 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
         <span>סמו א.ג.ס בע"מ</span>
       </div>
     </div>
-    <div class="portal-badge">🔧 פורטל יצירת הצעות מחיר</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="portal-badge">🔧 פורטל יצירת הצעות מחיר</div>
+      <button onclick="openContentEditor()" style="background:#F4A200;color:#0A1628;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.2s">📝 ניהול תוכן</button>
+    </div>
   </header>
   <div class="portal-body">
     <div class="portal-title">
@@ -994,7 +1003,7 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
       </div>
       <div style="display:flex;gap:10px">
         <a href="extras-manager.html" target="_blank" style="font-size:12px;color:#3B82F6;text-decoration:underline;font-weight:600">ניהול שדרוגים והוצאות</a>
-        <a href="quote-content-editor.html" target="_blank" style="font-size:12px;color:#3B82F6;text-decoration:underline;font-weight:600">עורך תוכן ההצעה</a>
+        <button onclick="openContentEditor()" style="font-size:12px;color:white;background:#1a3a5c;border:none;padding:6px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit">ניהול תוכן ההצעה</button>
       </div>
     </div>
 
@@ -1119,7 +1128,98 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
 
 
 
+<!-- ==================== CONTENT EDITOR (in-portal) ==================== -->
+<div id="content-editor" style="display:none">
+  <div class="ce-header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="ce-back-btn" onclick="closeContentEditor()">→ חזור לטופס</button>
+      <h1 class="ce-title">ניהול תוכן הצעת המחיר</h1>
+    </div>
+    <div class="ce-actions">
+      <span class="ce-session-badge" id="ceSessionBadge" style="display:none">📝 מצב חד-פעמי</span>
+      <button class="ce-btn ce-btn-reset" onclick="ceResetDefaults()">איפוס לברירת מחדל</button>
+      <button class="ce-btn ce-btn-session" onclick="ceSaveSession()">שמור להצעה הנוכחית בלבד</button>
+      <button class="ce-btn ce-btn-save" onclick="ceSaveDefaults()">שמור כברירת מחדל</button>
+    </div>
+  </div>
+  <div class="ce-body" id="ceBody">
+    <!-- sections rendered dynamically by JS -->
+  </div>
+  <div class="ce-footer">
+    <button class="ce-btn ce-btn-add-section" onclick="ceAddSection()">+ הוסף סקציה חדשה</button>
+    <div class="ce-info">גרור סקציות ובלוקים לשינוי סדר | עריכה ישירה בלחיצה על הטקסט</div>
+  </div>
+</div>
+
+<style>
+/* ── Content Editor ── */
+#content-editor { background:#f1f5f9; min-height:100vh; direction:rtl; font-family:'Assistant',sans-serif; }
+.ce-header { background:linear-gradient(135deg,#0A1628,#1D3461); color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; position:sticky; top:0; z-index:100; }
+.ce-title { font-size:18px; font-weight:800; margin:0; }
+.ce-back-btn { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+.ce-back-btn:hover { background:rgba(255,255,255,0.25); }
+.ce-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.ce-btn { padding:8px 16px; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.2s; }
+.ce-btn-save { background:#F4A200; color:white; }
+.ce-btn-save:hover { background:#e09500; }
+.ce-btn-session { background:#3B82F6; color:white; }
+.ce-btn-session:hover { background:#2563EB; }
+.ce-btn-reset { background:#e2e8f0; color:#0A1628; }
+.ce-btn-reset:hover { background:#cbd5e1; }
+.ce-btn-add-section { background:#10b981; color:white; padding:10px 20px; font-size:14px; }
+.ce-btn-add-section:hover { background:#059669; }
+.ce-session-badge { background:#3B82F6; color:white; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.ce-body { max-width:960px; margin:0 auto; padding:24px; }
+.ce-footer { max-width:960px; margin:0 auto; padding:0 24px 40px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+.ce-info { font-size:12px; color:#6B7280; }
+
+/* Section card */
+.ce-section { background:white; border-radius:16px; margin-bottom:16px; box-shadow:0 2px 12px rgba(0,0,0,0.06); overflow:hidden; transition:box-shadow 0.2s; }
+.ce-section.disabled { opacity:0.5; }
+.ce-section-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0; cursor:pointer; gap:10px; }
+.ce-section-header:hover { background:#f1f5f9; }
+.ce-section-title { font-size:16px; font-weight:800; color:#0A1628; border-right:4px solid #F4A200; padding-right:10px; flex:1; }
+.ce-section-title[contenteditable] { outline:none; cursor:text; }
+.ce-section-title[contenteditable]:focus { background:#fffbeb; border-radius:4px; padding:2px 10px; }
+.ce-section-controls { display:flex; gap:4px; align-items:center; flex-shrink:0; }
+.ce-section-controls button { background:#e2e8f0; border:none; width:28px; height:28px; border-radius:6px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
+.ce-section-controls button:hover { background:#cbd5e1; }
+.ce-section-body { padding:8px 20px 16px; }
+.ce-section-type { font-size:11px; color:#6B7280; background:#f1f5f9; padding:2px 8px; border-radius:4px; margin-left:8px; }
+
+/* Block item */
+.ce-block { display:flex; gap:10px; padding:10px 8px; border-bottom:1px solid #f1f5f9; align-items:flex-start; transition:background 0.15s; }
+.ce-block:hover { background:#f8fafc; }
+.ce-block:last-child { border-bottom:none; }
+.ce-block.disabled { opacity:0.4; }
+.ce-block-toggle { margin-top:4px; width:18px; height:18px; accent-color:#F4A200; flex-shrink:0; cursor:pointer; }
+.ce-block-text { flex:1; font-size:14px; line-height:1.7; color:#333; min-height:24px; outline:none; }
+.ce-block-text:focus { background:#fffbeb; border-radius:4px; padding:4px 6px; margin:-4px -6px; }
+.ce-block-title-input { font-weight:700; font-size:14px; color:#0A1628; border:none; border-bottom:1.5px solid #e2e8f0; padding:2px 4px; margin-bottom:4px; width:100%; font-family:inherit; outline:none; background:transparent; }
+.ce-block-title-input:focus { border-bottom-color:#F4A200; background:#fffbeb; }
+.ce-block-controls { display:flex; flex-direction:column; gap:2px; flex-shrink:0; }
+.ce-block-controls button { background:none; border:1px solid #e2e8f0; width:24px; height:24px; border-radius:4px; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; color:#6B7280; }
+.ce-block-controls button:hover { background:#f1f5f9; color:#0A1628; }
+.ce-block-icon { font-size:16px; width:28px; text-align:center; flex-shrink:0; margin-top:2px; }
+.ce-add-block { display:flex; align-items:center; justify-content:center; gap:6px; padding:10px; margin:8px 8px 4px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:8px; cursor:pointer; font-size:13px; color:#6B7280; font-weight:600; transition:all 0.15s; }
+.ce-add-block:hover { background:#f1f5f9; border-color:#F4A200; color:#0A1628; }
+.ce-toggle-switch { position:relative; width:40px; height:22px; flex-shrink:0; }
+.ce-toggle-switch input { opacity:0; width:0; height:0; }
+.ce-toggle-track { position:absolute; cursor:pointer; inset:0; background:#cbd5e1; border-radius:22px; transition:0.3s; }
+.ce-toggle-track:before { content:''; position:absolute; height:16px; width:16px; right:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s; }
+.ce-toggle-switch input:checked + .ce-toggle-track { background:#F4A200; }
+.ce-toggle-switch input:checked + .ce-toggle-track:before { transform:translateX(-18px); }
+
+@media (max-width:768px) {
+  .ce-header { flex-direction:column; align-items:stretch; }
+  .ce-actions { justify-content:center; }
+  .ce-body { padding:12px; }
+  .ce-section-header { flex-wrap:wrap; }
+}
+</style>
+
 <!-- ==================== MODULES ==================== -->
+<script src="content-manager.js"></script>
 <script src="quote-engine.js"></script>
 <script src="storage-service.js"></script>
 <script src="signature-service.js"></script>
@@ -1153,6 +1253,224 @@ function submitSig()                   { _quoteUI && _quoteUI.submitSig().catch(
 function clearSigCanvas()              { _quoteUI && _quoteUI.clearSigCanvas(); }
 function openPrintDocument()           { _quoteUI && _quoteUI.openPrintDocument(); }
 function selectCity(name)              { _quoteUI && _quoteUI._selectCity(name); }
+
+// ══════════════════════════════════════════════════════════════════════
+// CONTENT EDITOR — in-portal
+// ══════════════════════════════════════════════════════════════════════
+
+let _ceData = null; // working copy of content data
+
+function openContentEditor() {
+  _ceData = ContentManager.load();
+  document.getElementById('portal').style.display = 'none';
+  document.getElementById('quote-output').style.display = 'none';
+  document.getElementById('content-editor').style.display = 'block';
+  document.getElementById('ceSessionBadge').style.display = ContentManager.hasSession() ? 'inline' : 'none';
+  _ceRender();
+  window.scrollTo(0, 0);
+}
+
+function closeContentEditor() {
+  document.getElementById('content-editor').style.display = 'none';
+  document.getElementById('portal').style.display = 'flex';
+  window.scrollTo(0, 0);
+}
+
+function _ceRender() {
+  const body = document.getElementById('ceBody');
+  let html = '';
+  const order = _ceData.sectionOrder;
+  for (let si = 0; si < order.length; si++) {
+    const sid = order[si];
+    const section = _ceData.sections[sid];
+    if (!section) continue;
+    const isFirst = si === 0;
+    const isLast = si === order.length - 1;
+    const disabled = !section.enabled;
+    const typeLabel = _ceTypeLabel(section.type);
+    const regionLabel = _ceRegionLabel(section.region);
+
+    html += `<div class="ce-section ${disabled ? 'disabled' : ''}" data-section-id="${sid}">
+      <div class="ce-section-header">
+        <div style="display:flex;align-items:center;gap:8px;flex:1">
+          <label class="ce-toggle-switch">
+            <input type="checkbox" ${section.enabled ? 'checked' : ''} onchange="ceToggleSection('${sid}')">
+            <span class="ce-toggle-track"></span>
+          </label>
+          <div class="ce-section-title" contenteditable="true" data-section-id="${sid}" onblur="ceUpdateSectionTitle('${sid}', this.textContent)">${_ceEsc(section.title)}</div>
+          <span class="ce-section-type">${typeLabel}</span>
+          <span class="ce-section-type">${regionLabel}</span>
+        </div>
+        <div class="ce-section-controls">
+          <button onclick="ceMoveSection('${sid}', -1)" title="הזז למעלה" ${isFirst ? 'disabled style="opacity:0.3"' : ''}>▲</button>
+          <button onclick="ceMoveSection('${sid}', 1)" title="הזז למטה" ${isLast ? 'disabled style="opacity:0.3"' : ''}>▼</button>
+          <button onclick="ceCollapseSection('${sid}')" title="כווץ/הרחב" id="ce-collapse-${sid}">▾</button>
+        </div>
+      </div>
+      <div class="ce-section-body" id="ce-body-${sid}">`;
+
+    // Render blocks
+    for (let bi = 0; bi < section.blocks.length; bi++) {
+      const block = section.blocks[bi];
+      const bFirst = bi === 0;
+      const bLast = bi === section.blocks.length - 1;
+      html += _ceRenderBlock(sid, block, section.type, bFirst, bLast);
+    }
+
+    // Add block button
+    html += `<div class="ce-add-block" onclick="ceAddBlock('${sid}')">+ הוסף בלוק</div>`;
+    html += `</div></div>`;
+  }
+  body.innerHTML = html;
+}
+
+function _ceRenderBlock(sid, block, type, isFirst, isLast) {
+  const disabled = !block.enabled;
+  let inner = '';
+
+  if (type === 'process-steps' || type === 'warranty-cards' || type === 'payment-stages') {
+    // Has title + text
+    const iconHtml = block.icon ? `<div class="ce-block-icon">${block.icon}</div>` : '';
+    inner = `${iconHtml}<div style="flex:1">
+      <input class="ce-block-title-input" value="${_ceEsc(block.title || '')}" onblur="ceUpdateBlockTitle('${sid}','${block.id}',this.value)" placeholder="כותרת">
+      <div class="ce-block-text" contenteditable="true" data-sid="${sid}" data-bid="${block.id}" onblur="ceUpdateBlockText('${sid}','${block.id}',this.innerText)">${_ceEsc(block.text)}</div>
+    </div>`;
+  } else {
+    // Text only
+    inner = `<div class="ce-block-text" contenteditable="true" data-sid="${sid}" data-bid="${block.id}" onblur="ceUpdateBlockText('${sid}','${block.id}',this.innerHTML)">${block.text}</div>`;
+  }
+
+  return `<div class="ce-block ${disabled ? 'disabled' : ''}" data-block-id="${block.id}">
+    <input type="checkbox" class="ce-block-toggle" ${block.enabled ? 'checked' : ''} onchange="ceToggleBlock('${sid}','${block.id}')">
+    ${inner}
+    <div class="ce-block-controls">
+      <button onclick="ceMoveBlock('${sid}','${block.id}',-1)" title="הזז למעלה" ${isFirst ? 'disabled style="opacity:0.3"' : ''}>▲</button>
+      <button onclick="ceMoveBlock('${sid}','${block.id}',1)" title="הזז למטה" ${isLast ? 'disabled style="opacity:0.3"' : ''}>▼</button>
+      <button onclick="ceRemoveBlock('${sid}','${block.id}')" title="מחק" style="color:#dc2626">✕</button>
+    </div>
+  </div>`;
+}
+
+function _ceTypeLabel(type) {
+  const labels = {
+    'paragraphs': 'פסקאות',
+    'include-items': 'פריטים כלולים',
+    'process-steps': 'שלבים',
+    'warranty-cards': 'כרטיסי אחריות',
+    'terms': 'תנאים',
+    'payment-stages': 'שלבי תשלום',
+    'single-texts': 'טקסטים',
+  };
+  return labels[type] || type;
+}
+
+function _ceRegionLabel(region) {
+  const labels = {
+    'pre-financial': 'לפני פיננסי',
+    'post-financial': 'אחרי פיננסי',
+    'post-payment': 'אחרי תשלום',
+  };
+  return labels[region] || region;
+}
+
+function _ceEsc(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ── Mutations ──
+function ceToggleSection(sid) {
+  ContentManager.toggleSection(_ceData, sid);
+  _ceRender();
+}
+
+function ceToggleBlock(sid, bid) {
+  ContentManager.toggleBlock(_ceData, sid, bid);
+  _ceRender();
+}
+
+function ceMoveSection(sid, dir) {
+  ContentManager.moveSection(_ceData, sid, dir);
+  _ceRender();
+}
+
+function ceMoveBlock(sid, bid, dir) {
+  ContentManager.moveBlock(_ceData, sid, bid, dir);
+  _ceRender();
+}
+
+function ceUpdateBlockText(sid, bid, newText) {
+  ContentManager.updateBlockText(_ceData, sid, bid, newText);
+}
+
+function ceUpdateBlockTitle(sid, bid, newTitle) {
+  ContentManager.updateBlockTitle(_ceData, sid, bid, newTitle);
+}
+
+function ceUpdateSectionTitle(sid, newTitle) {
+  ContentManager.updateSectionTitle(_ceData, sid, newTitle);
+}
+
+function ceAddBlock(sid) {
+  const section = _ceData.sections[sid];
+  if (!section) return;
+  const hasTitle = ['process-steps', 'warranty-cards', 'payment-stages'].includes(section.type);
+  ContentManager.addBlock(_ceData, sid, '', hasTitle ? '' : undefined);
+  _ceRender();
+  // Scroll to bottom of the section
+  const body = document.getElementById('ce-body-' + sid);
+  if (body) body.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function ceRemoveBlock(sid, bid) {
+  if (!confirm('למחוק את הבלוק?')) return;
+  ContentManager.removeBlock(_ceData, sid, bid);
+  _ceRender();
+}
+
+function ceCollapseSection(sid) {
+  const body = document.getElementById('ce-body-' + sid);
+  const btn = document.getElementById('ce-collapse-' + sid);
+  if (!body) return;
+  if (body.style.display === 'none') {
+    body.style.display = '';
+    if (btn) btn.textContent = '▾';
+  } else {
+    body.style.display = 'none';
+    if (btn) btn.textContent = '▸';
+  }
+}
+
+function ceAddSection() {
+  const title = prompt('שם הסקציה החדשה:');
+  if (!title) return;
+  ContentManager.addSection(_ceData, title, 'paragraphs');
+  _ceRender();
+}
+
+// ── Save / Reset ──
+function ceSaveDefaults() {
+  ContentManager.saveDefaults(_ceData);
+  ContentManager.clearSession();
+  document.getElementById('ceSessionBadge').style.display = 'none';
+  alert('נשמר כברירת מחדל!');
+}
+
+function ceSaveSession() {
+  ContentManager.saveSession(_ceData);
+  document.getElementById('ceSessionBadge').style.display = 'inline';
+  alert('נשמר להצעה הנוכחית בלבד. בהצעה הבאה יחזרו ברירות המחדל.');
+}
+
+function ceResetDefaults() {
+  if (!confirm('לאפס את כל התוכן לברירת מחדל? כל השינויים יימחקו.')) return;
+  _ceData = ContentManager.resetToDefaults();
+  document.getElementById('ceSessionBadge').style.display = 'none';
+  _ceRender();
+  alert('אופס לברירת מחדל.');
+}
 </script>
 
 </body>
