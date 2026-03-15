@@ -1109,10 +1109,15 @@ class QuoteUI {
     <div class="stat-card"><div class="stat-icon ic-g">🔆</div><span class="stat-val">${fmt(d.annualKwh)}</span><div class="stat-unit">קו"ט לשנה</div><div class="stat-label">ייצור אנרגיה</div></div>
   </div>
 
-  <!-- CONTENT: pre-financial sections (from ContentManager: includes + paragraphs) -->
-  ${ContentManager.renderRegion('pre-financial', d, { extraIncludeItems: (battInc || '') + (meterInc || '') })}
+  <!-- ORDERED SECTIONS (driven by ContentManager.sectionOrder) -->
+  ${(() => {
+    const _extraIncItems = (battInc || '') + (meterInc || '');
+    const _battCard = d.batt > 0 ? '<div class="warranty-card"><div style="display:flex;align-items:flex-start;gap:12px"><div class="warranty-icon">🔋</div><div><div class="warranty-title">מצברי אגירה</div><div class="warranty-desc">' + d.batt + ' × 5 קו"ט (' + (d.batt*5) + ' קו"ט סה"כ)<br>אחריות יצרן: <strong>10 שנים</strong></div></div></div></div>' : '';
 
-  <!-- FINANCIALS -->
+    // Pre-build all fixed section HTML
+    const _fixedHTML = {};
+
+    _fixedHTML['financials'] = `
   <div class="sec">
     <div class="sec-title"><span class="bar"></span>המערכת הסולארית במספרים</div>
 
@@ -1211,10 +1216,9 @@ class QuoteUI {
       <div class="roi-track"><div class="roi-fill" style="width:0%" id="roiFill"></div></div>
       <div class="roi-caption">ציר זמן להחזר מול חיי מערכת של ${YEARS} שנה | ${p.rateNote} | עלות לקו"ט: ₪${fmt(d.ppkw)}</div>
     </div>
-  </div>
+  </div>`;
 
-  ${allUpgrades.length > 0 ? `
-  <!-- UPGRADES — customer can toggle (near plan selector) -->
+    _fixedHTML['upgrades-section'] = allUpgrades.length > 0 ? `
   <div class="sec">
     <div class="sec-title"><span class="bar"></span>${ContentManager.getInlineText('upgrades-intro', 'upgrades-title') || 'שדרוגים (אופציונלי)'}</div>
     <div style="font-size:13px;color:var(--gray);margin-bottom:12px">${ContentManager.getInlineText('upgrades-intro', 'upgrades-subtitle') || 'ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:'}</div>
@@ -1246,20 +1250,9 @@ class QuoteUI {
       <span>סה"כ שדרוגים</span>
       <span id="upgrades-total">₪${fmt(upgradesTotal)}</span>
     </div>
-  </div>` : ''}
+  </div>` : '';
 
-  <!-- CONTENT: post-financial sections (warranty, spec, process, steps, etc. from ContentManager) -->
-  ${ContentManager.renderRegion('post-financial', d, { extraBatteryCard: d.batt > 0 ? `<div class="warranty-card">
-        <div style="display:flex;align-items:flex-start;gap:12px">
-          <div class="warranty-icon">🔋</div>
-          <div>
-            <div class="warranty-title">מצברי אגירה</div>
-            <div class="warranty-desc">${d.batt} × 5 קו"ט (${d.batt * 5} קו"ט סה"כ)<br>אחריות יצרן: <strong>10 שנים</strong></div>
-          </div>
-        </div>
-      </div>` : '' })}
-
-  <!-- PRICE BREAKDOWN -->
+    _fixedHTML['price-breakdown'] = `
   <div class="sec">
     <div class="sec-title"><span class="bar"></span>פירוט מחיר ההצעה</div>
     <ul class="spec-list" style="list-style:none;padding:0">
@@ -1271,10 +1264,9 @@ class QuoteUI {
       <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(d.price)}</span></li>
       <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span id="project-total-vat-display">₪${fmt(Math.round(d.price * VAT))}</span></li>
     </ul>
-  </div>
+  </div>`;
 
-  ${selectedPotential.length > 0 ? `
-  <!-- POTENTIAL ADDITIONAL COSTS — informational only, NOT in project total -->
+    _fixedHTML['potential-costs'] = selectedPotential.length > 0 ? `
   <div class="sec">
     <div class="sec-title"><span class="bar"></span>${ContentManager.getInlineText('potential-intro', 'potential-title') || 'הוצאות פוטנציאליות נוספות'}</div>
     <div style="font-size:13px;color:var(--gray);margin-bottom:12px">${ContentManager.getInlineText('potential-intro', 'potential-subtitle') || 'הוצאות אלו עשויות להידרש בהתאם לתנאי השטח. <strong>אינן כלולות בעלות הפרויקט</strong> — במידה ויידרש, הלקוח יחויב בהתאם:'}</div>
@@ -1288,26 +1280,36 @@ class QuoteUI {
       </tbody>
     </table>
     <div style="font-size:11px;color:var(--gray);margin-top:8px;font-style:italic">* הסכומים הם הערכה בלבד ויקבעו סופית לאחר סקר שטח</div>
-  </div>` : ''}
+  </div>` : '';
 
-  <!-- PAYMENT -->
+    const _payDescs = ContentManager.getPaymentDescriptions();
+    _fixedHTML['payment-section'] = `
   <div class="sec">
     <div class="sec-title"><span class="bar"></span>תנאי תשלום</div>
     <table class="payment-table">
       <thead><tr><th>שלב התשלום</th><th>תיאור</th><th>סכום (₪)</th></tr></thead>
       <tbody>
-        <tr><td>${(ContentManager.getPaymentDescriptions()['pay-1'] || {}).title || 'מקדמה'}</td><td>${(ContentManager.getPaymentDescriptions()['pay-1'] || {}).text || 'בחתימת ההסכם'}</td><td class="amount-col" id="pay-dep">₪${fmt(d.dep)}</td></tr>
-        <tr><td>${(ContentManager.getPaymentDescriptions()['pay-2'] || {}).title || 'השלמה ל-35%'}</td><td>${(ContentManager.getPaymentDescriptions()['pay-2'] || {}).text || 'בקבלת תוכניות ביצוע'}</td><td class="amount-col" id="pay-p2">₪${fmt(d.p2)}</td></tr>
-        <tr><td>${(ContentManager.getPaymentDescriptions()['pay-3'] || {}).title || 'השלמה ל-95%'}</td><td>${(ContentManager.getPaymentDescriptions()['pay-3'] || {}).text || '7 ימי עסקים בטרם אספקת פאנלים לאתר'}</td><td class="amount-col" id="pay-p3">₪${fmt(d.p3)}</td></tr>
-        <tr><td>${(ContentManager.getPaymentDescriptions()['pay-4'] || {}).title || '5% אחרון'}</td><td>${(ContentManager.getPaymentDescriptions()['pay-4'] || {}).text || 'ביום החיבור לחברת החשמל'}</td><td class="amount-col" id="pay-p4">₪${fmt(d.p4)}</td></tr>
+        <tr><td>${(_payDescs['pay-1'] || {}).title || 'מקדמה'}</td><td>${(_payDescs['pay-1'] || {}).text || 'בחתימת ההסכם'}</td><td class="amount-col" id="pay-dep">₪${fmt(d.dep)}</td></tr>
+        <tr><td>${(_payDescs['pay-2'] || {}).title || 'השלמה ל-35%'}</td><td>${(_payDescs['pay-2'] || {}).text || 'בקבלת תוכניות ביצוע'}</td><td class="amount-col" id="pay-p2">₪${fmt(d.p2)}</td></tr>
+        <tr><td>${(_payDescs['pay-3'] || {}).title || 'השלמה ל-95%'}</td><td>${(_payDescs['pay-3'] || {}).text || '7 ימי עסקים בטרם אספקת פאנלים לאתר'}</td><td class="amount-col" id="pay-p3">₪${fmt(d.p3)}</td></tr>
+        <tr><td>${(_payDescs['pay-4'] || {}).title || '5% אחרון'}</td><td>${(_payDescs['pay-4'] || {}).text || 'ביום החיבור לחברת החשמל'}</td><td class="amount-col" id="pay-p4">₪${fmt(d.p4)}</td></tr>
         <tr class="total-row"><td colspan="2"><strong>סה"כ</strong></td><td class="amount-col" id="pay-total"><strong>₪${fmt(d.price)}</strong></td></tr>
       </tbody>
     </table>
     <p class="vat-note" id="pay-vat-note">* לכל הסכומים הנ"ל יצורף מע"מ כחוק (סה"כ כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))})</p>
-  </div>
+  </div>`;
 
-  <!-- GENERAL TERMS + post-payment sections (from ContentManager) -->
-  ${ContentManager.renderRegion('post-payment', d)}
+    // Assemble all sections in ContentManager order
+    const _order = ContentManager.getSectionOrder();
+    return _order.map(sid => {
+      const sec = ContentManager.getSection(sid);
+      if (!sec || !sec.enabled) return '';
+      // Fixed/calculated sections
+      if (sec.type === 'fixed') return _fixedHTML[sid] || '';
+      // Content sections (paragraphs, includes, warranty-cards, process-steps, terms)
+      return ContentManager.renderSection(sid, d, { extraIncludeItems: _extraIncItems, extraBatteryCard: _battCard });
+    }).join('\n');
+  })()}
 
   ${noteBox}
 
