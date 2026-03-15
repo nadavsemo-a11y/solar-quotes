@@ -22,11 +22,16 @@ const ContentManager = (() => {
     sectionOrder: [
       'includes',
       'intro', 'service', 'focus', 'environment',
+      'financials',
+      'upgrades-section',
       'warranty-cards',
       'spec', 'project-details', 'design',
       'process',
       'steps',
       'warranty', 'notes',
+      'price-breakdown',
+      'potential-costs',
+      'payment-section',
       'terms',
     ],
 
@@ -289,6 +294,57 @@ const ContentManager = (() => {
           { id: 'potential-title', text: 'הוצאות פוטנציאליות נוספות', enabled: true },
           { id: 'potential-subtitle', text: 'הוצאות אלו עשויות להידרש בהתאם לתנאי השטח. <strong>אינן כלולות בעלות הפרויקט</strong> — במידה ויידרש, הלקוח יחויב בהתאם:', enabled: true },
         ],
+      },
+
+      // ══════════════════════════════════════════════════════════════
+      // FIXED / CALCULATED SECTIONS (position-only, not editable)
+      // ══════════════════════════════════════════════════════════════
+
+      'financials': {
+        title: 'נתונים פיננסיים ומסלול תעריף',
+        type: 'fixed',
+        enabled: true,
+        fixedKey: 'financials',
+        description: 'בוחר מסלול תעריף, כרטיסי הכנסות, ROI ותחזית כלכלית',
+        editLink: null,
+      },
+
+      'upgrades-section': {
+        title: 'שדרוגים והוצאות נוספות',
+        type: 'fixed',
+        enabled: true,
+        fixedKey: 'upgrades-section',
+        description: 'רשימת השדרוגים שהלקוח יכול לבחור (toggle)',
+        editLink: 'extras-manager.html',
+        editLabel: 'ניהול שדרוגים והוצאות',
+      },
+
+      'price-breakdown': {
+        title: 'פירוט מחיר ההצעה',
+        type: 'fixed',
+        enabled: true,
+        fixedKey: 'price-breakdown',
+        description: 'טבלת פירוט עלות המערכת, תוספות ומע"מ',
+        editLink: null,
+      },
+
+      'potential-costs': {
+        title: 'הוצאות פוטנציאליות',
+        type: 'fixed',
+        enabled: true,
+        fixedKey: 'potential-costs',
+        description: 'טבלת הוצאות שעשויות לחול — לידיעה בלבד, לא כלולות במחיר',
+        editLink: 'extras-manager.html',
+        editLabel: 'ניהול שדרוגים והוצאות',
+      },
+
+      'payment-section': {
+        title: 'תנאי תשלום',
+        type: 'fixed',
+        enabled: true,
+        fixedKey: 'payment-section',
+        description: 'טבלת 4 שלבי תשלום (מקדמה עד חיבור)',
+        editLink: null,
       },
     },
   };
@@ -670,6 +726,7 @@ const ContentManager = (() => {
       case 'terms':           return renderTermsSection();
       case 'payment-stages':  return ''; // handled inline in _buildQuoteHTML
       case 'single-texts':    return ''; // titles handled inline
+      case 'fixed':           return ''; // rendered by _buildQuoteHTML order loop
       default:                return renderParagraphSection(sectionId, d);
     }
   }
@@ -681,7 +738,7 @@ const ContentManager = (() => {
       .filter(sid => {
         const s = data.sections[sid];
         return s && s.enabled && s.region === region &&
-               s.type !== 'payment-stages' && s.type !== 'single-texts';
+               s.type !== 'payment-stages' && s.type !== 'single-texts' && s.type !== 'fixed';
       })
       .map(sid => renderSection(sid, d, opts))
       .join('\n');
