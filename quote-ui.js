@@ -156,13 +156,28 @@ class QuoteUI {
   }
 
   _initBatteryValidation() {
+    // Battery quantity is now driven by the upgrade checkbox + qty select
     const battEl = document.getElementById('batteries');
+    const chk = document.getElementById('chk-batteries');
+    const qtySelect = document.getElementById('battQtySelect');
     if (!battEl) return;
-    battEl.addEventListener('change', () => {
-      const v = parseInt(battEl.value) || 0;
-      if (v === 1) { battEl.value = 2; }
-      if (v < 0)   { battEl.value = 0; }
-    });
+
+    // Sync hidden batteries field from checkbox + qty
+    const syncBatt = () => {
+      if (chk && !chk.checked) {
+        battEl.value = 0;
+      } else if (qtySelect) {
+        battEl.value = qtySelect.value;
+      }
+      this._updatePreview();
+    };
+    if (chk) chk.addEventListener('change', syncBatt);
+    if (qtySelect) qtySelect.addEventListener('change', syncBatt);
+
+    // Initialize: if checkbox is checked, set default qty
+    if (chk && chk.checked && qtySelect) {
+      battEl.value = qtySelect.value;
+    }
   }
 
   _updatePanelCount() {
@@ -813,8 +828,9 @@ class QuoteUI {
     if (!extras) return;
     // New format: { id: { checked, price } }
     for (const [id, val] of Object.entries(extras)) {
+      if (val == null || val.checked === undefined) continue; // skip missing entries — keep HTML default
       const chk = document.getElementById('chk-' + id);
-      if (chk) chk.checked = val.checked || false;
+      if (chk) chk.checked = !!val.checked;
       const price = document.getElementById('price-' + id);
       if (price && val.price) price.value = val.price;
     }
