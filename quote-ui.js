@@ -1282,17 +1282,22 @@ class QuoteUI {
     <div style="font-size:11px;color:var(--gray);margin-top:8px;font-style:italic">* הסכומים הם הערכה בלבד ויקבעו סופית לאחר סקר שטח</div>
   </div>` : '';
 
-    const _payDescs = ContentManager.getPaymentDescriptions();
+    const _payStages = d.stages || [
+      { label: 'מקדמה', desc: 'בחתימת ההסכם', amount: d.dep },
+      { label: 'השלמה ל-35%', desc: 'בקבלת תוכניות ביצוע', amount: d.p2 },
+      { label: 'השלמה ל-95%', desc: '7 ימי עסקים בטרם אספקת פאנלים לאתר', amount: d.p3 },
+      { label: '5% אחרון', desc: 'ביום החיבור לחברת החשמל', amount: d.p4 },
+    ];
+    const _payRows = _payStages.map(s =>
+      `<tr><td>${s.label}</td><td>${s.desc}</td><td class="amount-col">₪${fmt(s.amount)}</td></tr>`
+    ).join('\n        ');
     _fixedHTML['payment-section'] = `
   <div class="sec">
     <div class="sec-title"><span class="bar"></span>תנאי תשלום</div>
     <table class="payment-table">
       <thead><tr><th>שלב התשלום</th><th>תיאור</th><th>סכום (₪)</th></tr></thead>
       <tbody>
-        <tr><td>${(_payDescs['pay-1'] || {}).title || 'מקדמה'}</td><td>${(_payDescs['pay-1'] || {}).text || 'בחתימת ההסכם'}</td><td class="amount-col" id="pay-dep">₪${fmt(d.dep)}</td></tr>
-        <tr><td>${(_payDescs['pay-2'] || {}).title || 'השלמה ל-35%'}</td><td>${(_payDescs['pay-2'] || {}).text || 'בקבלת תוכניות ביצוע'}</td><td class="amount-col" id="pay-p2">₪${fmt(d.p2)}</td></tr>
-        <tr><td>${(_payDescs['pay-3'] || {}).title || 'השלמה ל-95%'}</td><td>${(_payDescs['pay-3'] || {}).text || '7 ימי עסקים בטרם אספקת פאנלים לאתר'}</td><td class="amount-col" id="pay-p3">₪${fmt(d.p3)}</td></tr>
-        <tr><td>${(_payDescs['pay-4'] || {}).title || '5% אחרון'}</td><td>${(_payDescs['pay-4'] || {}).text || 'ביום החיבור לחברת החשמל'}</td><td class="amount-col" id="pay-p4">₪${fmt(d.p4)}</td></tr>
+        ${_payRows}
         <tr class="total-row"><td colspan="2"><strong>סה"כ</strong></td><td class="amount-col" id="pay-total"><strong>₪${fmt(d.price)}</strong></td></tr>
       </tbody>
     </table>
