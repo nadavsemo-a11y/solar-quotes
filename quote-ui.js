@@ -1240,12 +1240,12 @@ class QuoteUI {
     <div style="font-size:13px;color:var(--gray);margin-bottom:12px">${ContentManager.getInlineText('upgrades-intro', 'upgrades-subtitle') || 'ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:'}</div>
     <div id="upgrades-list">
       ${allUpgrades.map(e => `
-      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-batt-first="${d.battFirstPrice || 8900}" data-batt-extra="${d.battExtraPrice || 6500}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:${e.checked ? '1' : '0.5'}">
+      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-batt-first="${d.battFirstPrice || 8900}" data-batt-extra="${d.battExtraPrice || 6500}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:0.5">
         <div style="display:flex;align-items:center;gap:10px;flex:1">
           <label class="toggle-switch" style="position:relative;width:44px;height:24px;flex-shrink:0">
-            <input type="checkbox" data-upgrade-toggle="${e.id}" ${e.checked ? 'checked' : ''} onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
-            <span style="position:absolute;cursor:pointer;inset:0;background:${e.checked ? '#F4A200' : '#cbd5e1'};border-radius:24px;transition:0.3s"></span>
-            <span style="position:absolute;top:3px;${e.checked ? 'right:3px' : 'right:20px'};width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
+            <input type="checkbox" data-upgrade-toggle="${e.id}" onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
+            <span style="position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:24px;transition:0.3s"></span>
+            <span style="position:absolute;top:3px;right:20px;width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
           </label>
           <span style="font-size:14px;font-weight:600;color:var(--sky)">${e.label}</span>
           ${e.calcType === 'batteries' ? `
