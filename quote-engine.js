@@ -196,16 +196,54 @@ const QuoteEngine = (() => {
   // ── שלבי תשלום ───────────────────────────────────────────────────────────
 
   /**
+   * _loadPaymentStages()
+   * טוען הגדרות שלבי תשלום מ-localStorage (payment-editor.html) או ברירת מחדל.
+   */
+  function _loadPaymentStages() {
+    try {
+      const saved = typeof localStorage !== 'undefined' && localStorage.getItem('semo-payment-stages');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return [
+      { label: 'מקדמה',       desc: 'בחתימת ההסכם',                         type: 'fixed',     value: 6000 },
+      { label: 'השלמה ל-35%', desc: 'בקבלת תוכניות ביצוע',                  type: 'percent',   value: 35 },
+      { label: 'השלמה ל-95%', desc: '7 ימי עסקים בטרם אספקת פנלים לאתר',   type: 'percent',   value: 95 },
+      { label: '5% אחרון',    desc: 'ביום החיבור לחברת החשמל',               type: 'remainder', value: 100 },
+    ];
+  }
+
+  /**
    * calcPaymentStages(price)
-   * מחשב את 4 שלבי התשלום לפי המחיר.
-   * @returns {{ dep, p2, p3, p4 }}
+   * מחשב את שלבי התשלום לפי המחיר וההגדרות.
+   * @returns {{ dep, p2, p3, p4, stages }}
    */
   function calcPaymentStages(price) {
-    const dep = 6000;
-    const p2  = Math.round(price * 0.35) - dep;
-    const p3  = Math.round(price * 0.95) - Math.round(price * 0.35);
-    const p4  = price - Math.round(price * 0.95);
-    return { dep, p2, p3, p4 };
+    const config = _loadPaymentStages();
+    const stages = [];
+    let cumulative = 0;
+
+    for (const s of config) {
+      let amount = 0;
+      if (s.type === 'fixed') {
+        amount = s.value;
+      } else if (s.type === 'percent') {
+        amount = Math.round(price * s.value / 100) - cumulative;
+      } else {
+        // remainder
+        amount = price - cumulative;
+      }
+      cumulative += amount;
+      stages.push({ label: s.label, desc: s.desc, amount });
+    }
+
+    // Backward compatibility: return dep/p2/p3/p4 + full stages array
+    return {
+      dep: stages[0] ? stages[0].amount : 0,
+      p2:  stages[1] ? stages[1].amount : 0,
+      p3:  stages[2] ? stages[2].amount : 0,
+      p4:  stages[3] ? stages[3].amount : 0,
+      stages,
+    };
   }
 
   // ── חישוב כולל (ה-API הראשי) ─────────────────────────────────────────────
