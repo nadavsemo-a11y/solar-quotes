@@ -187,9 +187,8 @@ const QuoteEngine = (() => {
                         meterPanelPrice }) {
     let price = dcKW * ppkw;
     if (roof === 'בטון')  price += dcKW * concretePerKw;
-    if (batt > 0)         price += calcBatteryPrice(batt, battFirstPrice, battExtraPrice);
+    // Batteries are now an upgrade — NOT included in base price
     if (needsMeter)       price += meterPanelPrice;
-    // Extras/upgrades are NOT included — shown separately as options for the customer
     return price;
   }
 
