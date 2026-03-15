@@ -806,7 +806,7 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
         <div class="divider"></div>
         <div class="form-grid four">
           <div class="field"><label>מחיר לקו"ט (₪)</label><input id="ppkw" type="number" value="2600" step="50"></div>
-          <div class="field"><label>כמות מצברים (5 קו"ט)</label><input id="batteries" type="number" value="0" min="0"></div>
+          <div class="field"><label>כמות מצברים (5 קו"ט)</label><input id="batteries" type="number" value="0" min="0" style="display:none"><span id="battDisplayCount" style="font-size:13px;color:var(--gray)">נקבע בשדרוגים</span></div>
           <div class="field"><label>הספק פאנל (וואט)</label><input id="panelW" type="number" value="640" step="10"></div>
           <div class="field"><label>כמות פאנלים (חישוב אוטומטי)</label><input id="panelCount" type="number" value="0" readonly style="background:#f1f5f9;color:var(--gray)"></div>
         </div>
@@ -891,10 +891,18 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
           <div class="extra-item" id="ex-batteries">
             <div class="extra-left">
               <input class="extra-checkbox" type="checkbox" id="chk-batteries" checked onchange="updatePreview()">
-              <label class="extra-label" for="chk-batteries">תוספת מצברי אגירה (בטריות)</label>
+              <label class="extra-label" for="chk-batteries">מצברי אגירה</label>
             </div>
-            <div class="extra-right">
-              <span class="extra-currency" style="font-size:11px;color:var(--gray)">לפי כמות וסוג שנבחרו למעלה</span>
+            <div class="extra-right" style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:var(--gray)">כמות:</span>
+              <select id="battQtySelect" onchange="document.getElementById('batteries').value=this.value;updatePreview()" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-weight:700;font-family:inherit">
+                <option value="2" selected>2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+              </select>
+              <span style="font-size:11px;color:var(--gray)">(מינ' 2 × 5 קו"ט)</span>
             </div>
           </div>
 
