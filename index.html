@@ -1309,16 +1309,28 @@ function _ceRender() {
       </div>
       <div class="ce-section-body" id="ce-body-${sid}">`;
 
-    // Render blocks
-    for (let bi = 0; bi < section.blocks.length; bi++) {
-      const block = section.blocks[bi];
-      const bFirst = bi === 0;
-      const bLast = bi === section.blocks.length - 1;
-      html += _ceRenderBlock(sid, block, section.type, bFirst, bLast);
-    }
+    if (section.type === 'fixed') {
+      // Fixed/calculated section — show info + optional edit link
+      html += `<div style="padding:12px 16px;background:#f0f7ff;border:1px solid #b8d4f0;border-radius:8px;margin:8px 0;display:flex;align-items:center;gap:12px">
+        <span style="font-size:24px;flex-shrink:0">📊</span>
+        <div style="flex:1">
+          <div style="font-size:13px;color:#1a3a5c;font-weight:600">${_ceEsc(section.description || '')}</div>
+          <div style="font-size:11px;color:#6B7280;margin-top:4px">סקציה מחושבת — הנתונים נשאבים מהטופס. ניתן לשנות מיקום.</div>
+        </div>
+        ${section.editLink ? `<a href="${section.editLink}" target="_blank" style="background:#3B82F6;color:white;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">${_ceEsc(section.editLabel || 'ערוך')}</a>` : ''}
+      </div>`;
+    } else {
+      // Render blocks
+      for (let bi = 0; bi < section.blocks.length; bi++) {
+        const block = section.blocks[bi];
+        const bFirst = bi === 0;
+        const bLast = bi === section.blocks.length - 1;
+        html += _ceRenderBlock(sid, block, section.type, bFirst, bLast);
+      }
 
-    // Add block button
-    html += `<div class="ce-add-block" onclick="ceAddBlock('${sid}')">+ הוסף בלוק</div>`;
+      // Add block button
+      html += `<div class="ce-add-block" onclick="ceAddBlock('${sid}')">+ הוסף בלוק</div>`;
+    }
     html += `</div></div>`;
   }
   body.innerHTML = html;
@@ -1360,6 +1372,7 @@ function _ceTypeLabel(type) {
     'terms': 'תנאים',
     'payment-stages': 'שלבי תשלום',
     'single-texts': 'טקסטים',
+    'fixed': 'מחושב',
   };
   return labels[type] || type;
 }
