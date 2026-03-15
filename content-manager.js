@@ -343,8 +343,9 @@ const ContentManager = (() => {
         type: 'fixed',
         enabled: true,
         fixedKey: 'payment-section',
-        description: 'טבלת 4 שלבי תשלום (מקדמה עד חיבור)',
-        editLink: null,
+        description: 'טבלת שלבי תשלום — שמות, תיאורים, אחוזים וסכום מקדמה',
+        editLink: 'payment-editor.html',
+        editLabel: 'עריכת תנאי תשלום',
       },
     },
   };
