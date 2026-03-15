@@ -136,6 +136,7 @@ class QuoteUI {
   // ══════════════════════════════════════════════════════════════════════
 
   init() {
+    this._renderExtrasUI();
     this._initCitySearch();
     this._bindInputListeners();
     this._initInverterToggle();
@@ -144,6 +145,71 @@ class QuoteUI {
     this._updatePreview();
     this.signature.init();
     this._tryLoadFromUrl();
+  }
+
+  /** Dynamically build extras checkboxes from config (localStorage / defaults) */
+  _renderExtrasUI() {
+    const container = document.getElementById('extras-dynamic-container');
+    if (!container) return;
+    const cfg = this._getExtrasConfig();
+    let html = '';
+
+    // ── Upgrades section ──
+    html += `<div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:4px">שדרוגים (נכללים בעלות הפרויקט)</div>`;
+    html += `<div style="font-size:12px;color:var(--gray);margin-bottom:14px">הלקוח יוכל להפעיל/לכבות — המחיר יתעדכן בהתאם</div>`;
+
+    for (const item of (cfg.upgrades || [])) {
+      html += this._renderExtraItem(item, 'upgrade');
+    }
+
+    // ── Potential costs section ──
+    html += `<div style="border-top:2px solid #f59e0b;margin:16px 0 12px;padding-top:12px">`;
+    html += `<div style="font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:4px">הוצאות פוטנציאליות נוספות (לא נכללות בעלות הפרויקט)</div>`;
+    html += `<div style="font-size:12px;color:var(--gray);margin-bottom:14px">מוצגות כטבלה אינפורמטיבית בלבד — הלקוח לא יכול לבחור אותן</div>`;
+    html += `</div>`;
+
+    for (const item of (cfg.potential || [])) {
+      html += this._renderExtraItem(item, 'potential');
+    }
+
+    container.innerHTML = html;
+  }
+
+  /** Render a single extra item (upgrade or potential) */
+  _renderExtraItem(item, category) {
+    const id = item.id;
+    const isBattery = item.calcType === 'batteries';
+    const isCalc = item.calcType === 'premium' || item.calcType === 'solaredge' || item.calcType === 'fixed' && !item.defaultPrice;
+
+    let rightHtml = '';
+    if (isBattery) {
+      rightHtml = `<div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:var(--gray)">כמות:</span>
+        <select id="battQtySelect" onchange="document.getElementById('batteries').value=this.value;updatePreview()" style="padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-weight:700;font-family:inherit">
+          <option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option>
+        </select>
+        <span style="font-size:11px;color:var(--gray)">(מינ' 2 × 5 קו"ט)</span>
+      </div>`;
+    } else if (item.calcType === 'premium') {
+      rightHtml = `<span style="font-size:11px;color:var(--gray)">$100 לקילו-וואט DC × שער דולר</span>`;
+    } else if (item.calcType === 'solaredge') {
+      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${item.defaultPrice || 0}" step="100" oninput="updatePreview()">`;
+    } else if (id === 'hybrid-inv') {
+      rightHtml = `<span style="font-size:11px;color:var(--gray)">לפי מחיר שהוגדר למעלה</span>`;
+    } else if (id === 'ev') {
+      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${item.defaultPrice || 4500}" step="100" oninput="updatePreview()">
+        <input id="evModel" type="text" placeholder="דגם (אופציונלי)" style="width:140px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;margin-right:8px">`;
+    } else {
+      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${item.defaultPrice || 0}" step="50" oninput="updatePreview()">`;
+    }
+
+    return `<div class="extra-item" id="ex-${id}">
+      <div class="extra-left">
+        <input class="extra-checkbox" type="checkbox" id="chk-${id}" checked onchange="updatePreview()">
+        <label class="extra-label" for="chk-${id}">${item.label}</label>
+      </div>
+      <div class="extra-right">${rightHtml}</div>
+    </div>`;
   }
 
   _initInverterToggle() {
