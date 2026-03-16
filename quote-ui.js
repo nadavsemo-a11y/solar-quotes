@@ -798,7 +798,7 @@ class QuoteUI {
   }
 
   /** Lock document after signing — disable all interactive elements */
-  _lockDocument() {
+  _lockDocument(sigInfo) {
     // Disable upgrade toggles
     document.querySelectorAll('[data-upgrade-toggle]').forEach(el => {
       el.disabled = true;
@@ -809,14 +809,26 @@ class QuoteUI {
       el.style.pointerEvents = 'none';
       el.style.opacity = '0.5';
     });
-    // Hide signature form, show locked badge
+    // Hide CTA sign block
+    const ctaBlock = document.getElementById('cta-sign-block');
+    if (ctaBlock) ctaBlock.style.display = 'none';
+    // Hide signature form, show locked badge with signature details
     const sigForm = document.getElementById('sigForm');
     if (sigForm) sigForm.style.display = 'none';
     const sigSection = document.getElementById('sig-section');
     if (sigSection) {
+      sigSection.style.display = 'block';
       const badge = document.createElement('div');
-      badge.style.cssText = 'text-align:center;padding:20px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;margin-top:12px;';
-      badge.innerHTML = '<div style="font-size:28px;margin-bottom:8px">🔒</div><div style="font-size:16px;font-weight:800;color:#166534">מסמך זה נחתם ונעול</div>';
+      badge.style.cssText = 'text-align:center;padding:24px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;margin-top:12px;';
+      let html = '<div style="font-size:28px;margin-bottom:8px">🔒</div><div style="font-size:16px;font-weight:800;color:#166534;margin-bottom:12px">מסמך זה נחתם ונעול</div>';
+      if (sigInfo && sigInfo.signerName) {
+        html += '<div style="font-size:13px;color:#334155;line-height:2;text-align:right;max-width:300px;margin:0 auto">';
+        html += `<strong>שם החותם:</strong> ${sigInfo.signerName}<br>`;
+        if (sigInfo.refID)   html += `<strong>מזהה אישור:</strong> ${sigInfo.refID}<br>`;
+        if (sigInfo.dateStr) html += `<strong>תאריך חתימה:</strong> ${sigInfo.dateStr}`;
+        html += '</div>';
+      }
+      badge.innerHTML = html;
       sigSection.appendChild(badge);
     }
   }
@@ -1012,7 +1024,7 @@ class QuoteUI {
     if (!docId) return;
     const result = await PostSignService.checkSignature(docId);
     if (result.signed) {
-      this._lockDocument();
+      this._lockDocument(result);
     }
   }
 
