@@ -1141,6 +1141,7 @@ function scrollToSign() {
   if (!sec) return;
   sec.style.display = 'block';
   sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (_quoteUI && _quoteUI.signature) _quoteUI.signature.init();
 }
 function selectCity(name)              { _quoteUI && _quoteUI._selectCity(name); }
 
