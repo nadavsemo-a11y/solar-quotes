@@ -186,10 +186,12 @@ class SignatureService {
    * @param {{ name, idNum, agreed }} fields
    * @returns {{ valid: boolean, errors: string[] }}
    */
-  validate({ name, idNum, agreed }) {
+  validate({ name, idNum, agreed, email, sigDate }) {
     const errors = [];
     if (!name || name.trim().length < 2)          errors.push('name');
     if (!SignatureService.validateIsraeliID(idNum)) errors.push('idNum');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('email');
+    if (!sigDate)                                  errors.push('sigDate');
     if (!this._hasSig)                             errors.push('canvas');
     if (!agreed)                                   errors.push('agree');
     return { valid: errors.length === 0, errors };
@@ -241,8 +243,8 @@ class SignatureService {
    *
    * @returns {Promise<{ ok: boolean, errors?: string[], signature?: object }>}
    */
-  async collect({ name, idNum, agreed, quoteSnapshot = {}, clientData = {} }) {
-    const { valid, errors } = this.validate({ name, idNum, agreed });
+  async collect({ name, idNum, agreed, email, sigDate, quoteSnapshot = {}, clientData = {} }) {
+    const { valid, errors } = this.validate({ name, idNum, agreed, email, sigDate });
     if (!valid) return { ok: false, errors };
 
     const sigImg  = this.toDataURL();
