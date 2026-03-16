@@ -960,6 +960,16 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
           <input type="text" id="sigID" placeholder="000000000" maxlength="9" inputmode="numeric" onblur="this.value=this.value.replace(/[^\d]/g,'').padStart(this.value.replace(/[^\d]/g,'').length>0?9:0,'0')">
           <div class="sig-err-msg" id="err-sigID">ת.ז לא תקינה</div>
         </div>
+        <div class="sig-field">
+          <label>כתובת אימייל</label>
+          <input type="email" id="sigEmail" placeholder="example@email.com" dir="ltr" style="text-align:left">
+          <div class="sig-err-msg" id="err-sigEmail">נא להזין כתובת אימייל תקינה</div>
+        </div>
+        <div class="sig-field">
+          <label>תאריך חתימה</label>
+          <input type="date" id="sigDate">
+          <div class="sig-err-msg" id="err-sigDate">נא להזין תאריך</div>
+        </div>
       </div>
 
       <!-- Canvas -->
