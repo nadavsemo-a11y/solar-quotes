@@ -742,7 +742,6 @@ class QuoteUI {
   }
 
   async submitSig() {
-    alert('DEBUG 1: submitSig started');
     const name   = document.getElementById('sigName')?.value.trim()  || '';
     const idNum  = document.getElementById('sigID')?.value.trim()    || '';
     const agreed = document.getElementById('sigAgree')?.checked      || false;
@@ -763,16 +762,13 @@ class QuoteUI {
 
     this._clearSigErrors();
     this._showSigSuccess(result.signature);
-    alert('DEBUG 2: signature collected OK');
 
     // Post-signature flow: save → notify → confirm → lock
     const docId = window.location.pathname.split('/q/')[1]?.split('/')[0] || '';
     const hasPSS = typeof PostSignService !== 'undefined';
-    alert('DEBUG 3: docId=' + docId + ' PostSignService=' + hasPSS);
     if (docId && hasPSS) {
       try {
         const clientEmail = document.getElementById('clientEmail')?.value?.trim() || this._clientEmail || '';
-        alert('DEBUG 4: calling PostSignService.process, email=' + clientEmail);
         const postResult = await PostSignService.process({
           docType:   'quote',
           docId,
@@ -788,14 +784,12 @@ class QuoteUI {
           },
         });
 
-        alert('DEBUG 5: result=' + JSON.stringify(postResult));
         if (postResult.saved) {
           EmailService.showToast('✅ החתימה נשמרה בהצלחה');
         } else {
           EmailService.showToast('⚠️ שגיאה בשמירת החתימה', true);
         }
       } catch (err) {
-        alert('DEBUG ERROR: ' + err.message);
         EmailService.showToast('⚠️ שגיאה בתהליך החתימה: ' + err.message, true);
       }
     } else {
@@ -1405,7 +1399,7 @@ class QuoteUI {
     <div style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">הצעה בתוקף ל-14 יום</div>
     <div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;line-height:1.35">${vals.name} יקר/ה,<br>${clientMode ? 'מוכן/ה לצאת לדרך?' : 'מוכן/ה לאשר את ההצעה?'}</div>
     ${clientMode ? '<div style="font-size:15px;color:rgba(255,255,255,0.6);margin-bottom:16px">בואו נחתום ונתקדם — ההצעה מחכה לאישורך</div>' : ''}
-    <button onclick="openPrintDocument()" style="padding:14px 32px;background:var(--sun);color:white;font-size:16px;font-weight:800;border:none;border-radius:12px;cursor:pointer;box-shadow:0 4px 20px rgba(244,162,0,0.4);transition:all 0.2s">✍️ חתום על ההצעה</button>
+    <button onclick="scrollToSign()" style="padding:14px 32px;background:var(--sun);color:white;font-size:16px;font-weight:800;border:none;border-radius:12px;cursor:pointer;box-shadow:0 4px 20px rgba(244,162,0,0.4);transition:all 0.2s">✍️ חתום על ההצעה</button>
   </div>` : ''}`;
   }
 
