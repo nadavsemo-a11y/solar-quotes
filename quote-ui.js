@@ -822,10 +822,12 @@ class QuoteUI {
       badge.style.cssText = 'text-align:center;padding:24px;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;margin-top:12px;';
       let html = '<div style="font-size:28px;margin-bottom:8px">🔒</div><div style="font-size:16px;font-weight:800;color:#166534;margin-bottom:12px">מסמך זה נחתם ונעול</div>';
       if (sigInfo && sigInfo.signerName) {
-        html += '<div style="font-size:13px;color:#334155;line-height:2;text-align:right;max-width:300px;margin:0 auto">';
+        html += '<div style="font-size:13px;color:#334155;line-height:2;text-align:right;max-width:340px;margin:0 auto">';
         html += `<strong>שם החותם:</strong> ${sigInfo.signerName}<br>`;
-        if (sigInfo.refID)   html += `<strong>מזהה אישור:</strong> ${sigInfo.refID}<br>`;
-        if (sigInfo.dateStr) html += `<strong>תאריך חתימה:</strong> ${sigInfo.dateStr}`;
+        if (sigInfo.signerId) html += `<strong>ת.ז.:</strong> ${sigInfo.signerId}<br>`;
+        if (sigInfo.refID)    html += `<strong>מזהה אישור:</strong> <span style="font-family:monospace;letter-spacing:0.5px">${sigInfo.refID}</span><br>`;
+        if (sigInfo.dateStr)  html += `<strong>תאריך חתימה:</strong> ${sigInfo.dateStr}<br>`;
+        if (sigInfo.ipAddr)   html += `<strong>כתובת IP:</strong> <span style="font-family:monospace">${sigInfo.ipAddr}</span>`;
         html += '</div>';
         if (sigInfo.sigImg) {
           html += `<div style="margin-top:16px"><div style="font-size:11px;color:#6B7280;margin-bottom:6px">חתימת הלקוח:</div><img src="${sigInfo.sigImg}" alt="חתימה" style="max-width:280px;height:80px;border:1px solid #ddd;border-radius:8px;background:white;object-fit:contain"></div>`;
