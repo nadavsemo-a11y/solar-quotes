@@ -732,11 +732,13 @@ class QuoteUI {
     set('sqs-kw',    (vals.kw  || 0) + ' kW');
     set('sqs-price', '₪' + this._fmt(d.price || 0));
 
-    // Pre-fill name + ID
+    // Pre-fill name + ID + date
     const nameEl = document.getElementById('sigName');
     const idEl   = document.getElementById('sigID');
+    const dateEl = document.getElementById('sigDate');
     if (nameEl && vals.name) nameEl.value = vals.name;
     if (idEl   && vals.cid)  idEl.value   = vals.cid;
+    if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
 
     setTimeout(() => this.signature.init(), 100);
   }
@@ -745,12 +747,14 @@ class QuoteUI {
     const name   = document.getElementById('sigName')?.value.trim()  || '';
     const idNum  = document.getElementById('sigID')?.value.trim()    || '';
     const agreed = document.getElementById('sigAgree')?.checked      || false;
+    const sigEmail = document.getElementById('sigEmail')?.value.trim() || '';
+    const sigDate  = document.getElementById('sigDate')?.value || '';
 
     const vals   = this._getFormValues();
     const client = { name: vals.name, phone: vals.phone, address: vals.address, city: vals.city };
 
     const result = await this.signature.collect({
-      name, idNum, agreed,
+      name, idNum, agreed, email: sigEmail, sigDate,
       quoteSnapshot: this.quoteData,
       clientData:    client,
     });
@@ -768,7 +772,7 @@ class QuoteUI {
     const hasPSS = typeof PostSignService !== 'undefined';
     if (docId && hasPSS) {
       try {
-        const clientEmail = document.getElementById('clientEmail')?.value?.trim() || this._clientEmail || '';
+        const clientEmail = document.getElementById('sigEmail')?.value?.trim() || document.getElementById('clientEmail')?.value?.trim() || this._clientEmail || '';
         const postResult = await PostSignService.process({
           docType:   'quote',
           docId,
@@ -845,19 +849,22 @@ class QuoteUI {
     };
     show('err-sigName',   errors.includes('name'));
     show('err-sigID',     errors.includes('idNum'));
+    show('err-sigEmail',  errors.includes('email'));
+    show('err-sigDate',   errors.includes('sigDate'));
     show('err-sigCanvas', errors.includes('canvas'));
     if (errors.includes('agree')) alert('נא לסמן את תיבת האישור');
     document.getElementById('sigName')?.classList.toggle('sig-err', errors.includes('name'));
     document.getElementById('sigID')?.classList.toggle('sig-err',   errors.includes('idNum'));
+    document.getElementById('sigEmail')?.classList.toggle('sig-err', errors.includes('email'));
     document.getElementById('sigBox')?.classList.toggle('sig-err',  errors.includes('canvas'));
   }
 
   _clearSigErrors() {
-    ['err-sigName','err-sigID','err-sigCanvas'].forEach(id => {
+    ['err-sigName','err-sigID','err-sigEmail','err-sigDate','err-sigCanvas'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
-    ['sigName','sigID','sigBox'].forEach(id => {
+    ['sigName','sigID','sigEmail','sigDate','sigBox'].forEach(id => {
       document.getElementById(id)?.classList.remove('sig-err');
     });
   }
