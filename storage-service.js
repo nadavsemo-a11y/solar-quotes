@@ -8,6 +8,9 @@
  *   - בניית קישורי שיתוף (WhatsApp, Email, fallback)
  *   - fallback URL (ללא Worker, embed מלא ב-hash)
  *
+ * תלויות:
+ *   - url-shortener.js → UrlShortener (מודול קיצור כתובות עצמאי)
+ *
  * אין כאן גישה ל-DOM — הנתונים מועברים מבחוץ.
  * אין כאן לוגיקת UI — callbacks מוחזרים לקורא.
  *
@@ -24,6 +27,7 @@ class StorageService {
    */
   constructor(workerUrl = 'https://s-a.gs') {
     this._workerUrl = workerUrl;
+    this.shortener  = new UrlShortener(workerUrl);
   }
 
   // ── Encode / Decode ────────────────────────────────────────────────────
@@ -176,18 +180,13 @@ class StorageService {
 
   /**
    * copyToClipboard(text)
-   * מעתיק טקסט ללוח. מחזיר Promise<boolean>.
+   * מדליגט למודול url-shortener.js החיצוני.
    *
    * @param {string} text
    * @returns {Promise<boolean>}
    */
   async copyToClipboard(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      return false;
-    }
+    return this.shortener.copyToClipboard(text);
   }
 }
 
