@@ -827,6 +827,9 @@ class QuoteUI {
         if (sigInfo.refID)   html += `<strong>מזהה אישור:</strong> ${sigInfo.refID}<br>`;
         if (sigInfo.dateStr) html += `<strong>תאריך חתימה:</strong> ${sigInfo.dateStr}`;
         html += '</div>';
+        if (sigInfo.sigImg) {
+          html += `<div style="margin-top:16px"><div style="font-size:11px;color:#6B7280;margin-bottom:6px">חתימת הלקוח:</div><img src="${sigInfo.sigImg}" alt="חתימה" style="max-width:280px;height:80px;border:1px solid #ddd;border-radius:8px;background:white;object-fit:contain"></div>`;
+        }
       }
       badge.innerHTML = html;
       sigSection.appendChild(badge);
