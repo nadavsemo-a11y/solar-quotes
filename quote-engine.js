@@ -24,12 +24,13 @@ const QuoteEngine = (() => {
   const MAX_AC_INDEX = 15;    // צמוד מדד: AC ≤ 15 בלבד
   const MAX_AC_FAST  = 30;    // החזר מהיר: AC ≤ 30 בלבד
 
-  // תעריפי רכישה 2026 — ₪ לקו"ט (תקרות מצטברות)
+  // תעריפי רכישה 2026 — אג׳ לקו"ט, מדרגות מצטברות (Nominal)
   const TARIFF_TIERS = [
-    { cap: 15,  rate: 0.48   },
-    { cap: 100, rate: 0.3731 },
-    { cap: 300, rate: 0.3437 },
-    { cap: 630, rate: 0.2844 },
+    { cap: 15,    rate: 0.4800 },
+    { cap: 100,   rate: 0.3731 },
+    { cap: 630,   rate: 0.2958 },
+    { cap: 5000,  rate: 0.2370 },
+    { cap: Infinity, rate: 0.1716 },
   ];
 
   // תעריפי מסלול מהיר — מדרגות לפי AC
