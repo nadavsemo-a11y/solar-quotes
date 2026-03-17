@@ -891,17 +891,19 @@ class QuoteUI {
   // EXTRAS STATE — dynamic save/restore (no hardcoded IDs)
   // ══════════════════════════════════════════════════════════════════════
 
-  /** Scans all extras from config, saves checked + price for each */
+  /** Scans all extras from config, saves checked + calculated price for each */
   _buildExtrasState() {
-    const cfg = this._getExtrasConfig();
-    const all = [...(cfg.upgrades || []), ...(cfg.potential || [])];
+    const vals = this._getFormValues();
+    const dcKW = parseFloat(vals.kw) || 0;
+    const premiumPanel = parseFloat(document.getElementById('premiumPanel')?.value) || 100;
+    const usdRate = parseFloat(document.getElementById('usdRate')?.value) || 3.14;
+    const computed = this._getExtras(dcKW, premiumPanel, usdRate);
+
     const state = {};
-    for (const item of all) {
-      const chk = document.getElementById('chk-' + item.id);
-      const price = document.getElementById('price-' + item.id);
+    for (const item of computed) {
       state[item.id] = {
-        checked: chk?.checked || false,
-        price: price?.value || '',
+        checked: item.checked,
+        price: String(item.price || ''),
       };
     }
     return state;
