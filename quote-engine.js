@@ -15,10 +15,14 @@ const QuoteEngine = (() => {
   // ── קבועים ──────────────────────────────────────────────────────────────
 
   const VAT                = 1.18;
-  const YEARS              = 25;
-  const URBAN_PREMIUM      = 0.06;   // 6 אג׳ לקו"ט, 15 שנות ראשונות
-  const URBAN_PREMIUM_YEARS = 15;
+  const YEARS              = 26;
+  const URBAN_PREMIUM      = 0.06;   // 6 אג׳ לקו"ט, 10 שנות ראשונות
+  const URBAN_PREMIUM_YEARS = 10;
   const DEFAULT_HOURS      = 1750;   // שעות שמש שנתיות ברירת מחדל
+
+  // מגבלות זכאות מסלולים לפי AC
+  const MAX_AC_INDEX = 15;    // צמוד מדד: AC ≤ 15 בלבד
+  const MAX_AC_FAST  = 30;    // החזר מהיר: AC ≤ 30 בלבד
 
   // תעריפי רכישה 2026 — ₪ לקו"ט (תקרות מצטברות)
   const TARIFF_TIERS = [
@@ -116,38 +120,56 @@ const QuoteEngine = (() => {
       planName = planKey === 'green' ? '🌿 מסלול ירוק' : '📊 מסלול רגיל';
       const rateStr = `${Math.round((baseR + up) * 100 * 100) / 100} אג׳`;
       planDesc = hasUrbanPremium
-        ? `${rateStr} (15 שנות ראשונות) + ${rateAg} אג׳ (לאחר מכן)`
+        ? `${rateStr} (${URBAN_PREMIUM_YEARS} שנות ראשונות) + ${rateAg} אג׳ (לאחר מכן)`
         : `${rateAg} אג׳ קבוע | הספק AC ${acKW} kW`;
       rateNote = hasUrbanPremium
-        ? `תעריף ${rateAg} אג׳ + פרמייה אורבנית 6 אג׳ = ${Math.round((baseR + up) * 100 * 100) / 100} אג׳ (15 שנים)`
+        ? `תעריף ${rateAg} אג׳ + פרמייה אורבנית ${URBAN_PREMIUM * 100} אג׳ = ${Math.round((baseR + up) * 100 * 100) / 100} אג׳ (${URBAN_PREMIUM_YEARS} שנים)`
         : `תעריף משוקלל ${rateAg} אג׳ לקו"ט | הספק AC ${acKW} kW`;
       for (let y = 1; y <= YEARS; y++) {
         yearlyBreakdown.push({ year: y, inc: kwh * (y <= URBAN_PREMIUM_YEARS ? rate : rateAfter) });
       }
 
     } else if (planKey === 'fast') {
-      const kwhBelow = Math.min(dcKW, acKW) * HOURS;
-      const kwhAbove = Math.max(dcKW - acKW, 0) * HOURS;
-      const baseHigh = 0.60 + up, baseMid = 0.48 + up, baseLow = 0.39;
       planName = '⚡ מסלול החזר השקעה מהיר';
-      planDesc = `60 אג׳ (≤${acKW}kW AC) | 48 אג׳ (מעל) | 39 אג׳ שנות 6–25`;
-      rateNote = `שנות 1–5: 60 אג׳ (עד ${acKW}kW) + 48 אג׳ (מעל) | שנות 6–25: 39 אג׳`;
-      const yr1_5  = kwhBelow * baseHigh + kwhAbove * baseMid;
-      const yr6_25 = kwh * baseLow;
-      for (let y = 1; y <= YEARS; y++) {
-        yearlyBreakdown.push({ year: y, inc: y <= 5 ? yr1_5 : yr6_25 });
+      if (acKW <= 15) {
+        // AC ≤ 15: שנים 1-5: 60 אג׳, שנים 6-26: 39 אג׳
+        const rateHigh = 0.60;
+        const rateLow  = 0.39;
+        planDesc = `60 אג׳ (שנות 1–5) | 39 אג׳ (שנות 6–26)`;
+        rateNote = hasUrbanPremium
+          ? `שנות 1–5: ${(rateHigh + URBAN_PREMIUM) * 100} אג׳ | שנות 6–10: ${(rateLow + URBAN_PREMIUM) * 100} אג׳ | שנות 11–26: ${rateLow * 100} אג׳ (כולל פרמייה אורבנית)`
+          : `שנות 1–5: 60 אג׳ | שנות 6–26: 39 אג׳`;
+        for (let y = 1; y <= YEARS; y++) {
+          const base = y <= 5 ? rateHigh : rateLow;
+          const prem = y <= URBAN_PREMIUM_YEARS ? up : 0;
+          yearlyBreakdown.push({ year: y, inc: kwh * (base + prem) });
+        }
+      } else {
+        // 15 < AC ≤ 30: תעריף אחיד 39.36 אג׳ כל התקופה
+        const rateFlat = 0.3936;
+        planDesc = `39.36 אג׳ קבוע | כל התקופה (26 שנה)`;
+        rateNote = hasUrbanPremium
+          ? `שנות 1–10: ${(rateFlat + URBAN_PREMIUM) * 100} אג׳ | שנות 11–26: ${rateFlat * 100} אג׳ (כולל פרמייה אורבנית)`
+          : `תעריף אחיד ${rateFlat * 100} אג׳ לקו"ט | הספק AC ${acKW} kW`;
+        for (let y = 1; y <= YEARS; y++) {
+          const prem = y <= URBAN_PREMIUM_YEARS ? up : 0;
+          yearlyBreakdown.push({ year: y, inc: kwh * (rateFlat + prem) });
+        }
       }
 
     } else { // index
-      const iR  = 0.387 + up;
-      const iRA = 0.387;
+      const iBase = 0.391;
       const inf = (inflationPct || 2.5) / 100;
       planName = '📈 מסלול צמוד מדד';
-      planDesc = `${hasUrbanPremium ? '44.7' : '38.7'} אג׳ + צמוד מדד ${inflationPct || 2.5}% לשנה`;
-      rateNote = `תעריף התחלתי ${hasUrbanPremium ? '44.7' : '38.7'} אג׳${hasUrbanPremium ? ' (כולל פרמייה)' : ''} | צמוד מדד ${inflationPct || 2.5}%`;
+      const withPrem = Math.round((iBase + URBAN_PREMIUM) * 1000) / 10;
+      const baseAg   = Math.round(iBase * 1000) / 10;
+      planDesc = `${hasUrbanPremium ? withPrem : baseAg} אג׳ + צמוד מדד ${inflationPct || 2.5}% לשנה`;
+      rateNote = hasUrbanPremium
+        ? `תעריף ${baseAg} אג׳ + פרמייה ${URBAN_PREMIUM * 100} אג׳ = ${withPrem} אג׳ (10 שנות ראשונות) | צמוד מדד ${inflationPct || 2.5}%`
+        : `תעריף התחלתי ${baseAg} אג׳ | צמוד מדד ${inflationPct || 2.5}%`;
       for (let y = 1; y <= YEARS; y++) {
-        const r = y <= URBAN_PREMIUM_YEARS ? iR : iRA;
-        yearlyBreakdown.push({ year: y, inc: kwh * r * Math.pow(1 + inf, y - 1) });
+        const prem = y <= URBAN_PREMIUM_YEARS ? up : 0;
+        yearlyBreakdown.push({ year: y, inc: kwh * (iBase + prem) * Math.pow(1 + inf, y - 1) });
       }
     }
 
@@ -355,6 +377,18 @@ const QuoteEngine = (() => {
   function fmt(n)  { return Math.round(n).toLocaleString('he-IL'); }
   function fmtD(n) { return Number(n).toFixed(1); }
 
+  /**
+   * getEligiblePlans(acKW)
+   * מחזיר רשימת מסלולים זכאים לפי הספק AC.
+   * @returns {string[]} מפתחות מסלולים זכאים
+   */
+  function getEligiblePlans(acKW) {
+    const plans = ['green', 'regular']; // נומינלי תמיד זמין
+    if (acKW <= MAX_AC_FAST)  plans.push('fast');
+    if (acKW <= MAX_AC_INDEX) plans.push('index');
+    return plans;
+  }
+
   // ── ייצוא ─────────────────────────────────────────────────────────────────
 
   return {
@@ -366,6 +400,7 @@ const QuoteEngine = (() => {
     calcPrice,
     calcPaymentStages,
     calcBreaker,
+    getEligiblePlans,
     // נתוני עזר
     isUrbanPremiumCity,
     PREMIUM_CITIES,
