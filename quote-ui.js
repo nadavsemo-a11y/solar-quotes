@@ -1139,22 +1139,16 @@ class QuoteUI {
 
     const fastPlanHTML = d.planKey === 'fast' ? `
       <div id="qf-fastplan" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
-        ${d.acKW <= 15 ? `
         <div style="background:rgba(244,162,0,0.15);border-radius:9px;padding:10px 14px">
           <div style="font-weight:800;color:var(--sun-light);margin-bottom:4px">שנות 1–5</div>
-          <div>60 אג׳ על כל הייצור</div>
+          <div>${p.planDesc.split('|')[0].trim()}</div>
           <div style="font-weight:800;color:var(--sun-light);margin-top:4px" id="qf-fast-yr1">₪${fmt(p.yearlyBreakdown[0].inc)} / שנה</div>
         </div>
         <div style="background:rgba(255,255,255,0.08);border-radius:9px;padding:10px 14px">
           <div style="font-weight:800;opacity:0.8;margin-bottom:4px">שנות 6–26</div>
-          <div>39 אג׳ על כל הייצור</div>
+          <div>${p.planDesc.split('|')[1]?.trim() || ''}</div>
           <div style="font-weight:800;opacity:0.8;margin-top:4px" id="qf-fast-yr6">₪${fmt(p.yearlyBreakdown[5].inc)} / שנה</div>
-        </div>` : `
-        <div style="background:rgba(244,162,0,0.15);border-radius:9px;padding:10px 14px;grid-column:1/-1">
-          <div style="font-weight:800;color:var(--sun-light);margin-bottom:4px">תעריף אחיד — 26 שנה</div>
-          <div>39.36 אג׳ על כל הייצור</div>
-          <div style="font-weight:800;color:var(--sun-light);margin-top:4px" id="qf-fast-yr1">₪${fmt(p.yearlyBreakdown[0].inc)} / שנה</div>
-        </div>`}
+        </div>
       </div>` : '';
 
     const indexPlanHTML = d.planKey === 'index' ? `
@@ -1256,8 +1250,8 @@ class QuoteUI {
         <div class="qplan-btn" id="qbtn-fast" onclick="${canFast?`switchPlan('fast',this)`:''}" style="${btnStyle('fast',canFast,'var(--sun)','rgba(244,162,0,0.05)')}">
           <div style="font-size:16px;margin-bottom:4px">⚡</div>
           <div style="font-weight:800;color:var(--sky);font-size:13px">החזר מהיר</div>
-          <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">${d.acKW<=15?'60 → 39 אג׳':'39.36 אג׳'}</div>
-          <div style="font-size:10px;color:var(--gray);margin-top:1px">${canFast?(d.acKW<=15?'שנות 1–5 vs 6–26':'תעריף אחיד 26 שנה'):'לא זמין >30kW'}</div>
+          <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">60 → 38 אג׳</div>
+          <div style="font-size:10px;color:var(--gray);margin-top:1px">${canFast?'שנות 1–5 vs 6–26':'לא זמין >30kW'}</div>
         </div>
         <div class="qplan-btn" id="qbtn-index" onclick="${canIndex?`switchPlan('index',this)`:''}" style="${btnStyle('index',canIndex,'var(--sun)','rgba(244,162,0,0.05)')}">
           <div style="font-size:16px;margin-bottom:4px">📈</div>
