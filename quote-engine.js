@@ -27,10 +27,15 @@ const QuoteEngine = (() => {
   // תעריפי רכישה 2026 — ₪ לקו"ט (תקרות מצטברות)
   const TARIFF_TIERS = [
     { cap: 15,  rate: 0.48   },
-    { cap: 100, rate: 0.3936 },
+    { cap: 100, rate: 0.3731 },
     { cap: 300, rate: 0.3437 },
     { cap: 630, rate: 0.2844 },
   ];
+
+  // תעריפי מסלול מהיר — מדרגות לפי AC
+  const FAST_BLOCK1_HIGH = 0.60;    // שנות 1-5, block_1 (≤15kW)
+  const FAST_BLOCK1_LOW  = 0.3807;  // שנות 6-26, block_1 (≤15kW)
+  const FAST_BLOCK2      = 0.3731;  // כל התקופה, block_2 (>15kW)
 
   // גדלי מפסק סטנדרטיים (אמפר)
   const BREAKER_SIZES = [25, 40, 63, 80, 100, 125, 160, 250, 400, 630];
@@ -131,30 +136,28 @@ const QuoteEngine = (() => {
 
     } else if (planKey === 'fast') {
       planName = '⚡ מסלול החזר השקעה מהיר';
-      if (acKW <= 15) {
-        // AC ≤ 15: שנים 1-5: 60 אג׳, שנים 6-26: 39 אג׳
-        const rateHigh = 0.60;
-        const rateLow  = 0.39;
-        planDesc = `60 אג׳ (שנות 1–5) | 39 אג׳ (שנות 6–26)`;
-        rateNote = hasUrbanPremium
-          ? `שנות 1–5: ${(rateHigh + URBAN_PREMIUM) * 100} אג׳ | שנות 6–10: ${(rateLow + URBAN_PREMIUM) * 100} אג׳ | שנות 11–26: ${rateLow * 100} אג׳ (כולל פרמייה אורבנית)`
-          : `שנות 1–5: 60 אג׳ | שנות 6–26: 39 אג׳`;
-        for (let y = 1; y <= YEARS; y++) {
-          const base = y <= 5 ? rateHigh : rateLow;
-          const prem = y <= URBAN_PREMIUM_YEARS ? up : 0;
-          yearlyBreakdown.push({ year: y, inc: kwh * (base + prem) });
-        }
-      } else {
-        // 15 < AC ≤ 30: תעריף אחיד 39.36 אג׳ כל התקופה
-        const rateFlat = 0.3936;
-        planDesc = `39.36 אג׳ קבוע | כל התקופה (26 שנה)`;
-        rateNote = hasUrbanPremium
-          ? `שנות 1–10: ${(rateFlat + URBAN_PREMIUM) * 100} אג׳ | שנות 11–26: ${rateFlat * 100} אג׳ (כולל פרמייה אורבנית)`
-          : `תעריף אחיד ${rateFlat * 100} אג׳ לקו"ט | ${YEARS} שנה | הספק AC ${acKW} kW`;
-        for (let y = 1; y <= YEARS; y++) {
-          const prem = y <= URBAN_PREMIUM_YEARS ? up : 0;
-          yearlyBreakdown.push({ year: y, inc: kwh * (rateFlat + prem) });
-        }
+      // מדרגות: block_1 = min(AC,15), block_2 = max(AC-15,0)
+      const block1 = Math.min(acKW, 15);
+      const block2 = Math.max(acKW - 15, 0);
+      const kwhB1 = block1 * HOURS;
+      const kwhB2 = block2 * HOURS;
+
+      // תעריפים משוקללים
+      const wHigh = acKW > 0 ? (block1 * FAST_BLOCK1_HIGH + block2 * FAST_BLOCK2) / acKW : FAST_BLOCK1_HIGH;
+      const wLow  = acKW > 0 ? (block1 * FAST_BLOCK1_LOW  + block2 * FAST_BLOCK2) / acKW : FAST_BLOCK1_LOW;
+      const wHighAg = Math.round(wHigh * 10000) / 100;
+      const wLowAg  = Math.round(wLow  * 10000) / 100;
+
+      planDesc = `${wHighAg} אג׳ (שנות 1–5) | ${wLowAg} אג׳ (שנות 6–26)`;
+      rateNote = hasUrbanPremium
+        ? `שנות 1–5: ${wHighAg} אג׳ | שנות 6–10: ${wLowAg}+${URBAN_PREMIUM*100} אג׳ | שנות 11–26: ${wLowAg} אג׳ (כולל פרמייה)`
+        : `שנות 1–5: ${wHighAg} אג׳ | שנות 6–26: ${wLowAg} אג׳ | הספק AC ${acKW} kW`;
+
+      for (let y = 1; y <= YEARS; y++) {
+        const b1Rate = y <= 5 ? FAST_BLOCK1_HIGH : FAST_BLOCK1_LOW;
+        const prem = y <= URBAN_PREMIUM_YEARS ? up : 0;
+        const inc = kwhB1 * (b1Rate + prem) + kwhB2 * (FAST_BLOCK2 + prem);
+        yearlyBreakdown.push({ year: y, inc });
       }
 
     } else { // index
