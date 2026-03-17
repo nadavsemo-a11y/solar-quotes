@@ -150,7 +150,7 @@ const QuoteEngine = (() => {
         planDesc = `39.36 אג׳ קבוע | כל התקופה (26 שנה)`;
         rateNote = hasUrbanPremium
           ? `שנות 1–10: ${(rateFlat + URBAN_PREMIUM) * 100} אג׳ | שנות 11–26: ${rateFlat * 100} אג׳ (כולל פרמייה אורבנית)`
-          : `תעריף אחיד ${rateFlat * 100} אג׳ לקו"ט | הספק AC ${acKW} kW`;
+          : `תעריף אחיד ${rateFlat * 100} אג׳ לקו"ט | ${YEARS} שנה | הספק AC ${acKW} kW`;
         for (let y = 1; y <= YEARS; y++) {
           const prem = y <= URBAN_PREMIUM_YEARS ? up : 0;
           yearlyBreakdown.push({ year: y, inc: kwh * (rateFlat + prem) });
