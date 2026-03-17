@@ -39,7 +39,7 @@ class QuoteUI {
     // Section 1: מבוא
     'intro-1': { section: 'מבוא', text: 'ברכות על הבחירה להצטרף לייצור אנרגיה סולארית. אנו נשמח לעבוד על הפרויקט יחד איתכם.' },
     'intro-2': { section: 'מבוא', text: 'בעידן שבו העולם צמא לאנרגיה ממקורות מתחדשים, להפיק חשמל נקי מזיהום, מאנרגיית השמש זה הדבר הנכון לעשות. כבעלי גג, יש לכם הזדמנות לעשות בו שימוש כדי לקדם מטרה שחשובה למדינה ולאנושות.' },
-    'intro-3': { section: 'מבוא', text: 'כדי לתרום למאמץ, מדינת ישראל, באמצעות רשות החשמל, יצרה אסדרות בזכותן החשמל שתייצרו באמצעות המערכת הסולארית שתותקן על הגג שלכם ישמש להתקזזות מול עלויות צריכת החשמל ואף תוכלו למכור את עודפי ייצור החשמל לחברת החשמל. האסדרה מבטיחה את זכאותכם לתשלומים מול חברת החשמל למשך 25 שנה.' },
+    'intro-3': { section: 'מבוא', text: 'כדי לתרום למאמץ, מדינת ישראל, באמצעות רשות החשמל, יצרה אסדרות בזכותן החשמל שתייצרו באמצעות המערכת הסולארית שתותקן על הגג שלכם ישמש להתקזזות מול עלויות צריכת החשמל ואף תוכלו למכור את עודפי ייצור החשמל לחברת החשמל. האסדרה מבטיחה את זכאותכם לתשלומים מול חברת החשמל למשך 26 שנה.' },
     'intro-4': { section: 'מבוא', text: 'באופן זה המערכת הסולארית תיצור עבורכם חיסכון והכנסות מעבר לעלותה, ובכך תניב לכם תשואה נאה, ותתרום לרווחתכם וביטחונכם הכלכלי.' },
 
     // Section 2: שירות אישי
@@ -1139,16 +1139,22 @@ class QuoteUI {
 
     const fastPlanHTML = d.planKey === 'fast' ? `
       <div id="qf-fastplan" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
+        ${d.acKW <= 15 ? `
         <div style="background:rgba(244,162,0,0.15);border-radius:9px;padding:10px 14px">
           <div style="font-weight:800;color:var(--sun-light);margin-bottom:4px">שנות 1–5</div>
-          <div>60 אג׳ על ${Math.min(d.dcKW,15)} kW ראשונים${d.dcKW>15 ? ' | 48 אג׳ על '+(d.dcKW-15).toFixed(1)+' kW נוספים' : ''}</div>
+          <div>60 אג׳ על כל הייצור</div>
           <div style="font-weight:800;color:var(--sun-light);margin-top:4px" id="qf-fast-yr1">₪${fmt(p.yearlyBreakdown[0].inc)} / שנה</div>
         </div>
         <div style="background:rgba(255,255,255,0.08);border-radius:9px;padding:10px 14px">
-          <div style="font-weight:800;opacity:0.8;margin-bottom:4px">שנות 6–25</div>
+          <div style="font-weight:800;opacity:0.8;margin-bottom:4px">שנות 6–26</div>
           <div>39 אג׳ על כל הייצור</div>
           <div style="font-weight:800;opacity:0.8;margin-top:4px" id="qf-fast-yr6">₪${fmt(p.yearlyBreakdown[5].inc)} / שנה</div>
-        </div>
+        </div>` : `
+        <div style="background:rgba(244,162,0,0.15);border-radius:9px;padding:10px 14px;grid-column:1/-1">
+          <div style="font-weight:800;color:var(--sun-light);margin-bottom:4px">תעריף אחיד — 26 שנה</div>
+          <div>39.36 אג׳ על כל הייצור</div>
+          <div style="font-weight:800;color:var(--sun-light);margin-top:4px" id="qf-fast-yr1">₪${fmt(p.yearlyBreakdown[0].inc)} / שנה</div>
+        </div>`}
       </div>` : '';
 
     const indexPlanHTML = d.planKey === 'index' ? `
@@ -1227,30 +1233,39 @@ class QuoteUI {
     <div class="sec" style="padding:24px 28px;margin-bottom:18px">
       <div class="sec-title" style="font-size:17px"><span class="bar"></span>בחר מסלול תעריף — ההכנסות יתעדכנו מיד</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="quotePlanSelector">
-        <div class="qplan-btn" id="qbtn-green" onclick="${d.acKW<=15?'switchPlan(\'green\',this)':''}" style="cursor:${d.acKW<=15?'pointer':'not-allowed'};border-radius:12px;padding:14px;border:2px solid ${d.effectivePlanKey==='green'?'#22c55e':'var(--border)'};background:${d.effectivePlanKey==='green'?'rgba(34,197,94,0.07)':'var(--light)'};opacity:${d.acKW>15?'0.4':'1'};transition:all 0.2s">
+        ${(() => {
+          const elig = QuoteEngine.getEligiblePlans(d.acKW);
+          const canGreen = elig.includes('green') && d.acKW <= 15;
+          const canFast  = elig.includes('fast');
+          const canIndex = elig.includes('index');
+          const act = d.effectivePlanKey;
+          const btnStyle = (key, ok, color, bgColor) => `cursor:${ok?'pointer':'not-allowed'};border-radius:12px;padding:14px;border:2px solid ${act===key?color:'var(--border)'};background:${act===key?bgColor:'var(--light)'};opacity:${ok?'1':'0.4'};transition:all 0.2s`;
+          return `
+        <div class="qplan-btn" id="qbtn-green" onclick="${canGreen?`switchPlan('green',this)`:''}" style="${btnStyle('green',canGreen,'#22c55e','rgba(34,197,94,0.07)')}">
           <div style="font-size:16px;margin-bottom:4px">🌿</div>
           <div style="font-weight:800;color:var(--sky);font-size:13px">מסלול ירוק</div>
           <div style="font-size:10px;color:#15803d;margin-top:2px;font-weight:700">${Math.round(calcWeightedRate(d.acKW)*10000)/100} אג׳</div>
-          <div style="font-size:10px;color:var(--gray);margin-top:1px">${d.acKW>15?'לא זמין >15kW':'ללא מונה ייצור ✓'}</div>
+          <div style="font-size:10px;color:var(--gray);margin-top:1px">${canGreen?'ללא מונה ייצור ✓':'לא זמין >15kW'}</div>
         </div>
-        <div class="qplan-btn" id="qbtn-regular" onclick="switchPlan('regular',this)" style="cursor:pointer;border-radius:12px;padding:14px;border:2px solid ${d.effectivePlanKey==='regular'?'var(--sun)':'var(--border)'};background:${d.effectivePlanKey==='regular'?'rgba(244,162,0,0.05)':'var(--light)'};transition:all 0.2s">
+        <div class="qplan-btn" id="qbtn-regular" onclick="switchPlan('regular',this)" style="${btnStyle('regular',true,'var(--sun)','rgba(244,162,0,0.05)')}">
           <div style="font-size:16px;margin-bottom:4px">📊</div>
           <div style="font-weight:800;color:var(--sky);font-size:13px">מסלול רגיל</div>
           <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">${Math.round(calcWeightedRate(d.acKW)*10000)/100} אג׳</div>
           <div style="font-size:10px;color:var(--gray);margin-top:1px">+ לוח מונה ייצור</div>
         </div>
-        <div class="qplan-btn" id="qbtn-fast" onclick="switchPlan('fast',this)" style="cursor:pointer;border-radius:12px;padding:14px;border:2px solid ${d.effectivePlanKey==='fast'?'var(--sun)':'var(--border)'};background:${d.effectivePlanKey==='fast'?'rgba(244,162,0,0.05)':'var(--light)'};transition:all 0.2s">
+        <div class="qplan-btn" id="qbtn-fast" onclick="${canFast?`switchPlan('fast',this)`:''}" style="${btnStyle('fast',canFast,'var(--sun)','rgba(244,162,0,0.05)')}">
           <div style="font-size:16px;margin-bottom:4px">⚡</div>
           <div style="font-weight:800;color:var(--sky);font-size:13px">החזר מהיר</div>
-          <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">60/48 → 39 אג׳</div>
-          <div style="font-size:10px;color:var(--gray);margin-top:1px">שנות 1–5 vs 6–25</div>
+          <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">${d.acKW<=15?'60 → 39 אג׳':'39.36 אג׳'}</div>
+          <div style="font-size:10px;color:var(--gray);margin-top:1px">${canFast?(d.acKW<=15?'שנות 1–5 vs 6–26':'תעריף אחיד 26 שנה'):'לא זמין >30kW'}</div>
         </div>
-        <div class="qplan-btn" id="qbtn-index" onclick="switchPlan('index',this)" style="cursor:pointer;border-radius:12px;padding:14px;border:2px solid ${d.effectivePlanKey==='index'?'var(--sun)':'var(--border)'};background:${d.effectivePlanKey==='index'?'rgba(244,162,0,0.05)':'var(--light)'};transition:all 0.2s">
+        <div class="qplan-btn" id="qbtn-index" onclick="${canIndex?`switchPlan('index',this)`:''}" style="${btnStyle('index',canIndex,'var(--sun)','rgba(244,162,0,0.05)')}">
           <div style="font-size:16px;margin-bottom:4px">📈</div>
           <div style="font-weight:800;color:var(--sky);font-size:13px">צמוד מדד</div>
-          <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">38.7 אג׳ + מדד</div>
-          <div style="font-size:10px;color:var(--gray);margin-top:1px">${d.needsMeter ? "⚡ כולל מונה ייצור" : "ללא מונה ייצור ✓"}</div>
-        </div>
+          <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">39.1 אג׳ + מדד</div>
+          <div style="font-size:10px;color:var(--gray);margin-top:1px">${canIndex?'צמוד למדד המחירים לצרכן':'לא זמין >15kW'}</div>
+        </div>`;
+        })()}
       </div>
       <div id="quoteInflationRowDiv" style="display:none;align-items:center;gap:8px;margin-top:12px;background:rgba(244,162,0,0.08);border:1px solid rgba(244,162,0,0.25);border-radius:9px;padding:10px 14px;font-size:13px;font-weight:600;color:#112240">
         <span>📉 אחוז אינפלציה שנתי:</span>
@@ -1290,7 +1305,7 @@ class QuoteUI {
       </div>
       <div class="fin-card">
         <span class="fin-val" id="qf-total">₪${fmt(p.totalInc)}</span>
-        <div class="fin-lbl">סה"כ הכנסות 25 שנה</div>
+        <div class="fin-lbl">סה"כ הכנסות 26 שנה</div>
         <div class="fin-note">ממוצע שנתי: <span id="qf-avg">₪${fmt(p.avgAnnual)}</span></div>
       </div>
       <div class="fin-card">
