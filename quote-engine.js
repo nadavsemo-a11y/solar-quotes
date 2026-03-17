@@ -137,13 +137,10 @@ const QuoteEngine = (() => {
 
     } else if (planKey === 'fast') {
       planName = '⚡ מסלול החזר השקעה מהיר';
-      // מדרגות: block_1 = min(AC,15), block_2 = max(AC-15,0)
+      // תעריף משוקלל לפי מדרגות AC, ייצור לפי DC
       const block1 = Math.min(acKW, 15);
       const block2 = Math.max(acKW - 15, 0);
-      const kwhB1 = block1 * HOURS;
-      const kwhB2 = block2 * HOURS;
 
-      // תעריפים משוקללים
       const wHigh = acKW > 0 ? (block1 * FAST_BLOCK1_HIGH + block2 * FAST_BLOCK2) / acKW : FAST_BLOCK1_HIGH;
       const wLow  = acKW > 0 ? (block1 * FAST_BLOCK1_LOW  + block2 * FAST_BLOCK2) / acKW : FAST_BLOCK1_LOW;
       const wHighAg = Math.round(wHigh * 10000) / 100;
@@ -155,10 +152,9 @@ const QuoteEngine = (() => {
         : `שנות 1–5: ${wHighAg} אג׳ | שנות 6–26: ${wLowAg} אג׳ | הספק AC ${acKW} kW`;
 
       for (let y = 1; y <= YEARS; y++) {
-        const b1Rate = y <= 5 ? FAST_BLOCK1_HIGH : FAST_BLOCK1_LOW;
+        const wRate = y <= 5 ? wHigh : wLow;
         const prem = y <= URBAN_PREMIUM_YEARS ? up : 0;
-        const inc = kwhB1 * (b1Rate + prem) + kwhB2 * (FAST_BLOCK2 + prem);
-        yearlyBreakdown.push({ year: y, inc });
+        yearlyBreakdown.push({ year: y, inc: kwh * (wRate + prem) });
       }
 
     } else { // index
