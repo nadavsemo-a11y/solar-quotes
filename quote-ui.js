@@ -816,6 +816,10 @@ class QuoteUI {
     // Hide CTA sign block
     const ctaBlock = document.getElementById('cta-sign-block');
     if (ctaBlock) ctaBlock.style.display = 'none';
+    // Hide "לחתימה דיגיטלית" button in topbar
+    document.querySelectorAll('.topbar-actions button').forEach(btn => {
+      if (btn.textContent.includes('לחתימה')) btn.style.display = 'none';
+    });
     // Hide signature form, show locked badge with signature details
     const sigForm = document.getElementById('sigForm');
     if (sigForm) sigForm.style.display = 'none';
@@ -1033,6 +1037,11 @@ class QuoteUI {
 
   /** Check if this document was already signed and lock if so */
   async _checkIfSigned() {
+    // אם ה-Worker הזריק נתוני חתימה — נעילה מיידית (עובד גם offline)
+    if (window.__SIGNATURE_DATA__ && window.__SIGNATURE_DATA__.signed) {
+      this._lockDocument(window.__SIGNATURE_DATA__);
+      return;
+    }
     if (typeof PostSignService === 'undefined') return;
     const docId = window.location.pathname.split('/q/')[1]?.split('/')[0] || '';
     if (!docId) return;
