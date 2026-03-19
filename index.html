@@ -1012,6 +1012,10 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
         <input type="checkbox" id="sigAgree">
         <span>אני מאשר/ת את כל פרטי ההצעה ומסכים/ה לתנאים המפורטים</span>
       </label>
+      <label class="sig-checkbox-row" style="margin-top:6px">
+        <input type="checkbox" id="sigSendCopy" checked>
+        <span>אבקש לקבל העתק מההסכם החתום לכתובת האימייל שלי</span>
+      </label>
 
       <!-- Submit -->
       <button class="btn-sig-submit" onclick="submitSig()">✅ אני מאשר ומסכים להצעה</button>
@@ -1165,7 +1169,10 @@ function scrollToSign() {
   if (!sec) return;
   sec.style.display = 'block';
   sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  if (_quoteUI && _quoteUI.signature) _quoteUI.signature.init();
+  // delay init to ensure browser has completed layout after display:block
+  setTimeout(function() {
+    if (_quoteUI && _quoteUI.signature) _quoteUI.signature.init();
+  }, 150);
 }
 function selectCity(name)              { _quoteUI && _quoteUI._selectCity(name); }
 
