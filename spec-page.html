@@ -246,6 +246,24 @@
     accent-color: var(--green);
   }
 
+  /* Terms Block */
+  .terms-block {
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    font-size: 13.5px;
+    line-height: 1.9;
+    color: var(--text);
+  }
+  .terms-block p {
+    margin-bottom: 12px;
+  }
+  .terms-block p:last-child {
+    margin-bottom: 0;
+  }
+
   .sig-btn {
     background: linear-gradient(135deg, var(--green), #27ae60);
     color: white;
@@ -367,7 +385,8 @@
   <!-- Signature Section -->
   <div class="signature-section" id="signatureSection">
     <div class="sig-title">אישור לקוח</div>
-    <div class="sig-sub">אני מאשר/ת שקראתי את המפרט הטכני והוא תואם את הסכמתנו</div>
+
+    <div class="terms-block" id="termsBlock"></div>
 
     <div class="sig-grid">
       <div class="sig-field">
@@ -398,7 +417,7 @@
 
     <label class="sig-agree">
       <input type="checkbox" id="sigAgree">
-      <span>אני מאשר/ת שקראתי את המפרט הטכני ואני מסכים/ה לתוכנו</span>
+      <span>קראתי את התנאים לעיל ואני מאשר/ת את תוכן המפרט הטכני</span>
     </label>
 
     <button class="sig-btn" id="sigBtn" onclick="submitSignature()">✓ אישור וחתימה</button>
@@ -423,6 +442,14 @@
 (function() {
   const WORKER_URL = 'https://s-a.gs';
   const DOC_TYPE = 'spec';
+
+  // ── Terms Content (editable separately) ──
+  const SPEC_TERMS = [
+    'אני מאשר/ת כי קיבלתי לעיוני מפרט טכני מלא של המערכת, לרבות הספקי המערכת (DC ו-AC), מספר הפאנלים, סוג הציוד ושרטוט פריסת הפאנלים על גג הנכס, וכי בדקתי ואישרתי את תכנון המערכת כפי שמוצג במסמך זה.',
+    'ידוע לי כי ההספק הסופי של המערכת (DC) נקבע בהתאם לתכנון ולפריסה שאושרו על ידי במסמך זה, וכי הספק זה מהווה את הבסיס לחישוב עלות המערכת.',
+    'אני מבין/ה כי תמחור המערכת מבוסס על מחיר ליחידת הספק (קילו-וואט DC), ולכן כל שינוי בהספק המערכת משפיע ישירות על המחיר הכולל, וכי ההספק הסופי עשוי להיות שונה מההספק שהוצג בהצעת המחיר הראשונית.',
+    'לאחר אישורי למסמך זה, תופק עבורי הזמנת עבודה הכוללת את ההספק הסופי שאושר ואת העלות הכוללת בהתאם, והזמנה זו תהווה מסמך מחייב לביצוע העבודה ותחליף כל התייחסות קודמת להספק או למחיר.',
+  ];
 
   // ── Load spec data ──
   const specData = window.__SPEC_DATA__;
@@ -481,6 +508,9 @@
       <div class="image-title">תמונת הדמייה — מבט על</div>
       <div class="no-image">תמונת הדמייה לא זמינה</div>`;
   }
+
+  // ── Render terms ──
+  document.getElementById('termsBlock').innerHTML = SPEC_TERMS.map(p => `<p>${p}</p>`).join('');
 
   // ── Set date ──
   document.getElementById('sigDate').value = new Date().toLocaleDateString('he-IL');
