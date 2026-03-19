@@ -801,13 +801,14 @@ class QuoteUI {
     if (docId && hasPSS) {
       try {
         const clientEmail = document.getElementById('sigEmail')?.value?.trim() || document.getElementById('clientEmail')?.value?.trim() || this._clientEmail || '';
+        const sendCopy = document.getElementById('sigSendCopy')?.checked ?? true;
         const postResult = await PostSignService.process({
           docType:   'quote',
           docId,
           signature: result.signature,
           emailData: {
             clientName:  vals.name,
-            clientEmail,
+            clientEmail: sendCopy ? clientEmail : '',
             docUrl:      window.location.href,
           },
           onLock: () => this._lockDocument(),
