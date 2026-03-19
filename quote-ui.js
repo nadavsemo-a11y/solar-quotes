@@ -654,13 +654,14 @@ class QuoteUI {
     ready.style.display   = 'block';
 
     // Sync contact to HubSpot (best-effort, non-blocking)
-    this._syncToHubspot(vals);
+    const quoteUrl = document.getElementById('share-url')?.value || '';
+    this._syncToHubspot(vals, quoteUrl);
   }
 
-  async _syncToHubspot(vals) {
+  async _syncToHubspot(vals, quoteUrl) {
     try {
       const email = document.getElementById('clientEmail')?.value?.trim();
-      if (!email) return; // no email = can't sync
+      if (!email) return;
       const nameParts = (vals.name || '').trim().split(/\s+/);
       const firstname = nameParts[0] || '';
       const lastname = nameParts.slice(1).join(' ') || '';
@@ -674,6 +675,7 @@ class QuoteUI {
           phone: vals.phone || '',
           address: vals.address || '',
           city: vals.city || '',
+          quoteUrl: quoteUrl || '',
           hubspotId: window._hsContactId || null,
         }),
       });
