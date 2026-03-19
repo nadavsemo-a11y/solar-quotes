@@ -441,6 +441,7 @@
 <script>
 (function() {
   const WORKER_URL = 'https://s-a.gs';
+  const YARON_WORKER_URL = 'https://monday-yaron.monday-shimrit.workers.dev';
   const DOC_TYPE = 'spec';
 
   // ── Terms Content (editable separately) ──
@@ -659,6 +660,17 @@
         }
       },
     });
+
+    // Update Monday task status to "בוצע" after successful signature
+    if (processResult.saved && specData.subitemId) {
+      try {
+        fetch(`${YARON_WORKER_URL}/update-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId: specData.subitemId, newStatus: 'בוצע' }),
+        }).catch(() => {});
+      } catch { /* best effort */ }
+    }
 
     if (!processResult.saved) {
       btn.disabled = false;
