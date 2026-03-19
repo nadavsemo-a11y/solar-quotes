@@ -1691,6 +1691,10 @@ class QuoteUI {
 // ── Global helpers (לשימוש מ-HTML inline handlers) ─────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Set today's date as default
+  const dateEl = document.getElementById('quoteDate');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+
   window._quoteUI = new QuoteUI();
   await _quoteUI.loadTemplate('solar-quote-template.html');
   _quoteUI.init();
