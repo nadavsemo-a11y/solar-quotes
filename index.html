@@ -746,8 +746,22 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
     </div>
 
     <div class="form-card">
-      <div class="card-header"><div class="icon">👤</div><h2>פרטי לקוח</h2></div>
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px"><div class="icon">👤</div><h2>פרטי לקוח</h2></div>
+        <button type="button" onclick="openHubspotSearch()" style="background:linear-gradient(135deg,#ff7a59,#ff5c35);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(255,92,53,0.3)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M22.2 1.2C21.3.3 20 0 18.8.6l-2.7 1.5c-1-.7-2.2-1-3.4-.8L10.5 2c-1.2.2-2.2.9-2.8 2L6 7.1c-.3.5-.3 1.1 0 1.6l.7 1.2c.3.5.8.8 1.4.8h1.6l-.3 5.4c0 .8.5 1.5 1.3 1.7l.3.1c.7.2 1.5-.1 1.9-.7l3.3-5.7 1.3.7c.5.3 1.1.3 1.6 0l1.2-.7c.5-.3.8-.8.8-1.4V5.7l2.1-1.2c1-.6 1.5-1.8 1.2-3l-.2-.3z"/></svg>
+          שליפה מ-HubSpot
+        </button>
+      </div>
       <div class="card-body">
+        <!-- HubSpot Search Modal -->
+        <div id="hubspotSearchBox" style="display:none;background:#fff4f0;border:2px solid #ff5c35;border-radius:12px;padding:16px;margin-bottom:14px">
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="hubspotQuery" type="text" placeholder="חפש לפי שם, טלפון או אימייל..." dir="rtl" style="flex:1;padding:10px 14px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit" oninput="searchHubspot(this.value)">
+            <button type="button" onclick="closeHubspotSearch()" style="background:#e2e8f0;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:14px">✕</button>
+          </div>
+          <div id="hubspotResults" style="max-height:200px;overflow-y:auto"></div>
+        </div>
         <div class="form-grid">
           <div class="field"><label>שם לקוח</label><input id="clientName" type="text" value="שמעון כחלון"></div>
           <div class="field"><label>טלפון</label><input id="clientPhone" type="text" value="052-5247272"></div>
@@ -1154,6 +1168,63 @@ function scrollToSign() {
   if (_quoteUI && _quoteUI.signature) _quoteUI.signature.init();
 }
 function selectCity(name)              { _quoteUI && _quoteUI._selectCity(name); }
+
+// ── HubSpot Integration ──
+var _hsTimer = null;
+var _hsContactId = null;
+
+function openHubspotSearch() {
+  document.getElementById('hubspotSearchBox').style.display = 'block';
+  document.getElementById('hubspotQuery').focus();
+}
+
+function closeHubspotSearch() {
+  document.getElementById('hubspotSearchBox').style.display = 'none';
+  document.getElementById('hubspotResults').innerHTML = '';
+  document.getElementById('hubspotQuery').value = '';
+}
+
+function searchHubspot(q) {
+  clearTimeout(_hsTimer);
+  if (q.length < 2) { document.getElementById('hubspotResults').innerHTML = ''; return; }
+  _hsTimer = setTimeout(async function() {
+    try {
+      var res = await fetch('https://s-a.gs/q/hubspot/search?q=' + encodeURIComponent(q));
+      var data = await res.json();
+      var box = document.getElementById('hubspotResults');
+      if (!data.results || data.results.length === 0) {
+        box.innerHTML = '<div style="padding:10px;color:#666;text-align:center">לא נמצאו תוצאות</div>';
+        return;
+      }
+      box.innerHTML = data.results.map(function(c) {
+        return '<div onclick=\'selectHubspotContact(' + JSON.stringify(c).replace(/'/g, "\\'") + ')\' style="padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background=\'#fff0eb\'" onmouseout="this.style.background=\'transparent\'">'
+          + '<div style="font-weight:700;font-size:14px;color:#0A1628">' + (c.name || '—') + '</div>'
+          + '<div style="font-size:12px;color:#666;display:flex;gap:12px;margin-top:2px">'
+          + (c.phone ? '<span>📞 ' + c.phone + '</span>' : '')
+          + (c.email ? '<span>✉️ ' + c.email + '</span>' : '')
+          + (c.city ? '<span>📍 ' + c.city + '</span>' : '')
+          + '</div></div>';
+      }).join('');
+    } catch(e) {
+      document.getElementById('hubspotResults').innerHTML = '<div style="padding:10px;color:red">שגיאה: ' + e.message + '</div>';
+    }
+  }, 300);
+}
+
+function selectHubspotContact(c) {
+  _hsContactId = c.id;
+  var parts = (c.name || '').split(' ');
+  document.getElementById('clientName').value = c.name || '';
+  document.getElementById('clientPhone').value = (c.phone || '').replace('+972', '0');
+  if (c.email) document.getElementById('clientEmail').value = c.email;
+  if (c.address) document.getElementById('clientAddress').value = c.address;
+  if (c.city) {
+    document.getElementById('citySearch').value = c.city;
+    if (_quoteUI) _quoteUI._selectCity(c.city);
+  }
+  closeHubspotSearch();
+  if (typeof EmailService !== 'undefined') EmailService.showToast('✅ פרטי לקוח נטענו מ-HubSpot');
+}
 
 // ══════════════════════════════════════════════════════════════════════
 // CONTENT EDITOR — in-portal
