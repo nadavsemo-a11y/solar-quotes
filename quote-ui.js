@@ -652,6 +652,32 @@ class QuoteUI {
     if (urlInput) urlInput.value = shortUrl;
     loading.style.display = 'none';
     ready.style.display   = 'block';
+
+    // Sync contact to HubSpot (best-effort, non-blocking)
+    this._syncToHubspot(vals);
+  }
+
+  async _syncToHubspot(vals) {
+    try {
+      const email = document.getElementById('clientEmail')?.value?.trim();
+      if (!email) return; // no email = can't sync
+      const nameParts = (vals.name || '').trim().split(/\s+/);
+      const firstname = nameParts[0] || '';
+      const lastname = nameParts.slice(1).join(' ') || '';
+      await fetch('https://s-a.gs/q/hubspot/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          firstname,
+          lastname,
+          phone: vals.phone || '',
+          address: vals.address || '',
+          city: vals.city || '',
+          hubspotId: window._hsContactId || null,
+        }),
+      });
+    } catch { /* best-effort */ }
   }
 
   async copyShareUrl() {
