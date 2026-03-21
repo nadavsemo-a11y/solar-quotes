@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEMO AGS — ניהול קיצורים</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface-2: #232730;
+  --surface-3: #2a2e3a;
+  --accent: #4f8ef7;
+  --sun: #F4A200;
+  --sun-light: #FFD166;
+  --green: #2ECC71;
+  --green-dark: #1a9e52;
+  --red: #e74c3c;
+  --orange: #f39c12;
+  --text: #e1e4ea;
+  --text-2: #8b8f9a;
+  --text-3: #5a5e6b;
+  --border: #2d313d;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font-family: inherit; cursor: pointer; border: none; }
+
+/* ── Auth Modal ─────────────────────────────────── */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 40px; width: 380px;
+  text-align: center; box-shadow: var(--shadow);
+}
+.auth-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.auth-box p { color: var(--text-2); font-size: 14px; margin-bottom: 24px; }
+.auth-box input {
+  width: 100%; padding: 12px 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text); font-size: 15px; text-align: center;
+  direction: ltr; margin-bottom: 16px;
+}
+.auth-box input:focus { outline: none; border-color: var(--accent); }
+.auth-box .auth-note {
+  color: var(--text-3); font-size: 12px; margin-top: 12px;
+}
+
+/* ── Header ─────────────────────────────────────── */
+.header {
+  background: linear-gradient(135deg, #0A1628 0%, #112240 60%, #1D3461 100%);
+  padding: 16px 32px; display: flex; align-items: center;
+  justify-content: space-between; border-bottom: 1px solid var(--border);
+}
+.header-right { display: flex; align-items: center; gap: 14px; }
+.header-logo { height: 36px; filter: brightness(0) invert(1); }
+.header-title { font-size: 20px; font-weight: 700; }
+.header-sub { font-size: 12px; color: var(--text-2); }
+.header-left { display: flex; gap: 10px; }
+.btn {
+  padding: 8px 18px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; transition: all 0.2s;
+}
+.btn-outline {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-2);
+}
+.btn-outline:hover { border-color: var(--text); color: var(--text); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #3b7ae0);
+  color: #fff; border: none;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-success {
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  color: #fff;
+}
+.btn-danger-fill { background: var(--red); color: #fff; }
+
+/* ── Main Content ───────────────────────────────── */
+.main { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
+
+/* ── Stats Row ──────────────────────────────────── */
+.stats-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.stat-card {
+  flex: 1; min-width: 140px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; text-align: center; transition: border-color 0.2s;
+}
+.stat-card:hover { border-color: var(--text-3); }
+.stat-card.active { border-color: var(--accent); background: rgba(79,142,247,0.08); }
+.stat-label { font-size: 12px; color: var(--text-2); font-weight: 500; margin-bottom: 6px; }
+.stat-value { font-size: 28px; font-weight: 800; }
+.stat-card[data-type="total"] .stat-value { color: var(--text); }
+.stat-card[data-type="quote"] .stat-value { color: var(--accent); }
+.stat-card[data-type="redirect"] .stat-value { color: var(--sun); }
+.stat-card[data-type="spec"] .stat-value { color: var(--green); }
+.stat-card[data-type="signed"] .stat-value { color: #a78bfa; }
+
+/* ── Toolbar ────────────────────────────────────── */
+.toolbar {
+  display: flex; gap: 12px; margin-bottom: 20px;
+  flex-wrap: wrap; align-items: center;
+}
+.search-box {
+  flex: 1; min-width: 220px; position: relative;
+}
+.search-box input {
+  width: 100%; padding: 10px 16px 10px 40px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-size: 14px;
+}
+.search-box input:focus { outline: none; border-color: var(--accent); }
+.search-box::before {
+  content: "\1F50D"; position: absolute; right: 14px; top: 50%;
+  transform: translateY(-50%); font-size: 14px; opacity: 0.4;
+  pointer-events: none;
+}
+.filter-select {
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-size: 13px; font-family: inherit;
+  min-width: 120px;
+}
+.filter-select:focus { outline: none; border-color: var(--accent); }
+.results-count { color: var(--text-3); font-size: 13px; margin-right: auto; }
+
+/* ── Table ──────────────────────────────────────── */
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  padding: 12px 16px; font-size: 12px; font-weight: 600;
+  color: var(--text-2); text-align: right; border-bottom: 1px solid var(--border);
+  background: var(--surface-2); white-space: nowrap; cursor: pointer;
+  user-select: none;
+}
+thead th:hover { color: var(--text); }
+thead th.sorted { color: var(--accent); }
+thead th .sort-arrow { margin-right: 4px; font-size: 10px; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface-2); }
+tbody td { padding: 12px 16px; font-size: 14px; vertical-align: middle; }
+
+.link-id {
+  font-family: 'Courier New', monospace; font-weight: 600;
+  font-size: 13px; direction: ltr; display: inline-block;
+}
+
+/* ── Badges ─────────────────────────────────────── */
+.badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.badge-quote { background: rgba(79,142,247,0.15); color: var(--accent); border: 1px solid rgba(79,142,247,0.3); }
+.badge-redirect { background: rgba(244,162,0,0.15); color: var(--sun); border: 1px solid rgba(244,162,0,0.3); }
+.badge-spec { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+.badge-data { background: rgba(139,143,154,0.15); color: var(--text-2); border: 1px solid rgba(139,143,154,0.3); }
+.badge-signed {
+  background: rgba(167,139,250,0.15); color: #a78bfa;
+  border: 1px solid rgba(167,139,250,0.3);
+}
+.badge-expired {
+  background: rgba(231,76,60,0.15); color: var(--red);
+  border: 1px solid rgba(231,76,60,0.3);
+}
+
+.content-cell { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.content-main { font-weight: 600; }
+.content-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+/* ── Action Buttons ─────────────────────────────── */
+.actions-cell { white-space: nowrap; }
+.act-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 6px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text-2); font-size: 14px; transition: all 0.15s;
+  margin-left: 4px;
+}
+.act-btn:hover { background: var(--surface-3); color: var(--text); border-color: var(--text-3); }
+.act-btn.danger:hover { background: rgba(231,76,60,0.2); color: var(--red); border-color: var(--red); }
+.act-btn svg { width: 15px; height: 15px; fill: currentColor; }
+
+/* ── Group Header ───────────────────────────────── */
+.group-header td {
+  padding: 10px 16px; font-size: 13px; font-weight: 700;
+  color: var(--sun); background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Modal ──────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.visible { display: flex; }
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 32px; width: 420px;
+  box-shadow: var(--shadow);
+}
+.modal-box h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+.modal-box label { display: block; font-size: 13px; color: var(--text-2); margin-bottom: 6px; font-weight: 500; }
+.modal-box input[type="date"],
+.modal-box input[type="datetime-local"] {
+  width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text); font-size: 14px; font-family: inherit;
+  direction: ltr; margin-bottom: 16px;
+}
+.modal-box input:focus { outline: none; border-color: var(--accent); }
+.quick-btns { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.quick-btn {
+  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text-2); transition: all 0.15s;
+}
+.quick-btn:hover { border-color: var(--accent); color: var(--accent); }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-start; margin-top: 24px; }
+
+/* ── Toast ──────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  padding: 12px 24px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 600; z-index: 2000;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: all 0.3s;
+  opacity: 0; pointer-events: none;
+}
+.toast.visible { opacity: 1; pointer-events: auto; }
+.toast.success { background: var(--green); color: #fff; }
+.toast.error { background: var(--red); color: #fff; }
+
+/* ── Loading ────────────────────────────────────── */
+.loading-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 1100;
+  background: var(--accent); transform-origin: right;
+  animation: loading-slide 1.2s ease-in-out infinite;
+  display: none;
+}
+.loading-bar.active { display: block; }
+@keyframes loading-slide {
+  0% { transform: scaleX(0); transform-origin: right; }
+  50% { transform: scaleX(1); transform-origin: right; }
+  51% { transform-origin: left; }
+  100% { transform: scaleX(0); transform-origin: left; }
+}
+
+/* ── Empty State ────────────────────────────────── */
+.empty-state {
+  text-align: center; padding: 60px 20px; color: var(--text-3);
+}
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+.empty-state p { font-size: 15px; }
+
+/* ── Responsive ─────────────────────────────────── */
+@media (max-width: 900px) {
+  .main { padding: 16px; }
+  .stats-row { gap: 10px; }
+  .stat-card { min-width: 100px; padding: 14px; }
+  .stat-value { font-size: 22px; }
+  .toolbar { gap: 8px; }
+  .content-cell { max-width: 160px; }
+  td, th { padding: 10px 10px; font-size: 13px; }
+}
+@media (max-width: 600px) {
+  .header { padding: 12px 16px; }
+  .stats-row { flex-direction: column; }
+  .stat-card { min-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading bar -->
+<div class="loading-bar" id="loading-bar"></div>
+
+<!-- Auth Modal -->
+<div class="auth-overlay" id="auth-modal">
+  <div class="auth-box">
+    <img src="ags-logo.png" alt="SEMO AGS" style="height:40px; margin-bottom:20px; filter:brightness(0) invert(1);">
+    <h2>ניהול קיצורים</h2>
+    <p>הזן מפתח גישה לדשבורד</p>
+    <input type="password" id="key-input" placeholder="Admin Key" autofocus
+           onkeydown="if(event.key==='Enter') authenticate()">
+    <button class="btn btn-primary" style="width:100%; padding:12px;" onclick="authenticate()">כניסה</button>
+    <div class="auth-note">או השאר ריק אם לא הוגדר ADMIN_KEY</div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app" style="display:none">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-right">
+      <img src="ags-logo.png" alt="SEMO AGS" class="header-logo">
+      <div>
+        <div class="header-title">ניהול קיצורים</div>
+        <div class="header-sub">s-a.gs — Links Dashboard</div>
+      </div>
+    </div>
+    <div class="header-left">
+      <button class="btn btn-outline" onclick="exportCSV()">ייצוא CSV</button>
+      <button class="btn btn-primary" onclick="loadLinks()">רענון</button>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card" data-type="total" onclick="filterByType('')">
+        <div class="stat-label">סה״כ קיצורים</div>
+        <div class="stat-value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card" data-type="quote" onclick="filterByType('quote')">
+        <div class="stat-label">הצעות מחיר</div>
+        <div class="stat-value" id="stat-quotes">—</div>
+      </div>
+      <div class="stat-card" data-type="redirect" onclick="filterByType('redirect')">
+        <div class="stat-label">הפניות URL</div>
+        <div class="stat-value" id="stat-redirects">—</div>
+      </div>
+      <div class="stat-card" data-type="spec" onclick="filterByType('spec')">
+        <div class="stat-label">מפרטים טכניים</div>
+        <div class="stat-value" id="stat-specs">—</div>
+      </div>
+      <div class="stat-card" data-type="signed" onclick="filterBySigned()">
+        <div class="stat-label">חתומים</div>
+        <div class="stat-value" id="stat-signed">—</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="חיפוש לפי שם, ID, כתובת..."
+               oninput="applyFilters()">
+      </div>
+      <select class="filter-select" id="type-filter" onchange="applyFilters()">
+        <option value="">כל הסוגים</option>
+        <option value="quote">הצעות מחיר</option>
+        <option value="redirect">הפניות URL</option>
+        <option value="spec">מפרטים</option>
+        <option value="data">אחר</option>
+      </select>
+      <select class="filter-select" id="signed-filter" onchange="applyFilters()">
+        <option value="">הכל</option>
+        <option value="signed">חתומים</option>
+        <option value="unsigned">לא חתומים</option>
+      </select>
+      <select class="filter-select" id="group-select" onchange="applyFilters()">
+        <option value="none">ללא קיבוץ</option>
+        <option value="type">לפי סוג</option>
+        <option value="signed">לפי חתימה</option>
+        <option value="month">לפי חודש</option>
+      </select>
+      <span class="results-count" id="results-count"></span>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('id')">ID <span class="sort-arrow"></span></th>
+            <th onclick="sortBy('type')">סוג</th>
+            <th onclick="sortBy('content')">תוכן</th>
+            <th onclick="sortBy('createdAt')">נוצר</th>
+            <th onclick="sortBy('expiration')">תפוגה</th>
+            <th onclick="sortBy('signed')">חתימה</th>
+            <th>פעולות</th>
+          </tr>
+        </thead>
+        <tbody id="links-tbody">
+          <tr><td colspan="7" class="empty-state">
+            <div class="empty-icon">&#9729;</div>
+            <p>טוען נתונים...</p>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- .main -->
+</div><!-- #app -->
+
+<!-- Expiry Modal -->
+<div class="modal-overlay" id="expiry-modal">
+  <div class="modal-box">
+    <h3>הגדרת תאריך תפוגה</h3>
+    <p style="color:var(--text-2); font-size:13px; margin-bottom:16px;">
+      ID: <code id="expiry-link-id" style="color:var(--accent); direction:ltr; display:inline-block;"></code>
+    </p>
+    <label>תאריך תפוגה</label>
+    <input type="datetime-local" id="expiry-date-input">
+    <label style="margin-bottom:8px;">קיצורי דרך</label>
+    <div class="quick-btns">
+      <button class="quick-btn" onclick="setQuickExpiry(7)">שבוע</button>
+      <button class="quick-btn" onclick="setQuickExpiry(30)">חודש</button>
+      <button class="quick-btn" onclick="setQuickExpiry(90)">3 חודשים</button>
+      <button class="quick-btn" onclick="setQuickExpiry(180)">6 חודשים</button>
+      <button class="quick-btn" onclick="setQuickExpiry(365)">שנה</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="saveExpiry()">שמור</button>
+      <button class="btn btn-outline" onclick="removeExpiry()">הסר תפוגה</button>
+      <button class="btn btn-outline" onclick="closeExpiryModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────
+const API_BASE = 'https://s-a.gs';
+let adminKey = sessionStorage.getItem('semo_admin_key') || '';
+let allLinks = [];
+let filteredLinks = [];
+let currentSort = { field: 'createdAt', dir: 'desc' };
+let expiryTargetId = null;
+
+// ── Init ────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  if (adminKey) {
+    document.getElementById('auth-modal').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadLinks();
+  }
+});
+
+function authenticate() {
+  adminKey = document.getElementById('key-input').value;
+  sessionStorage.setItem('semo_admin_key', adminKey);
+  document.getElementById('auth-modal').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadLinks();
+}
+
+// ── API ─────────────────────────────────────────────────────────────────
+async function apiCall(path, opts = {}) {
+  const headers = { 'X-Admin-Key': adminKey, ...opts.headers };
+  const resp = await fetch(`${API_BASE}${path}`, { ...opts, headers });
+  if (resp.status === 401) {
+    sessionStorage.removeItem('semo_admin_key');
+    adminKey = '';
+    document.getElementById('auth-modal').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    throw new Error('Unauthorized');
+  }
+  return resp.json();
+}
+
+async function loadLinks() {
+  setLoading(true);
+  try {
+    const data = await apiCall('/admin/links');
+    allLinks = data.links || [];
+    updateStats();
+    applyFilters();
+  } catch (err) {
+    if (err.message !== 'Unauthorized') {
+      showToast('שגיאה בטעינת נתונים: ' + err.message, 'error');
+    }
+  }
+  setLoading(false);
+}
+
+// ── Stats ───────────────────────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('stat-total').textContent = allLinks.length;
+  document.getElementById('stat-quotes').textContent = allLinks.filter(l => l.type === 'quote').length;
+  document.getElementById('stat-redirects').textContent = allLinks.filter(l => l.type === 'redirect').length;
+  document.getElementById('stat-specs').textContent = allLinks.filter(l => l.type === 'spec').length;
+  document.getElementById('stat-signed').textContent = allLinks.filter(l => l.signed).length;
+}
+
+// ── Filters ─────────────────────────────────────────────────────────────
+function filterByType(type) {
+  document.getElementById('type-filter').value = type;
+  // Highlight active stat card
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+  if (type) {
+    const card = document.querySelector(`.stat-card[data-type="${type}"]`);
+    if (card) card.classList.add('active');
+  }
+  applyFilters();
+}
+
+function filterBySigned() {
+  const current = document.getElementById('signed-filter').value;
+  document.getElementById('signed-filter').value = current === 'signed' ? '' : 'signed';
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+  if (document.getElementById('signed-filter').value === 'signed') {
+    document.querySelector('.stat-card[data-type="signed"]')?.classList.add('active');
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const typeF = document.getElementById('type-filter').value;
+  const signedF = document.getElementById('signed-filter').value;
+
+  filteredLinks = allLinks.filter(link => {
+    if (typeF && link.type !== typeF) return false;
+    if (signedF === 'signed' && !link.signed) return false;
+    if (signedF === 'unsigned' && link.signed) return false;
+    if (search) {
+      const hay = [
+        link.id,
+        link.summary?.clientName,
+        link.summary?.targetUrl,
+        link.summary?.projectName,
+        link.summary?.city,
+        link.summary?.dcKW,
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  sortLinks();
+  renderTable();
+}
+
+// ── Sort ────────────────────────────────────────────────────────────────
+function sortBy(field) {
+  if (currentSort.field === field) {
+    currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSort.field = field;
+    currentSort.dir = field === 'id' ? 'asc' : 'desc';
+  }
+  // Update header indicators
+  document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
+  applyFilters();
+}
+
+function sortLinks() {
+  const { field, dir } = currentSort;
+  filteredLinks.sort((a, b) => {
+    let va, vb;
+    if (field === 'content') {
+      va = getContentSortValue(a);
+      vb = getContentSortValue(b);
+    } else if (field === 'signed') {
+      va = a.signed ? 1 : 0;
+      vb = b.signed ? 1 : 0;
+    } else {
+      va = a[field] || '';
+      vb = b[field] || '';
+    }
+    if (va < vb) return dir === 'asc' ? -1 : 1;
+    if (va > vb) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+}
+
+function getContentSortValue(link) {
+  return link.summary?.clientName || link.summary?.targetUrl || link.summary?.projectName || '';
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function renderTable() {
+  const groupBy = document.getElementById('group-select').value;
+  const tbody = document.getElementById('links-tbody');
+
+  if (filteredLinks.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">
+      <div class="empty-icon">&#128269;</div>
+      <p>לא נמצאו תוצאות</p>
+    </td></tr>`;
+    document.getElementById('results-count').textContent = `0 מתוך ${allLinks.length}`;
+    return;
+  }
+
+  let html = '';
+  if (groupBy === 'none') {
+    html = filteredLinks.map(renderRow).join('');
+  } else {
+    const groups = {};
+    for (const link of filteredLinks) {
+      let key;
+      if (groupBy === 'type') key = typeLabel(link.type);
+      else if (groupBy === 'signed') key = link.signed ? 'חתום' : 'לא חתום';
+      else if (groupBy === 'month') key = link.createdAt ? formatMonth(link.createdAt) : 'לא ידוע';
+      else key = 'אחר';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(link);
+    }
+    for (const [group, links] of Object.entries(groups)) {
+      html += `<tr class="group-header"><td colspan="7">${group} &nbsp;(${links.length})</td></tr>`;
+      html += links.map(renderRow).join('');
+    }
+  }
+
+  tbody.innerHTML = html;
+  document.getElementById('results-count').textContent = `${filteredLinks.length} מתוך ${allLinks.length}`;
+}
+
+function renderRow(link) {
+  const isExpired = link.expiration && new Date(link.expiration) < new Date();
+  const typeBadge = `<span class="badge badge-${link.type}">${typeLabel(link.type)}</span>`;
+  const content = getContentDisplay(link);
+  const created = link.createdAt
+    ? `<span title="${new Date(link.createdAt).toLocaleString('he-IL')}">${formatDate(link.createdAt)}</span>`
+    : '<span style="color:var(--text-3)">—</span>';
+  const expiry = link.expiration
+    ? `<span class="${isExpired ? 'badge badge-expired' : ''}" title="${new Date(link.expiration).toLocaleString('he-IL')}">${formatDate(link.expiration)}${isExpired ? ' (פג)' : ''}</span>`
+    : '<span style="color:var(--text-3)">—</span>';
+  const signedBadge = link.signed ? '<span class="badge badge-signed">חתום</span>' : '';
+
+  return `<tr>
+    <td><a href="${esc(link.url)}" target="_blank" class="link-id">${esc(link.id)}</a></td>
+    <td>${typeBadge}</td>
+    <td class="content-cell">${content}</td>
+    <td>${created}</td>
+    <td>${expiry}</td>
+    <td>${signedBadge}</td>
+    <td class="actions-cell">
+      <button class="act-btn" onclick="copyUrl('${esc(link.url)}')" title="העתק URL">
+        <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+      </button>
+      <button class="act-btn" onclick="openExpiryModal('${esc(link.id)}', '${link.expiration || ''}')" title="תפוגה">
+        <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+      </button>
+      <button class="act-btn danger" onclick="deleteLink('${esc(link.id)}')" title="מחק">
+        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      </button>
+    </td>
+  </tr>`;
+}
+
+function getContentDisplay(link) {
+  const s = link.summary || {};
+  if (link.type === 'quote') {
+    const name = s.clientName || 'ללא שם';
+    const sub = [s.dcKW ? `${s.dcKW} kWp` : '', s.city || ''].filter(Boolean).join(' · ');
+    return `<div class="content-main">${esc(name)}</div>${sub ? `<div class="content-sub">${esc(sub)}</div>` : ''}`;
+  }
+  if (link.type === 'redirect') {
+    const url = s.targetUrl || '';
+    return `<div class="content-main" style="direction:ltr; text-align:right;">${esc(truncate(url, 50))}</div>`;
+  }
+  if (link.type === 'spec') {
+    const name = s.projectName || 'מפרט';
+    const sub = [s.dcKW ? `${s.dcKW} kWp` : '', s.address || ''].filter(Boolean).join(' · ');
+    return `<div class="content-main">${esc(name)}</div>${sub ? `<div class="content-sub">${esc(sub)}</div>` : ''}`;
+  }
+  return `<span style="color:var(--text-3)">${esc(link.id)}</span>`;
+}
+
+// ── Actions ─────────────────────────────────────────────────────────────
+async function copyUrl(url) {
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('הקישור הועתק', 'success');
+  } catch {
+    showToast('לא ניתן להעתיק', 'error');
+  }
+}
+
+function openExpiryModal(id, currentExpiry) {
+  expiryTargetId = id;
+  document.getElementById('expiry-link-id').textContent = id;
+  const input = document.getElementById('expiry-date-input');
+  if (currentExpiry) {
+    input.value = currentExpiry.slice(0, 16);
+  } else {
+    input.value = '';
+  }
+  document.getElementById('expiry-modal').classList.add('visible');
+}
+
+function closeExpiryModal() {
+  document.getElementById('expiry-modal').classList.remove('visible');
+  expiryTargetId = null;
+}
+
+function setQuickExpiry(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  document.getElementById('expiry-date-input').value = toLocalISO(d);
+}
+
+async function saveExpiry() {
+  const dateStr = document.getElementById('expiry-date-input').value;
+  if (!dateStr) { showToast('בחר תאריך תפוגה', 'error'); return; }
+  const expiration = new Date(dateStr).toISOString();
+
+  setLoading(true);
+  try {
+    await apiCall(`/admin/links/${expiryTargetId}/expiry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiration }),
+    });
+    showToast('תפוגה עודכנה', 'success');
+    closeExpiryModal();
+    await loadLinks();
+  } catch (err) {
+    showToast('שגיאה: ' + err.message, 'error');
+  }
+  setLoading(false);
+}
+
+async function removeExpiry() {
+  setLoading(true);
+  try {
+    await apiCall(`/admin/links/${expiryTargetId}/expiry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiration: null }),
+    });
+    showToast('תפוגה הוסרה', 'success');
+    closeExpiryModal();
+    await loadLinks();
+  } catch (err) {
+    showToast('שגיאה: ' + err.message, 'error');
+  }
+  setLoading(false);
+}
+
+async function deleteLink(id) {
+  if (!confirm(`למחוק את הקיצור ${id}?\nפעולה זו בלתי הפיכה.`)) return;
+
+  setLoading(true);
+  try {
+    await apiCall(`/admin/links/${id}`, { method: 'DELETE' });
+    showToast('הקיצור נמחק', 'success');
+    await loadLinks();
+  } catch (err) {
+    showToast('שגיאה: ' + err.message, 'error');
+  }
+  setLoading(false);
+}
+
+// ── Export CSV ───────────────────────────────────────────────────────────
+function exportCSV() {
+  const headers = ['ID', 'Type', 'URL', 'Client/Target', 'kWp', 'City', 'Created', 'Expiration', 'Signed'];
+  const rows = filteredLinks.map(l => [
+    l.id,
+    l.type,
+    l.url,
+    l.summary?.clientName || l.summary?.targetUrl || l.summary?.projectName || '',
+    l.summary?.dcKW || '',
+    l.summary?.city || '',
+    l.createdAt || '',
+    l.expiration || '',
+    l.signed ? 'Yes' : 'No',
+  ]);
+
+  const bom = '\uFEFF';
+  const csv = bom + [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `semo-links-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('קובץ CSV הורד', 'success');
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+function typeLabel(type) {
+  const map = { quote: 'הצעת מחיר', redirect: 'הפניה', spec: 'מפרט', data: 'נתונים' };
+  return map[type] || type;
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
+function formatMonth(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+}
+
+function toLocalISO(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function truncate(s, max) {
+  return s.length > max ? s.slice(0, max) + '...' : s;
+}
+
+function esc(s) {
+  const el = document.createElement('span');
+  el.textContent = s || '';
+  return el.innerHTML;
+}
+
+function setLoading(on) {
+  document.getElementById('loading-bar').classList.toggle('active', on);
+}
+
+function showToast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} visible`;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('visible'), 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('expiry-modal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeExpiryModal();
+});
+</script>
+</body>
+</html>
