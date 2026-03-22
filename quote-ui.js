@@ -677,6 +677,8 @@ class QuoteUI {
           city: vals.city || '',
           quoteUrl: quoteUrl || '',
           hubspotId: window._hsContactId || null,
+          quoteDate: vals.date || new Date().toISOString().split('T')[0],
+          dcKw: vals.kw || '',
         }),
       });
     } catch { /* best-effort */ }
