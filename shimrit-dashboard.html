@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<!-- COMMIT: Clean soft botanical colors - gentle animations 🌸 -->
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>משימות לשמרית • A.G.S Semo</title>
+  <link rel="icon" type="image/png" href="./logo.png">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&family=Heebo:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      /* פלטת צבעים רכה וחמה 🌸 */
+      --color-waiting: #F4A460;
+      --color-waiting-bg: #FFF5E6;
+      --color-in-progress: #8FBC8F;
+      --color-in-progress-bg: #F0FFF0;
+      --color-bg-main: linear-gradient(135deg, #E8F5E9 0%, #FFF8F0 50%, #F1F8E9 100%);
+      --color-card-bg: rgba(255, 255, 255, 0.98);
+      --color-text-primary: #2E5D3E;
+      --color-text-secondary: #6B8E6B;
+      --color-shadow: rgba(46, 93, 62, 0.08);
+      --color-accent: #FFB6C1;
+      --color-success: #66BB6A;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Assistant', 'Heebo', -apple-system, sans-serif;
+      background: var(--color-bg-main);
+      color: var(--color-text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    /* כותרת */
+    .header {
+      background: var(--color-card-bg);
+      padding: 1.5rem 1.5rem;
+      border-radius: 25px;
+      box-shadow: 0 10px 40px var(--color-shadow);
+      margin-bottom: 2.5rem;
+      text-align: center;
+      border: 2px solid #C8E6C9;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .header-logo img {
+      height: 60px;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.1));
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      color: var(--color-text-secondary);
+      font-size: 1rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .stat-badge {
+      padding: 0.6rem 1.2rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .stat-badge.waiting {
+      background: var(--color-waiting-bg);
+      color: #8B4513;
+      border: 2px solid var(--color-waiting);
+    }
+
+    .stat-badge.in-progress {
+      background: var(--color-in-progress-bg);
+      color: #2d5f2e;
+      border: 2px solid var(--color-in-progress);
+    }
+
+    /* כרטיסי משימות */
+    .items-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .item-card {
+      background: var(--color-card-bg);
+      padding: 1rem 1.2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px var(--color-shadow);
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 2px solid transparent;
+    }
+
+    .item-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 50px rgba(46, 93, 62, 0.15);
+      border-color: #A5D6A7;
+    }
+
+    /* אנימציית כניסה חלקה 🌸 */
+    .item-card.fade-in {
+      animation: fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* אנימציית יציאה עדינה ואיטית */
+    .item-card.fade-out {
+      animation: fadeOutDown 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes fadeOutDown {
+      from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 500px;
+        margin-bottom: 1.5rem;
+      }
+      to {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.8rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .item-name {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      flex: 1;
+    }
+
+    .status-badge {
+      padding: 0.35rem 0.8rem;
+      border-radius: 15px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-badge.waiting {
+      background: var(--color-waiting-bg);
+      color: #8B4513;
+      border: 2px solid var(--color-waiting);
+    }
+
+    .status-badge.in-progress {
+      background: var(--color-in-progress-bg);
+      color: #2d5f2e;
+      border: 2px solid var(--color-in-progress);
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.6rem;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      border: none;
+      border-radius: 15px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    .btn-action.start {
+      background: linear-gradient(135deg, #F4A460 0%, #DEB887 100%);
+      color: white;
+    }
+
+    .btn-action.complete {
+      background: linear-gradient(135deg, #81C784 0%, #66BB6A 100%);
+      color: white;
+    }
+
+    .btn-action:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .btn-action:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* כפתור ביטול צף 💕 */
+    .undo-button {
+      position: fixed;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 1.2rem 2.5rem;
+      background: linear-gradient(135deg, #FFB6C1 0%, #FFC0CB 100%);
+      color: white;
+      border: 3px solid white;
+      border-radius: 50px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 15px 50px rgba(255, 182, 193, 0.4);
+      z-index: 1000;
+      font-family: inherit;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: undoAppear 0.6s cubic-bezier(0.4, 0, 0.2, 1), undoPulse 3s ease-in-out infinite 0.6s;
+    }
+
+    @keyframes undoAppear {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(100px) scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+      }
+    }
+
+    @keyframes undoPulse {
+      0%, 100% {
+        transform: translateX(-50%) scale(1);
+        box-shadow: 0 15px 50px rgba(255, 182, 193, 0.4);
+      }
+      50% {
+        transform: translateX(-50%) scale(1.05);
+        box-shadow: 0 20px 60px rgba(255, 182, 193, 0.6);
+      }
+    }
+
+    .undo-button:hover {
+      transform: translateX(-50%) scale(1.08);
+      box-shadow: 0 20px 70px rgba(255, 182, 193, 0.7);
+    }
+
+    /* טוען */
+    .loading {
+      text-align: center;
+      padding: 4rem;
+      font-size: 1.5rem;
+      color: var(--color-text-secondary);
+      animation: breathe 2s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    /* ריק */
+    .empty {
+      text-align: center;
+      padding: 4rem;
+      background: var(--color-card-bg);
+      border-radius: 25px;
+      border: 2px dashed #A5D6A7;
+      box-shadow: 0 10px 40px var(--color-shadow);
+    }
+
+    .empty h2 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty p {
+      font-size: 1.2rem;
+      color: var(--color-text-secondary);
+    }
+
+    /* שגיאה */
+    .error {
+      background: #FFF3F3;
+      color: #C62828;
+      padding: 1.5rem;
+      border-radius: 15px;
+      border: 2px solid #EF5350;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .btn-refresh {
+      padding: 0.8rem 1.5rem;
+      background: linear-gradient(135deg, #81C784, #66BB6A);
+      color: white;
+      border: none;
+      border-radius: 15px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.4s ease;
+      box-shadow: 0 4px 15px rgba(102, 187, 106, 0.3);
+      margin-top: 1rem;
+    }
+
+    .btn-refresh:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 187, 106, 0.4);
+    }
+
+    .btn-refresh:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .controls {
+      text-align: center;
+      margin-bottom: 2rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      padding: 0.8rem 1.5rem;
+      border: 2px solid #C8E6C9;
+      border-radius: 15px;
+      font-size: 1rem;
+      font-family: inherit;
+      background: var(--color-card-bg);
+      color: var(--color-text-primary);
+      width: 300px;
+      max-width: 100%;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px var(--color-shadow);
+    }
+
+    .search-box:focus {
+      outline: none;
+      border-color: #81C784;
+      box-shadow: 0 4px 20px rgba(129, 199, 132, 0.3);
+    }
+
+    .search-box::placeholder {
+      color: var(--color-text-secondary);
+      opacity: 0.7;
+    }
+
+    /* Survey button */
+    .btn-survey {
+      padding: 0.6rem 1rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+      color: white;
+    }
+    .btn-survey:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 211, 102, 0.3);
+    }
+    .btn-survey:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Phone input modal */
+    .phone-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .phone-modal {
+      background: white;
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    .phone-modal h3 {
+      color: var(--color-text-primary);
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+    .phone-modal p {
+      color: var(--color-text-secondary);
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .phone-modal input {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border: 2px solid #C8E6C9;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-family: inherit;
+      text-align: center;
+      direction: ltr;
+      margin-bottom: 1rem;
+      outline: none;
+    }
+    .phone-modal input:focus {
+      border-color: #81C784;
+    }
+    .phone-modal-buttons {
+      display: flex;
+      gap: 0.8rem;
+    }
+    .phone-modal-buttons button {
+      flex: 1;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .phone-modal-buttons .btn-confirm {
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      color: white;
+    }
+    .phone-modal-buttons .btn-cancel {
+      background: #f5f5f5;
+      color: #666;
+    }
+
+    @media (max-width: 768px) {
+      .header h1 { font-size: 1.5rem; }
+      .header-logo img { height: 45px; }
+      .item-card { padding: 1rem; }
+      .item-name { font-size: 1.1rem; }
+      .stats { flex-direction: column; gap: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const WORKER_URL = 'https://monday-shimrit.monday-shimrit.workers.dev';
+
+    function MondayDashboard() {
+      const [items, setItems] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [updatingId, setUpdatingId] = useState(null);
+      const [lastDeleted, setLastDeleted] = useState(null);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [phoneModal, setPhoneModal] = useState(null); // { itemId, parentId, parentName, callback }
+
+      const loadItems = async () => {
+        try {
+          setLoading(true);
+          // Phase 1: Quick load (first page only)
+          const quickRes = await fetch(`${WORKER_URL}/items?quick=true`);
+          if (!quickRes.ok) throw new Error('שגיאה בטעינת הנתונים');
+          const quickData = await quickRes.json();
+          setItems(quickData);
+          setLoading(false);
+
+          // Phase 2: Full load in background
+          const fullRes = await fetch(`${WORKER_URL}/items`);
+          if (fullRes.ok) {
+            const fullData = await fullRes.json();
+            if (fullData.length > quickData.length) {
+              setItems(fullData);
+            }
+          }
+        } catch (err) {
+          setError(err.message);
+          setLoading(false);
+        }
+      };
+
+      const handleUpdateStatus = async (itemId, currentStatus) => {
+        try {
+          setUpdatingId(itemId);
+          const newStatus = currentStatus === 'ממתין' ? 'בתהליך' : 'בוצע';
+          
+          if (newStatus === 'בוצע') {
+            const deletedItem = items.find(item => item.id === itemId);
+            setLastDeleted({ ...deletedItem, previousStatus: currentStatus });
+            
+            setItems(prev => prev.filter(item => item.id !== itemId));
+            
+            fetch(`${WORKER_URL}/update-status`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ itemId, newStatus }),
+            }).catch(console.error);
+            
+            setTimeout(() => setLastDeleted(null), 10000);
+          } else {
+            // עדכון מקומי בלי רענון - שינוי סטטוס מ"ממתין" ל"בתהליך"
+            setItems(prev => prev.map(item =>
+              item.id === itemId ? { ...item, status: 'בתהליך' } : item
+            ));
+
+            // עדכון מאנדיי ברקע
+            fetch(`${WORKER_URL}/update-status`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ itemId, newStatus }),
+            }).catch(console.error);
+          }
+        } catch (err) {
+          alert('שגיאה: ' + err.message);
+        } finally {
+          setUpdatingId(null);
+        }
+      };
+
+      const undoLastDelete = async () => {
+        if (!lastDeleted) return;
+        try {
+          // החזר את המשימה לרשימה עם אנימציה 🌸
+          setItems(prev => [...prev, lastDeleted]);
+          
+          await fetch(`${WORKER_URL}/update-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              itemId: lastDeleted.id,
+              newStatus: lastDeleted.previousStatus
+            }),
+          });
+          
+          setLastDeleted(null);
+        } catch (err) {
+          console.error('Undo failed:', err);
+          setTimeout(() => loadItems(), 500);
+        }
+      };
+
+      const formatPhone = (phone) => {
+        if (!phone) return '';
+        let p = phone.replace(/[^0-9+]/g, '');
+        if (p.startsWith('0')) p = '972' + p.slice(1);
+        if (!p.startsWith('+') && !p.startsWith('972')) p = '972' + p;
+        p = p.replace(/^\+/, '');
+        return p;
+      };
+
+      const buildSurveyMessage = (firstName, gender) => {
+        const canYou = gender === 'F' ? 'תוכלי' : gender === 'M' ? 'תוכל' : 'תוכל/י';
+        return `הי ${firstName}, אשמח אם ${canYou} להקדיש רגע קצר ולשתף את החוויה שלך מהעבודה איתנו. כמה מילים ודירוג בגוגל עוזרים לנו מאוד להשתפר ולתת שירות טוב ללקוחות נוספים. תודה רבה על הזמן והפרגון! ☀️\nhttps://s-a.gs/q/review`;
+      };
+
+      const getGender = async (name) => {
+        try {
+          const res = await fetch(`https://s-a.gs/q/gender?name=${encodeURIComponent(name)}`);
+          const data = await res.json();
+          return { firstName: data.firstName, gender: data.gender };
+        } catch {
+          return { firstName: name.split(' ')[0], gender: 'U' };
+        }
+      };
+
+      const markAsDone = async (itemId) => {
+        // Mark task as בוצע directly, regardless of current status
+        const deletedItem = items.find(i => i.id === itemId);
+        if (deletedItem) {
+          setItems(prev => prev.filter(i => i.id !== itemId));
+        }
+        fetch(`${WORKER_URL}/update-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId, newStatus: 'בוצע' }),
+        }).catch(console.error);
+      };
+
+      const handleSendSurvey = async (item) => {
+        // Detect gender and build message
+        const { firstName, gender } = await getGender(item.parentName);
+        const message = buildSurveyMessage(firstName, gender);
+
+        const openWhatsApp = (phone) => {
+          const formatted = formatPhone(phone);
+          const waUrl = `https://wa.me/${formatted}?text=${encodeURIComponent(message)}`;
+          window.open(waUrl, '_blank');
+          // Mark as done directly
+          markAsDone(item.id);
+        };
+
+        // Check if we have a client phone
+        if (item.clientPhone) {
+          openWhatsApp(item.clientPhone);
+          return;
+        }
+
+        // No phone - need to ask user
+        // First check if client is linked
+        if (!item.hasClientLinked) {
+          // Create client first, then ask for phone
+          try {
+            await fetch(`${WORKER_URL}/create-client`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ parentItemId: item.parentId, clientName: item.parentName }),
+            });
+          } catch (err) {
+            console.error('Failed to create client:', err);
+          }
+        }
+
+        // Show phone input modal
+        setPhoneModal({
+          itemId: item.id,
+          parentId: item.parentId,
+          parentName: item.parentName,
+          callback: (phone) => {
+            // Save phone to Monday via create-client or update
+            fetch(`${WORKER_URL}/create-client`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ parentItemId: item.parentId, clientName: item.parentName, phone }),
+            }).catch(console.error);
+            openWhatsApp(phone);
+            setPhoneModal(null);
+          },
+        });
+      };
+
+      useEffect(() => {
+        loadItems();
+        // רענון אוטומטי כל 30 דקות
+        const interval = setInterval(() => loadItems(), 1800000);
+        return () => clearInterval(interval);
+      }, []);
+
+      const filteredItems = searchQuery
+        ? items.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        : items;
+
+      const waitingCount = items.filter(i => i.status === 'ממתין').length;
+      const inProgressCount = items.filter(i => i.status === 'בתהליך').length;
+
+      if (loading) {
+        return (
+          <div className="container">
+            <div className="loading">🌸 טוען משימות... 🌸</div>
+          </div>
+        );
+      }
+
+      if (error) {
+        return (
+          <div className="container">
+            <div className="error">
+              <div>⚠️ {error}</div>
+              <button className="btn-refresh" onClick={loadItems}>נסה שוב</button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="container">
+          {lastDeleted && (
+            <button className="undo-button" onClick={undoLastDelete}>
+              ↩️ ביטול פעולה אחרונה
+            </button>
+          )}
+
+          <div className="header">
+            <div className="header-logo">
+              <img src="./logo.png" alt="A.G.S Semo" />
+              <div>
+                <h1>✨ משימות לשמרית</h1>
+                <p>משימות פעילות מ-Monday.com</p>
+              </div>
+            </div>
+
+            <div className="stats">
+              <div className="stat-badge waiting">
+                ⏳ ממתין: {waitingCount}
+              </div>
+              <div className="stat-badge in-progress">
+                🔄 בתהליך: {inProgressCount}
+              </div>
+            </div>
+          </div>
+
+          <div className="controls">
+            <input
+              type="text"
+              className="search-box"
+              placeholder="🔍 חיפוש משימה..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button className="btn-refresh" onClick={loadItems} disabled={loading}>
+              🔄 רענן
+            </button>
+          </div>
+
+          {filteredItems.length === 0 ? (
+            <div className="empty">
+              <h2>{searchQuery ? '🔍' : '🎉'} {searchQuery ? 'לא נמצאו תוצאות' : 'מעולה!'}</h2>
+              <p>{searchQuery ? `אין משימות התואמות ל-"${searchQuery}"` : 'אין משימות ממתינות או בתהליך'}</p>
+            </div>
+          ) : (
+            <div className="items-grid">
+              {filteredItems.map((item) => (
+                <div key={item.id} className="item-card fade-in">
+                  <div className="item-header">
+                    <div className="item-name">{item.name}</div>
+                    <div className={`status-badge ${item.status === 'ממתין' ? 'waiting' : 'in-progress'}`}>
+                      {item.status === 'ממתין' ? '⏳' : '🔄'} {item.status}
+                    </div>
+                  </div>
+
+                  <div className="item-actions">
+                    {item.subitemName && item.subitemName.includes('ביצוע סקר לקוח') && (
+                      <button
+                        className="btn-survey"
+                        onClick={() => handleSendSurvey(item)}
+                      >
+                        📋 שלחי סקר
+                      </button>
+                    )}
+                    {item.status === 'ממתין' ? (
+                      <button
+                        className="btn-action start"
+                        onClick={() => handleUpdateStatus(item.id, item.status)}
+                        disabled={updatingId === item.id}
+                      >
+                        {updatingId === item.id ? '⏳ מעדכן...' : '🚀 מתחילה לעבוד'}
+                      </button>
+                    ) : (
+                      <button
+                        className="btn-action complete"
+                        onClick={() => handleUpdateStatus(item.id, item.status)}
+                        disabled={updatingId === item.id}
+                      >
+                        {updatingId === item.id ? '⏳ מעדכן...' : '✅ בוצע'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {phoneModal && (
+            <div className="phone-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setPhoneModal(null); }}>
+              <div className="phone-modal">
+                <h3>הזנת טלפון לקוח</h3>
+                <p>הזן את מספר הטלפון של הלקוח עבור פרויקט "{phoneModal.parentName}"</p>
+                <input
+                  type="tel"
+                  placeholder="050-1234567"
+                  id="phoneInput"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter') { const val = document.getElementById('phoneInput').value; if (val) phoneModal.callback(val); } }}
+                />
+                <div className="phone-modal-buttons">
+                  <button className="btn-confirm" onClick={() => { const val = document.getElementById('phoneInput').value; if (val) phoneModal.callback(val); }}>
+                    📱 שלחי סקר
+                  </button>
+                  <button className="btn-cancel" onClick={() => setPhoneModal(null)}>
+                    ביטול
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.render(<MondayDashboard />, document.getElementById('root'));
+  </script>
+</body>
+</html>
