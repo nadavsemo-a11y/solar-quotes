@@ -24,6 +24,9 @@ const STATUS_COLUMN_ID     = 'color_mkywhgg6';
 const VENDOR_FILE_COL_ID   = 'file_mm1qw5m2';
 const VENDOR_CONFIG_COL_ID = 'long_text_mm1qf7wq';
 const SUPPLIER_RELATION_COL = 'board_relation_mkywenar';
+const BUTTONS_BOARD_ID     = 5093182974;
+const TASK_REQ_COL_ID      = 'long_text_mm1qbn28';
+const BUTTON_MATCH_COL_ID  = 'name';       // matchText is the item name
 const TOKEN_LENGTH         = 12;
 const ID_XOR_KEY           = 0x5E3CA69B;  // XOR key for ID obfuscation
 
@@ -145,7 +148,10 @@ export class VendorService {
 
     if (linkedIds.length === 0) return [];
 
-    // 2. Fetch those subitems with status + parent info (batch to avoid query size limits)
+    // 2. Fetch task requirements from buttons board (per task type, not per vendor)
+    const taskReqMap = await this._fetchTaskRequirements();
+
+    // 3. Fetch those subitems with status + parent info (batch to avoid query size limits)
     const tasks = [];
     const BATCH = 100;
 
@@ -215,8 +221,8 @@ export class VendorService {
         const roofType = parentCols.find(c => c.id === 'dropdown_mkywtpq4')?.text || '';
         const phone = phoneMap[item.parent_item?.id] || '';
 
-        // Determine task-specific rules from vendor config
-        const taskRules = this._getTaskRules(vendor.config, item.name);
+        // Determine task-specific rules from buttons board (per task type)
+        const taskRules = this._getTaskRules(taskReqMap, item.name);
 
         tasks.push({
           ref: encodeId(item.id),
@@ -235,16 +241,51 @@ export class VendorService {
   }
 
   /**
-   * Get task-specific rules from vendor config.
+   * Fetch task requirements from buttons board.
+   * Requirements are per task TYPE (e.g. "חשמלאי בודק"), not per vendor.
+   * Returns a map: matchText → { requireFile, fileLabel, fields }
    */
-  _getTaskRules(config, taskName) {
-    const rules = config?.taskRules || {};
-    // Try exact match first, then partial, then default
-    if (rules[taskName]) return rules[taskName];
-    for (const [pattern, rule] of Object.entries(rules)) {
-      if (pattern !== 'default' && taskName.includes(pattern)) return rule;
+  async _fetchTaskRequirements() {
+    if (this._taskReqCache) return this._taskReqCache;
+
+    const query = `query {
+      boards(ids: [${BUTTONS_BOARD_ID}]) {
+        items_page(limit: 100) {
+          items {
+            name
+            column_values(ids: ["${TASK_REQ_COL_ID}"]) { text }
+          }
+        }
+      }
+    }`;
+    try {
+      const res = await this._mondayQuery(query);
+      const items = res.data?.boards?.[0]?.items_page?.items || [];
+      const reqMap = {};
+      for (const item of items) {
+        const reqText = item.column_values?.[0]?.text;
+        if (reqText) {
+          try { reqMap[item.name] = JSON.parse(reqText); } catch {}
+        }
+      }
+      this._taskReqCache = reqMap;
+      return reqMap;
+    } catch {
+      return {};
     }
-    return rules.default || { requireFile: false, requireNote: false, fields: [] };
+  }
+
+  /**
+   * Get task-specific rules by matching task name against buttons board entries.
+   * Requirements come from the task type, not the vendor.
+   */
+  _getTaskRules(taskReqMap, taskName) {
+    // Try exact match first, then partial (task name includes button matchText)
+    if (taskReqMap[taskName]) return taskReqMap[taskName];
+    for (const [matchText, rules] of Object.entries(taskReqMap)) {
+      if (taskName.includes(matchText) || matchText.includes(taskName)) return rules;
+    }
+    return { requireFile: false, fields: [] };
   }
 
   // ── Task Actions ────────────────────────────────────────────────────
