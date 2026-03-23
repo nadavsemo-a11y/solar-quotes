@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEMO AGS — הזמנת עבודה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sun: #F4A200;
+  --sun-light: #FFD166;
+  --sky: #0A1628;
+  --sky-mid: #112240;
+  --sky-light: #1D3461;
+  --green: #2ECC71;
+  --green-dark: #1a9e52;
+  --danger: #e74c3c;
+  --text: #1a1a2e;
+  --gray: #6B7280;
+  --gray-light: #9CA3AF;
+  --light: #F7F9FC;
+  --white: #ffffff;
+  --border: #E2E8F0;
+  --radius: 16px;
+  --shadow: 0 2px 20px rgba(0,0,0,0.07);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); color: var(--text); }
+
+.page {
+  max-width: 800px; margin: 0 auto; background: var(--white);
+  box-shadow: 0 4px 40px rgba(0,0,0,0.1); min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-mid) 60%, var(--sky-light) 100%);
+  padding: 28px 40px; display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+.logo { display: flex; align-items: center; gap: 14px; color: white; }
+.logo img { height: 42px; filter: brightness(0) invert(1); }
+.logo-text strong { font-size: 22px; font-weight: 900; letter-spacing: 1px; display: block; }
+.logo-text span { font-size: 12px; opacity: 0.65; font-weight: 300; }
+.header-badge {
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  color: white; padding: 8px 20px; border-radius: 50px; font-size: 13px; font-weight: 600;
+}
+
+/* ── Title Section ── */
+.title-section {
+  padding: 32px 40px 24px; border-bottom: 3px solid var(--sun);
+}
+.doc-title { font-size: 26px; font-weight: 900; color: var(--sky); }
+.doc-subtitle { font-size: 15px; color: var(--gray); margin-top: 4px; }
+
+/* ── Project Card ── */
+.project-card {
+  margin: 24px 40px; background: var(--light); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.project-card-header {
+  background: linear-gradient(135deg, var(--sky), var(--sky-mid));
+  padding: 12px 24px; color: white; font-size: 15px; font-weight: 700;
+  display: flex; align-items: center; gap: 10px;
+}
+.project-card-header .icon {
+  width: 28px; height: 28px; background: rgba(255,255,255,0.15); border-radius: 7px;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.project-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+}
+.project-field {
+  padding: 14px 24px; border-bottom: 1px solid var(--border);
+}
+.project-field:nth-child(odd) { border-left: 1px solid var(--border); }
+.project-field .label { font-size: 11px; font-weight: 700; color: var(--sky-mid); text-transform: uppercase; letter-spacing: 0.5px; }
+.project-field .value { font-size: 16px; font-weight: 800; color: var(--text); margin-top: 2px; }
+
+/* ── Price Block ── */
+.price-block {
+  margin: 0 40px 24px; background: linear-gradient(135deg, var(--sky), var(--sky-mid));
+  border-radius: var(--radius); padding: 24px; color: white;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.price-label { font-size: 14px; font-weight: 600; opacity: 0.8; }
+.price-value { font-size: 32px; font-weight: 900; color: var(--sun); }
+.price-unit { font-size: 13px; color: var(--gray-light); margin-top: 4px; }
+.price-detail { text-align: left; }
+.price-main { text-align: right; }
+
+/* ── Sections ── */
+.section {
+  padding: 0 40px; margin-bottom: 24px;
+}
+.section-title {
+  font-size: 16px; font-weight: 800; color: var(--sky); margin-bottom: 14px;
+  padding-right: 14px; border-right: 4px solid var(--sun);
+  display: flex; align-items: center; gap: 8px;
+}
+.section-num {
+  background: var(--sun); color: var(--sky); width: 24px; height: 24px;
+  border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+}
+
+/* ── Content Lists ── */
+.work-list { list-style: none; counter-reset: work-item; }
+.work-list li {
+  padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+  line-height: 1.7; counter-increment: work-item; padding-right: 8px;
+  display: flex; gap: 10px;
+}
+.work-list li::before {
+  content: counter(work-item, decimal) ".";
+  color: var(--sun); font-weight: 800; min-width: 28px; flex-shrink: 0;
+}
+.work-list li:last-child { border-bottom: none; }
+
+.obligations-list { list-style: none; }
+.obligations-list li {
+  padding: 8px 0; font-size: 13.5px; line-height: 1.9; padding-right: 8px;
+  display: flex; gap: 10px;
+}
+.obligations-list li::before {
+  content: '•'; color: var(--sky-mid); font-weight: 800; min-width: 14px; flex-shrink: 0;
+}
+
+/* ── Payment Table ── */
+.payment-table {
+  width: 100%; border-collapse: collapse; border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--border);
+}
+.payment-table th {
+  background: var(--sky); color: white; padding: 12px 20px; font-size: 13px;
+  font-weight: 700; text-align: right;
+}
+.payment-table td {
+  padding: 12px 20px; font-size: 14px; border-bottom: 1px solid var(--border);
+}
+.payment-table tr:last-child td { border-bottom: none; }
+.payment-table .pct { font-weight: 800; color: var(--sun); font-size: 16px; }
+
+/* ── Signature Section ── */
+.signature-section {
+  padding: 32px 40px 40px; border-top: 2px solid var(--border); margin-top: 16px;
+}
+.sig-title { font-size: 18px; font-weight: 800; color: var(--sky); margin-bottom: 20px; padding-right: 14px; border-right: 4px solid var(--sun); }
+.sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.sig-field label { display: block; font-size: 11px; font-weight: 700; color: var(--sky-mid); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.sig-field input {
+  width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 15px; font-family: inherit; background: var(--light);
+}
+.sig-field input:focus { outline: none; border-color: var(--sun); box-shadow: 0 0 0 3px rgba(244,162,0,0.1); }
+.sig-field input.error { border-color: var(--danger); }
+.sig-canvas-wrap {
+  border: 1.5px dashed var(--border); border-radius: 12px; position: relative;
+  height: 140px; margin-bottom: 12px; background: var(--light);
+  cursor: crosshair; overflow: hidden;
+}
+.sig-canvas-wrap.error { border-color: var(--danger); }
+.sig-canvas-wrap canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; }
+.sig-placeholder {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  color: var(--gray-light); font-size: 14px; pointer-events: none;
+}
+.sig-actions { margin-bottom: 16px; }
+.btn-clear {
+  background: none; border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 16px; font-size: 12px; color: var(--gray); cursor: pointer;
+  font-family: inherit;
+}
+.sig-agree {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 20px;
+  font-size: 13px; line-height: 1.6; cursor: pointer;
+}
+.sig-agree input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--green); }
+.sig-btn {
+  width: 100%; padding: 16px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  color: white; font-size: 18px; font-weight: 800; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(46,204,113,0.3); transition: all 0.2s;
+  font-family: inherit;
+}
+.sig-btn:hover { box-shadow: 0 6px 24px rgba(46,204,113,0.5); transform: translateY(-1px); }
+.sig-error { color: var(--danger); font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+.progress-bar { display: none; margin-top: 16px; text-align: center; }
+.progress-text { font-size: 14px; color: var(--gray); margin-bottom: 8px; }
+.progress-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--sun)); width: 0; transition: width 0.3s; border-radius: 3px; }
+
+/* ── Signed Banner ── */
+.signed-banner {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 2px solid #86efac;
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; display: none;
+}
+.signed-banner h3 { color: #166534; font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+.signed-banner p { font-size: 13px; color: #15803d; line-height: 1.6; }
+
+/* ── Footer ── */
+.footer {
+  background: var(--sky); color: rgba(255,255,255,0.5); text-align: center;
+  padding: 20px; font-size: 12px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .header { padding: 20px; }
+  .title-section, .section, .signature-section { padding-right: 20px; padding-left: 20px; }
+  .project-card { margin: 16px 20px; }
+  .price-block { margin: 0 20px 16px; flex-direction: column; gap: 12px; text-align: center; }
+  .project-grid { grid-template-columns: 1fr; }
+  .project-field:nth-child(odd) { border-left: none; }
+  .sig-grid { grid-template-columns: 1fr; }
+  .doc-title { font-size: 20px; }
+}
+
+@media print {
+  body { background: white; }
+  .page { box-shadow: none; max-width: 100%; }
+  .signature-section { page-break-inside: avoid; }
+  .sig-btn, .btn-clear, .sig-actions { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <img src="ags-logo.png" alt="SEMO AGS">
+      <div class="logo-text">
+        <strong>SEMO A.G.S</strong>
+        <span>Solar Operations System</span>
+      </div>
+    </div>
+    <div class="header-badge">הזמנת עבודה</div>
+  </div>
+
+  <!-- Title -->
+  <div class="title-section">
+    <div class="doc-title">הזמנת עבודה – התקנת מערכת פוטו-וולטאית ועבודות חשמל</div>
+    <div class="doc-subtitle" id="docDate"></div>
+  </div>
+
+  <!-- Project Card -->
+  <div class="project-card">
+    <div class="project-card-header">
+      <div class="icon">&#9889;</div>
+      פרטי הפרויקט
+    </div>
+    <div class="project-grid">
+      <div class="project-field"><div class="label">שם הפרויקט</div><div class="value" id="vProjectName">—</div></div>
+      <div class="project-field"><div class="label">שם הקבלן</div><div class="value" id="vContractorName">—</div></div>
+      <div class="project-field"><div class="label">הספק AC</div><div class="value" id="vAcPower">—</div></div>
+      <div class="project-field"><div class="label">הספק DC</div><div class="value" id="vDcPower">—</div></div>
+    </div>
+  </div>
+
+  <!-- Price Block -->
+  <div class="price-block">
+    <div class="price-main">
+      <div class="price-label">עלות כוללת</div>
+      <div class="price-value" id="vTotalPrice">—</div>
+    </div>
+    <div class="price-detail">
+      <div class="price-label">מחיר ל-1 קילו-וואט DC</div>
+      <div class="price-value" id="vPricePerKw" style="font-size:22px;">—</div>
+      <div class="price-unit">₪ / kWp</div>
+    </div>
+  </div>
+
+  <!-- 1. תכולת העבודה -->
+  <div class="section">
+    <div class="section-title"><span class="section-num">1</span> תכולת העבודה</div>
+    <ol class="work-list">
+      <li>ביצוע סיור מקדים באתר העבודה.</li>
+      <li>התקנת קונסטרוקציה למערכת בהתאם לתוכניות מאושרות.</li>
+      <li>התקנת פאנלים על גבי הקונסטרוקציה בהתאם לתוכניות מאושרות.</li>
+      <li>הכנה לחיבור חשמלי של הפאנלים.</li>
+      <li>חיבור הפאנלים (שירשור טורי ומקבילי) בהתאם לתוכניות חשמל DC מאושרות.</li>
+      <li>חיבור סטרינגים למפסקים, כולל התקנת מפסקים בהתאם לתוכנית חשמל מאושרת.</li>
+      <li>התקנת קופסאות ריכוז סטרינגים לממירים, כולל התקנת מפסקי DC ו-AC בהתאם לתוכנית, ככל שנדרש.</li>
+      <li>מיפוי אופטימייזרים והקמת אתר במערכת SolarEdge או בפורטל ניטור אחר בהתאם לסוג הממיר.</li>
+      <li>התקנת ממירים על גבי קונסטרוקציה קיימת.</li>
+      <li>התקנת ארון חשמל ראשי מאסף לממירים, כולל התקנת מאמ"טים בהתאם לתוכנית חשמל מאושרת.</li>
+      <li>התקנת ארון עבור מונה ייצור / יחידת מנייה של חברת החשמל.</li>
+      <li>ביצוע גישור הארקות בין הפאנלים לקונסטרוקציה.</li>
+      <li>התקנת בריכת הארקה, כולל אלקטרודות או הארקת קוץ לפי הצורך.</li>
+      <li>התקנת תעלות רשת מכוסות ותעלות פח להעברת כבלים.</li>
+      <li>אספקה והתקנת חיבור הזנה ראשית קיימת אל ארון החשמל, כולל תוואי כבל ופריסה עד 30 מטר (ללא חפירה).</li>
+      <li>אספקה והתקנת פס השוואת הארקות.</li>
+      <li>חיבור הזנות AC לממירים.</li>
+      <li>אספקה והתקנת שילוט למערכת, לממירים, לסטרינגים ולפאנלים.</li>
+      <li>פריסת קו תקשורת מהמבנה אל הממירים עד 30 מטר, ככל שנדרש.</li>
+      <li>פינוי פסולת ושאריות מהאתר בצורה תקנית ומסודרת.</li>
+      <li>ליווי חשמלאי מוסמך ביום חיבור המערכת לחברת החשמל.</li>
+    </ol>
+  </div>
+
+  <!-- 2. התחייבויות הקבלן -->
+  <div class="section">
+    <div class="section-title"><span class="section-num">2</span> התחייבויות הקבלן</div>
+    <ul class="obligations-list">
+      <li>הקבלן יספק את כל הציוד והחומרים הנדרשים לביצוע העבודה, למעט: פאנלים, ממירים, קונסטרוקציה וציוד מיתוג.</li>
+      <li>הקבלן מתחייב להעסיק עובדים בעלי הכשרה מתאימה, לרבות עבודה בגובה, ולהחזיק בכל האישורים והביטוחים הנדרשים על פי דין.</li>
+      <li>הקבלן אחראי באופן מלא לבטיחות עובדיו ולעמידה בכל תקנות הבטיחות הרלוונטיות.</li>
+      <li>הקבלן יעניק אחריות לטיב העבודה לתקופה של 12 חודשים ממועד סיום העבודה.</li>
+      <li>העבודה תבוצע בהתאם לכללי המקצוע ובהתאם להוראות חוק החשמל והתקנות הנלוות.</li>
+      <li>העבודה תתבצע ברציפות וללא עיכובים בלתי סבירים.</li>
+      <li>הקבלן אחראי לכל נזק שייגרם כתוצאה מעבודתו, לרבות נזק לגוף או לרכוש.</li>
+      <li>לא יתקיימו יחסי עובד-מעביד בין המזמין לבין הקבלן או מי מטעמו.</li>
+      <li>העבודה אינה כוללת הובלות, הנפות, חפירות או חיזוקי מבנה, אלא אם צוין אחרת במפורש.</li>
+    </ul>
+  </div>
+
+  <!-- 3. תנאי תשלום -->
+  <div class="section">
+    <div class="section-title"><span class="section-num">3</span> תנאי תשלום</div>
+    <table class="payment-table">
+      <thead><tr><th>אבן דרך</th><th>תיאור</th><th>אחוז</th></tr></thead>
+      <tbody>
+        <tr><td>תשלום ראשון</td><td>עם סיום התקנת הקונסטרוקציה</td><td class="pct">40%</td></tr>
+        <tr><td>תשלום שני</td><td>עם סיום עבודות החשמל DC והתקנת הפאנלים</td><td class="pct">50%</td></tr>
+        <tr><td>תשלום שלישי</td><td>לאחר בדיקת חברת החשמל</td><td class="pct">10%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 4. חתימה -->
+  <div class="signature-section" id="signatureSection">
+    <div class="sig-title">חתימת הקבלן</div>
+
+    <div class="signed-banner" id="signedBanner">
+      <h3>&#10003; המסמך נחתם</h3>
+      <p id="signedInfo"></p>
+    </div>
+
+    <div id="sigForm">
+      <div class="sig-grid">
+        <div class="sig-field">
+          <label>שם מלא</label>
+          <input type="text" id="sigName" placeholder="שם הקבלן">
+        </div>
+        <div class="sig-field">
+          <label>ת.ז. / ח.פ.</label>
+          <input type="text" id="sigId" placeholder="מספר תעודת זהות / חברה" inputmode="numeric">
+        </div>
+        <div class="sig-field">
+          <label>אימייל</label>
+          <input type="email" id="sigEmail" placeholder="כתובת אימייל">
+        </div>
+        <div class="sig-field">
+          <label>תאריך</label>
+          <input type="text" id="sigDate" readonly>
+        </div>
+      </div>
+
+      <div class="sig-canvas-wrap" id="canvasWrap">
+        <span class="sig-placeholder" id="sigPlaceholder">&#9997;&#65039; חתום כאן עם העכבר או האצבע</span>
+        <canvas id="sigCanvas"></canvas>
+      </div>
+      <div class="sig-actions">
+        <button class="btn-clear" onclick="clearSignature()">&#128465;&#65039; נקה חתימה</button>
+      </div>
+
+      <label class="sig-agree">
+        <input type="checkbox" id="sigAgree">
+        <span>קראתי את הסעיפים לעיל ואני מאשר/ת את תוכן הזמנת העבודה ומתחייב/ת לפעול בהתאם</span>
+      </label>
+
+      <button class="sig-btn" id="sigBtn" onclick="submitSignature()">&#10003; אישור וחתימה</button>
+      <div class="sig-error" id="sigError"></div>
+
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-text" id="progressText">שומר חתימה...</div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">SEMO AGS — סמו א.ג.ס בע"מ · כל הזכויות שמורות</div>
+
+</div>
+
+<script src="signature-service.js"></script>
+<script src="post-sign-service.js"></script>
+<script>
+(function() {
+  const WORKER_URL = 'https://s-a.gs';
+  const DOC_TYPE = 'work-order';
+
+  // ── Populate from injected data ──
+  const data = window.__WORK_ORDER__ || {};
+
+  document.getElementById('vProjectName').textContent = data.project_name || '—';
+  document.getElementById('vContractorName').textContent = data.contractor_name || '—';
+  document.getElementById('vAcPower').textContent = data.ac_power ? data.ac_power + ' kW' : '—';
+  document.getElementById('vDcPower').textContent = data.dc_power ? data.dc_power + ' kWp' : '—';
+  document.getElementById('vPricePerKw').textContent = data.price_per_kw_dc ? Number(data.price_per_kw_dc).toLocaleString('he-IL') + ' ₪' : '—';
+  document.getElementById('vTotalPrice').textContent = data.total_price ? Number(data.total_price).toLocaleString('he-IL') + ' ₪' : '—';
+
+  // Date
+  const now = new Date();
+  document.getElementById('docDate').textContent = now.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  document.getElementById('sigDate').value = now.toLocaleDateString('he-IL');
+
+  // ── Check if already signed ──
+  const sigData = window.__SIGNATURE_DATA__;
+  if (sigData && sigData.signed) {
+    document.getElementById('sigForm').style.display = 'none';
+    const banner = document.getElementById('signedBanner');
+    banner.style.display = 'block';
+    banner.querySelector('#signedInfo').innerHTML =
+      `חותם: ${sigData.signerName || ''}<br>` +
+      `תאריך: ${sigData.dateStr || ''}<br>` +
+      (sigData.refID ? `מס' אסמכתא: ${sigData.refID}` : '');
+    if (sigData.sigImg) {
+      const img = document.createElement('img');
+      img.src = sigData.sigImg;
+      img.style.cssText = 'max-width:200px;margin-top:12px;border:1px solid #e2e8f0;border-radius:8px;';
+      banner.appendChild(img);
+    }
+  }
+
+  // ── Signature Service ──
+  const sig = new SignatureService('sigCanvas');
+  sig.init();
+
+  window.clearSignature = function() {
+    sig.clear();
+    document.getElementById('sigPlaceholder').style.display = '';
+  };
+
+  window.submitSignature = async function() {
+    const name = document.getElementById('sigName').value.trim();
+    const idNum = document.getElementById('sigId').value.trim();
+    const agreed = document.getElementById('sigAgree').checked;
+    const errEl = document.getElementById('sigError');
+    errEl.style.display = 'none';
+
+    // Clear errors
+    document.querySelectorAll('.sig-field input, .sig-canvas-wrap').forEach(el => el.classList.remove('error'));
+
+    // Validate
+    const errors = [];
+    if (!name) { errors.push('שם'); document.getElementById('sigName').classList.add('error'); }
+    if (!idNum) { errors.push('ת.ז.'); document.getElementById('sigId').classList.add('error'); }
+    if (!sig._hasSig) { errors.push('חתימה'); document.getElementById('canvasWrap').classList.add('error'); }
+    if (!agreed) { errors.push('אישור תנאים'); }
+
+    if (errors.length > 0) {
+      errEl.textContent = 'יש למלא: ' + errors.join(', ');
+      errEl.style.display = 'block';
+      return;
+    }
+
+    try {
+      const result = await sig.collect({ name, idNum, agreed, quoteSnapshot: data });
+      const docId = data.docId || '';
+
+      // Show progress
+      const progressBar = document.getElementById('progressBar');
+      const progressFill = document.getElementById('progressFill');
+      const progressText = document.getElementById('progressText');
+      document.getElementById('sigBtn').style.display = 'none';
+      progressBar.style.display = 'block';
+      progressText.textContent = 'שומר חתימה...';
+      progressFill.style.width = '30%';
+
+      // Save signature
+      const saveRes = await fetch(`${WORKER_URL}/sign/${docId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docType: DOC_TYPE, signature: result }),
+      });
+      progressFill.style.width = '70%';
+
+      const saveData = await saveRes.json();
+      if (!saveData.success) throw new Error(saveData.error || 'שגיאה בשמירה');
+
+      progressFill.style.width = '100%';
+      progressText.textContent = 'נחתם בהצלחה! ✓';
+
+      setTimeout(() => {
+        document.getElementById('sigForm').style.display = 'none';
+        const banner = document.getElementById('signedBanner');
+        banner.style.display = 'block';
+        banner.querySelector('#signedInfo').innerHTML =
+          `חותם: ${name}<br>תאריך: ${document.getElementById('sigDate').value}<br>מס' אסמכתא: ${saveData.docId || docId}`;
+        if (result.sigImg) {
+          const img = document.createElement('img');
+          img.src = result.sigImg;
+          img.style.cssText = 'max-width:200px;margin-top:12px;border:1px solid #e2e8f0;border-radius:8px;';
+          banner.appendChild(img);
+        }
+      }, 1000);
+
+    } catch (e) {
+      errEl.textContent = 'שגיאה: ' + e.message;
+      errEl.style.display = 'block';
+      document.getElementById('sigBtn').style.display = '';
+      document.getElementById('progressBar').style.display = 'none';
+    }
+  };
+})();
+</script>
+</body>
+</html>
