@@ -55,6 +55,14 @@ input, textarea { font-family: inherit; }
 }
 .task-card.completing { opacity: 0.5; transform: scale(0.98); }
 .task-card.done-exit { opacity: 0; transform: translateX(-100%); height: 0; padding: 0; margin: 0; overflow: hidden; }
+.task-card.highlight {
+  border-color: var(--sun); box-shadow: 0 0 20px rgba(244,162,0,0.25);
+  animation: highlightPulse 1s ease-in-out 3;
+}
+@keyframes highlightPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(244,162,0,0.25); }
+  50% { box-shadow: 0 0 35px rgba(244,162,0,0.5); }
+}
 
 .task-project {
   font-size: 18px; font-weight: 700; margin-bottom: 4px;
@@ -209,6 +217,7 @@ const fieldValues = {};   // ref -> { fieldId: value }
 
 // ── Init ─────────────────────────────────────────────────────────────────
 const IS_DEMO = new URLSearchParams(window.location.search).get('demo') === 'true';
+const HIGHLIGHT_REF = new URLSearchParams(window.location.search).get('highlight') || '';
 
 document.getElementById('vendorName').textContent = V.supplierName || '';
 loadTasks();
@@ -231,6 +240,16 @@ async function loadTasks() {
       : 'אין משימות';
 
     render();
+
+    // Highlight a specific task if requested via URL param
+    if (HIGHLIGHT_REF) {
+      const card = document.getElementById(`card-${HIGHLIGHT_REF}`);
+      if (card) {
+        card.classList.add('highlight');
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => card.classList.remove('highlight'), 5000);
+      }
+    }
   } catch (e) {
     showError('שגיאת חיבור: ' + e.message);
   }
@@ -279,13 +298,19 @@ function renderCard(task) {
     </div>`;
   }).join('');
 
-  const fileHtml = needsFile ? `
-    <div class="file-area" id="file-area-${task.ref}" onclick="document.getElementById('file-${task.ref}').click()">
-      <div class="file-icon">&#128206;</div>
-      <div class="file-label">${esc(fileLabel)}</div>
-      <input type="file" id="file-${task.ref}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" capture="environment"
-        onchange="onFileSelect('${task.ref}', this)">
-    </div>` : '';
+  // If file already uploaded (from previous session), mark it
+  if (task.hasFile) uploadedFiles[task.ref] = { name: 'קובץ קיים', uploaded: true };
+
+  const fileHtml = needsFile ? (task.hasFile
+    ? `<div class="file-area has-file" id="file-area-${task.ref}">
+        <div class="file-name">&#128206; קובץ כבר צורף &#10003;</div>
+      </div>`
+    : `<div class="file-area" id="file-area-${task.ref}" onclick="document.getElementById('file-${task.ref}').click()">
+        <div class="file-icon">&#128206;</div>
+        <div class="file-label">${esc(fileLabel)}</div>
+        <input type="file" id="file-${task.ref}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" capture="environment"
+          onchange="onFileSelect('${task.ref}', this)">
+      </div>`) : '';
 
   const details = [];
   if (task.address) details.push(`<div class="task-detail"><span class="detail-icon">&#128205;</span>${esc(task.address)}</div>`);
