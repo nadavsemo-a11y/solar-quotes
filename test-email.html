@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>SEMO — בדיקת שליחת מייל</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Assistant', Arial, sans-serif; background: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .card { background: white; border-radius: 16px; padding: 36px; max-width: 420px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    h1 { font-size: 22px; color: #0A1628; margin-bottom: 8px; }
+    p { font-size: 14px; color: #6B7280; margin-bottom: 24px; }
+    button {
+      width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 16px;
+      font-weight: 800; font-family: inherit; cursor: pointer; color: white;
+      background: linear-gradient(135deg, #0A1628, #1D3461);
+      box-shadow: 0 4px 16px rgba(10,22,40,0.3);
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #result { margin-top: 20px; padding: 14px; border-radius: 10px; font-size: 14px; font-weight: 700; display: none; }
+    .ok { background: #dcfce7; color: #166534; }
+    .err { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>בדיקת מודול מייל</h1>
+    <p>שולח מייל בדיקה ל-<strong>nadav.s@s-a.gs</strong> דרך Apps Script</p>
+    <button id="btn" onclick="sendTest()">שלח מייל בדיקה</button>
+    <div id="result"></div>
+  </div>
+
+  <script src="email-service.js"></script>
+  <script>
+    async function sendTest() {
+      const btn = document.getElementById('btn');
+      const res = document.getElementById('result');
+      btn.disabled = true;
+      btn.textContent = 'שולח...';
+      res.style.display = 'none';
+
+      const result = await EmailService.sendQuoteEmail({
+        clientName:  'בדיקת מערכת',
+        clientEmail: 'nadav.s@s-a.gs',
+        quoteUrl:    'https://s-a.gs/q/test',
+        systemKW:    '10',
+        totalPrice:  '35,000',
+        quoteDate:   new Date().toLocaleDateString('he-IL'),
+        city:        'תל אביב'
+      });
+
+      res.style.display = 'block';
+      if (result.success) {
+        res.className = 'ok';
+        res.textContent = 'נשלח בהצלחה ל: ' + (result.sentTo || []).join(', ');
+      } else {
+        res.className = 'err';
+        res.textContent = 'שגיאה: ' + (result.error || 'לא ידוע');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'שלח מייל בדיקה';
+    }
+  </script>
+</body>
+</html>
