@@ -6,131 +6,150 @@
 <title>SEMO AGS — פורטל ספק</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0f1117;
-  --surface: #1a1d27;
-  --surface-2: #232730;
-  --surface-3: #2a2e3a;
-  --accent: #4f8ef7;
   --sun: #F4A200;
+  --sun-light: #FFD166;
+  --sky: #0A1628;
+  --sky-mid: #112240;
+  --sky-light: #1D3461;
   --green: #2ECC71;
   --green-dark: #1a9e52;
   --red: #e74c3c;
-  --text: #e1e4ea;
-  --text-2: #8b8f9a;
-  --text-3: #5a5e6b;
-  --border: #2d313d;
-  --radius: 14px;
+  --text: #1a1a2e;
+  --gray: #6B7280;
+  --gray-light: #9CA3AF;
+  --light: #F7F9FC;
+  --white: #ffffff;
+  --border: #E2E8F0;
+  --radius: 16px;
   --radius-sm: 10px;
+  --shadow: 0 2px 20px rgba(0,0,0,0.07);
+  --shadow-lg: 0 8px 48px rgba(0,0,0,0.14);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); color: var(--text); min-height: 100vh; }
 button { font-family: inherit; cursor: pointer; border: none; }
 input, textarea { font-family: inherit; }
 
 /* ── Header ─────────────────────────────── */
 .header {
-  background: linear-gradient(135deg, #0A1628 0%, #112240 60%, #1D3461 100%);
-  padding: 18px 20px; display: flex; align-items: center; gap: 14px;
-  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50;
+  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-mid) 60%, var(--sky-light) 100%);
+  padding: 20px 24px; display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
 }
-.header-logo { height: 34px; filter: brightness(0) invert(1); }
-.header-info { flex: 1; }
-.header-title { font-size: 14px; font-weight: 700; }
-.header-name { font-size: 18px; font-weight: 800; color: var(--sun); margin-top: 2px; }
+.logo { display: flex; align-items: center; gap: 14px; color: white; }
+.logo-img { height: 38px; filter: brightness(0) invert(1); }
+.logo-info { }
+.logo-title { font-size: 13px; font-weight: 600; opacity: 0.7; }
+.logo-name { font-size: 20px; font-weight: 900; color: var(--sun); }
 .header-badge {
-  background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3);
-  padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap;
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  color: white; padding: 6px 16px; border-radius: 50px; font-size: 13px; font-weight: 600;
 }
 
 /* ── Main ───────────────────────────────── */
-.main { max-width: 600px; margin: 0 auto; padding: 16px; }
+.main { max-width: 640px; margin: 0 auto; padding: 28px 20px; }
+.page-title {
+  text-align: center; margin-bottom: 28px;
+}
+.page-title h1 { font-size: 26px; font-weight: 900; color: var(--sky); }
+.page-title h1 span { color: var(--sun); }
+.page-title p { font-size: 14px; color: var(--gray); margin-top: 4px; }
 
 /* ── Task Card ──────────────────────────── */
 .task-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 20px; margin-bottom: 14px; transition: all 0.3s;
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); margin-bottom: 18px; overflow: hidden;
+  transition: all 0.3s;
 }
 .task-card.completing { opacity: 0.5; transform: scale(0.98); }
-.task-card.done-exit { opacity: 0; transform: translateX(-100%); height: 0; padding: 0; margin: 0; overflow: hidden; }
+.task-card.done-exit { opacity: 0; transform: translateX(-100%); height: 0; margin: 0; overflow: hidden; transition: all 0.4s; }
 .task-card.highlight {
-  border-color: var(--sun); box-shadow: 0 0 20px rgba(244,162,0,0.25);
+  border-color: var(--sun); box-shadow: 0 0 24px rgba(244,162,0,0.3);
   animation: highlightPulse 1s ease-in-out 3;
 }
 @keyframes highlightPulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(244,162,0,0.25); }
-  50% { box-shadow: 0 0 35px rgba(244,162,0,0.5); }
+  0%, 100% { box-shadow: 0 0 24px rgba(244,162,0,0.3); }
+  50% { box-shadow: 0 0 40px rgba(244,162,0,0.55); }
 }
 
-.task-project {
-  font-size: 18px; font-weight: 700; margin-bottom: 4px;
-  display: flex; align-items: center; gap: 8px;
+.card-header {
+  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-mid) 100%);
+  padding: 14px 22px; display: flex; align-items: center; gap: 10px; color: white;
 }
-.task-project::before {
-  content: ''; width: 4px; height: 20px; background: var(--accent);
-  border-radius: 2px; flex-shrink: 0;
+.card-header .icon {
+  width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
 }
-.task-name { font-size: 14px; color: var(--text-2); margin-bottom: 8px; padding-right: 12px; }
-.task-details {
-  margin-bottom: 16px; padding-right: 12px; display: flex; flex-direction: column; gap: 6px;
+.card-header h3 { font-size: 17px; font-weight: 800; flex: 1; }
+
+.card-body { padding: 22px; }
+
+/* ── Details Grid ───────────────────────── */
+.details-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;
 }
-.task-detail {
-  font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 8px;
-}
-.detail-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
-.date-edit {
-  padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
-  background: var(--surface-2); color: var(--text); font-family: inherit;
-  font-size: 13px; direction: ltr; margin-right: 6px;
-}
-.date-edit:focus { outline: none; border-color: var(--accent); }
+.detail-item { }
+.detail-label { font-size: 11px; font-weight: 700; color: var(--sky-mid); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.detail-value { font-size: 14px; font-weight: 600; color: var(--text); }
+.detail-value a { color: var(--sky-mid); text-decoration: none; }
+.detail-value a:hover { text-decoration: underline; }
 
 /* ── Dynamic Fields ─────────────────────── */
 .field-group { margin-bottom: 14px; }
 .field-label {
-  font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 5px;
+  font-size: 12px; font-weight: 700; color: var(--sky-mid); margin-bottom: 5px;
+  text-transform: uppercase; letter-spacing: 0.5px;
   display: flex; align-items: center; gap: 4px;
 }
-.field-label .req { color: var(--red); }
+.field-label .req { color: var(--red); font-size: 14px; }
 .field-input {
   width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border); background: var(--surface-2);
-  color: var(--text); font-size: 14px; direction: rtl;
+  border: 1px solid var(--border); background: var(--light);
+  color: var(--text); font-size: 14px;
 }
-.field-input:focus { outline: none; border-color: var(--accent); }
+.field-input:focus { outline: none; border-color: var(--sun); box-shadow: 0 0 0 3px rgba(244,162,0,0.1); }
 .field-input.error { border-color: var(--red); }
-.field-error { font-size: 11px; color: var(--red); margin-top: 4px; }
 textarea.field-input { min-height: 70px; resize: vertical; }
+
+/* ── Date Edit ──────────────────────────── */
+.date-edit {
+  padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--light); color: var(--text); font-family: inherit;
+  font-size: 13px; direction: ltr;
+}
+.date-edit:focus { outline: none; border-color: var(--sun); }
 
 /* ── File Upload ────────────────────────── */
 .file-area {
-  border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 16px;
-  text-align: center; margin-bottom: 14px; transition: all 0.2s; cursor: pointer;
+  border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 20px;
+  text-align: center; margin-bottom: 16px; transition: all 0.2s; cursor: pointer;
+  background: var(--light);
 }
-.file-area:hover { border-color: var(--accent); background: rgba(79,142,247,0.05); }
+.file-area:hover { border-color: var(--sun); background: rgba(244,162,0,0.03); }
 .file-area.has-file { border-color: var(--green); border-style: solid; background: rgba(46,204,113,0.05); }
 .file-area.error { border-color: var(--red); }
-.file-icon { font-size: 28px; margin-bottom: 6px; }
-.file-label { font-size: 13px; color: var(--text-2); }
+.file-icon { font-size: 32px; margin-bottom: 8px; }
+.file-label { font-size: 13px; color: var(--gray); }
 .file-name {
-  font-size: 13px; color: var(--green); font-weight: 600; margin-top: 6px;
+  font-size: 13px; color: var(--green-dark); font-weight: 700; margin-top: 8px;
   display: flex; align-items: center; justify-content: center; gap: 8px;
 }
 .file-remove {
-  background: rgba(231,76,60,0.15); color: var(--red); border: none; width: 22px; height: 22px;
+  background: rgba(231,76,60,0.1); color: var(--red); border: none; width: 22px; height: 22px;
   border-radius: 50%; font-size: 14px; cursor: pointer; display: inline-flex;
   align-items: center; justify-content: center;
 }
-.file-uploading { font-size: 12px; color: var(--accent); margin-top: 6px; }
+.file-uploading { font-size: 12px; color: var(--sky-mid); margin-top: 6px; }
 input[type="file"] { display: none; }
 
 /* ── Done Button ────────────────────────── */
 .btn-done {
   width: 100%; padding: 14px; border-radius: var(--radius-sm); font-size: 16px;
-  font-weight: 700; transition: all 0.2s; display: flex; align-items: center;
-  justify-content: center; gap: 8px;
+  font-weight: 800; transition: all 0.2s; display: flex; align-items: center;
+  justify-content: center; gap: 8px; letter-spacing: 0.5px;
 }
 .btn-done.ready {
   background: linear-gradient(135deg, var(--green), var(--green-dark));
@@ -138,39 +157,36 @@ input[type="file"] { display: none; }
 }
 .btn-done.ready:hover { box-shadow: 0 6px 24px rgba(46,204,113,0.5); transform: translateY(-1px); }
 .btn-done.disabled {
-  background: var(--surface-2); color: var(--text-3); cursor: not-allowed;
+  background: var(--light); color: var(--gray-light); cursor: not-allowed;
   border: 1px solid var(--border);
 }
-.btn-done.disabled:hover { transform: none; box-shadow: none; }
 
 /* ── Undo Bar ───────────────────────────── */
 .undo-bar {
-  width: 100%; padding: 14px; border-radius: var(--radius-sm); font-size: 15px;
-  font-weight: 600; background: var(--surface-3); color: var(--text);
+  width: 100%; padding: 14px 18px; border-radius: var(--radius-sm); font-size: 15px;
+  font-weight: 600; background: var(--sky); color: white;
   display: flex; align-items: center; justify-content: space-between;
-  border: 1px solid var(--border); animation: fadeIn 0.2s;
+  animation: fadeIn 0.2s;
 }
-.undo-countdown { color: var(--accent); font-weight: 700; font-size: 18px; direction: ltr; }
+.undo-countdown { color: var(--sun); font-weight: 800; font-size: 20px; direction: ltr; }
 .undo-btn {
-  background: rgba(231,76,60,0.15); color: var(--red); border: 1px solid rgba(231,76,60,0.3);
-  padding: 6px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+  background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3);
+  padding: 6px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700;
 }
-.undo-btn:hover { background: rgba(231,76,60,0.3); }
+.undo-btn:hover { background: rgba(255,255,255,0.25); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ── Empty State ────────────────────────── */
-.empty-state {
-  text-align: center; padding: 60px 20px; color: var(--text-3);
-}
+.empty-state { text-align: center; padding: 60px 20px; }
 .empty-icon { font-size: 64px; margin-bottom: 16px; }
-.empty-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-.empty-text { font-size: 14px; line-height: 1.6; }
+.empty-title { font-size: 22px; font-weight: 900; color: var(--sky); margin-bottom: 8px; }
+.empty-text { font-size: 15px; color: var(--gray); line-height: 1.6; }
 
 /* ── Loading ────────────────────────────── */
 .loading { text-align: center; padding: 60px 20px; }
 .spinner {
   width: 40px; height: 40px; border: 3px solid var(--border);
-  border-top-color: var(--accent); border-radius: 50%;
+  border-top-color: var(--sun); border-radius: 50%;
   animation: spin 0.8s linear infinite; margin: 0 auto 16px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -178,52 +194,71 @@ input[type="file"] { display: none; }
 /* ── Toast ──────────────────────────────── */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  padding: 12px 24px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
-  z-index: 200; box-shadow: 0 8px 32px rgba(0,0,0,0.5); transition: all 0.3s;
+  padding: 12px 24px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700;
+  z-index: 200; box-shadow: var(--shadow-lg); transition: all 0.3s;
   opacity: 0; pointer-events: none; white-space: nowrap;
 }
 .toast.visible { opacity: 1; }
 .toast.success { background: var(--green); color: #fff; }
 .toast.error { background: var(--red); color: #fff; }
+
+/* ── Footer ─────────────────────────────── */
+.footer {
+  text-align: center; padding: 20px; font-size: 12px; color: var(--gray-light);
+}
+
+@media (max-width: 500px) {
+  .details-grid { grid-template-columns: 1fr; gap: 10px; }
+  .card-body { padding: 16px; }
+  .header { padding: 16px; }
+  .logo-name { font-size: 17px; }
+}
 </style>
 </head>
 <body>
 
 <!-- Header -->
 <header class="header">
-  <img src="ags-logo.png" alt="SEMO AGS" class="header-logo">
-  <div class="header-info">
-    <div class="header-title">פורטל ספק</div>
-    <div class="header-name" id="vendorName">—</div>
+  <div class="logo">
+    <img src="ags-logo.png" alt="SEMO AGS" class="logo-img">
+    <div class="logo-info">
+      <div class="logo-title">פורטל ספק</div>
+      <div class="logo-name" id="vendorName">—</div>
+    </div>
   </div>
   <div class="header-badge" id="taskCount">—</div>
 </header>
 
 <!-- Main Content -->
-<div class="main" id="content">
-  <div class="loading">
-    <div class="spinner"></div>
-    <div style="color:var(--text-2)">טוען משימות...</div>
+<div class="main">
+  <div class="page-title">
+    <h1>הזמנות <span>פתוחות</span></h1>
+    <p id="subtitle">טוען...</p>
+  </div>
+  <div id="content">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div style="color:var(--gray)">טוען משימות...</div>
+    </div>
   </div>
 </div>
+
+<!-- Footer -->
+<div class="footer">SEMO A.G.S — Solar Operations System</div>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ── Config (injected by Worker) ──────────────────────────────────────────
 const V = window.__VENDOR__ || {};
 const API = V.apiBase || '';
 const TOKEN = V.token || '';
-
-// ── State ────────────────────────────────────────────────────────────────
-let tasks = [];
-const uploadedFiles = {}; // ref -> { file, name, uploaded }
-const fieldValues = {};   // ref -> { fieldId: value }
-
-// ── Init ─────────────────────────────────────────────────────────────────
 const IS_DEMO = new URLSearchParams(window.location.search).get('demo') === 'true';
 const HIGHLIGHT_REF = new URLSearchParams(window.location.search).get('highlight') || '';
+
+let tasks = [];
+const uploadedFiles = {};
+const fieldValues = {};
 
 document.getElementById('vendorName').textContent = V.supplierName || '';
 loadTasks();
@@ -233,21 +268,16 @@ async function loadTasks() {
     const demoParam = IS_DEMO ? '&demo=true' : '';
     const res = await fetch(`${API}/v/api/tasks?token=${TOKEN}${demoParam}`);
     const data = await res.json();
-
-    if (!data.success) {
-      showError(data.error || 'שגיאה בטעינת משימות');
-      return;
-    }
+    if (!data.success) { showError(data.error || 'שגיאה'); return; }
 
     document.getElementById('vendorName').textContent = data.supplierName || V.supplierName || '';
     tasks = data.tasks || [];
-    document.getElementById('taskCount').textContent = tasks.length > 0
-      ? `${tasks.length} משימות פתוחות`
-      : 'אין משימות';
-
+    document.getElementById('taskCount').textContent = tasks.length > 0 ? `${tasks.length} הזמנות` : 'אין הזמנות';
+    document.getElementById('subtitle').textContent = tasks.length > 0
+      ? `${tasks.length} הזמנות ממתינות לטיפול`
+      : '';
     render();
 
-    // Highlight a specific task if requested via URL param
     if (HIGHLIGHT_REF) {
       const card = document.getElementById(`card-${HIGHLIGHT_REF}`);
       if (card) {
@@ -261,21 +291,17 @@ async function loadTasks() {
   }
 }
 
-// ── Render ────────────────────────────────────────────────────────────────
 function render() {
   const el = document.getElementById('content');
-
   if (tasks.length === 0) {
-    el.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">&#9728;&#65039;</div>
-        <div class="empty-title">אין משימות פתוחות</div>
-        <div class="empty-text">כל הכבוד! אין כרגע משימות שדורשות טיפול.</div>
-      </div>`;
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">&#9728;&#65039;</div>
+      <div class="empty-title">אין הזמנות פתוחות</div>
+      <div class="empty-text">כל הכבוד! אין כרגע הזמנות שדורשות טיפול.</div>
+    </div>`;
     return;
   }
-
-  el.innerHTML = tasks.map(t => renderCard(t)).join('');
+  el.innerHTML = tasks.map(renderCard).join('');
 }
 
 function renderCard(task) {
@@ -283,71 +309,57 @@ function renderCard(task) {
   const fields = rules.fields || [];
   const needsFile = rules.requireFile || false;
   const fileLabel = rules.fileLabel || 'צרף קובץ';
-
-  // Initialize field values for this task
   if (!fieldValues[task.ref]) fieldValues[task.ref] = {};
+  if (task.hasFile) uploadedFiles[task.ref] = { name: 'קובץ קיים', uploaded: true };
 
+  // Details grid
+  const dateVal = task.plannedDate ? task.plannedDate.split(' ')[0] : '';
+  let detailsHtml = '<div class="details-grid">';
+  if (task.address) detailsHtml += `<div class="detail-item"><div class="detail-label">כתובת</div><div class="detail-value">${esc(task.address)}</div></div>`;
+  if (task.roofType) detailsHtml += `<div class="detail-item"><div class="detail-label">סוג גג</div><div class="detail-value">${esc(task.roofType)}</div></div>`;
+  if (task.phone) detailsHtml += `<div class="detail-item"><div class="detail-label">טלפון לקוח</div><div class="detail-value"><a href="tel:${esc(task.phone)}">${esc(task.phone)}</a></div></div>`;
+  detailsHtml += `<div class="detail-item"><div class="detail-label">תאריך מתוכנן</div><div class="detail-value"><input type="date" class="date-edit" id="date-${task.ref}" value="${dateVal}" onchange="updateDate('${task.ref}', this.value)"></div></div>`;
+  detailsHtml += '</div>';
+
+  // Dynamic fields
   const fieldsHtml = fields.map(f => {
     const req = f.required ? '<span class="req">*</span>' : '';
     if (f.type === 'textarea') {
-      return `<div class="field-group">
-        <label class="field-label">${esc(f.label)} ${req}</label>
-        <textarea class="field-input" id="field-${task.ref}-${f.id}"
-          placeholder="${esc(f.label)}" oninput="onFieldChange('${task.ref}','${f.id}',this.value)"></textarea>
-      </div>`;
+      return `<div class="field-group"><label class="field-label">${esc(f.label)} ${req}</label>
+        <textarea class="field-input" id="field-${task.ref}-${f.id}" placeholder="${esc(f.label)}" oninput="onFieldChange('${task.ref}','${f.id}',this.value)"></textarea></div>`;
     }
-    return `<div class="field-group">
-      <label class="field-label">${esc(f.label)} ${req}</label>
+    return `<div class="field-group"><label class="field-label">${esc(f.label)} ${req}</label>
       <input class="field-input" type="${f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}"
-        id="field-${task.ref}-${f.id}" placeholder="${esc(f.label)}"
-        oninput="onFieldChange('${task.ref}','${f.id}',this.value)">
-    </div>`;
+        id="field-${task.ref}-${f.id}" placeholder="${esc(f.label)}" oninput="onFieldChange('${task.ref}','${f.id}',this.value)"></div>`;
   }).join('');
 
-  // If file already uploaded (from previous session), mark it
-  if (task.hasFile) uploadedFiles[task.ref] = { name: 'קובץ קיים', uploaded: true };
-
+  // File upload
   const fileHtml = needsFile ? (task.hasFile
-    ? `<div class="file-area has-file" id="file-area-${task.ref}">
-        <div class="file-name">&#128206; קובץ כבר צורף &#10003;</div>
-      </div>`
+    ? `<div class="file-area has-file" id="file-area-${task.ref}"><div class="file-name">&#128206; קובץ כבר צורף &#10003;</div></div>`
     : `<div class="file-area" id="file-area-${task.ref}" onclick="document.getElementById('file-${task.ref}').click()">
         <div class="file-icon">&#128206;</div>
         <div class="file-label">${esc(fileLabel)}</div>
-        <input type="file" id="file-${task.ref}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" capture="environment"
-          onchange="onFileSelect('${task.ref}', this)">
+        <input type="file" id="file-${task.ref}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" capture="environment" onchange="onFileSelect('${task.ref}', this)">
       </div>`) : '';
 
-  const details = [];
-  if (task.address) details.push(`<div class="task-detail"><span class="detail-icon">&#128205;</span>${esc(task.address)}</div>`);
-  if (task.roofType) details.push(`<div class="task-detail"><span class="detail-icon">&#127968;</span>סוג גג: ${esc(task.roofType)}</div>`);
-  if (task.phone) details.push(`<div class="task-detail"><span class="detail-icon">&#128222;</span><a href="tel:${esc(task.phone)}" style="color:var(--accent);text-decoration:none;">${esc(task.phone)}</a></div>`);
-  const dateVal = task.plannedDate ? task.plannedDate.split(' ')[0] : '';
-  details.push(`<div class="task-detail">
-    <span class="detail-icon">&#128197;</span>
-    <span>תאריך מתוכנן:</span>
-    <input type="date" class="date-edit" id="date-${task.ref}" value="${dateVal}"
-      onchange="updateDate('${task.ref}', this.value)">
-  </div>`);
-  const detailsHtml = details.length > 0 ? `<div class="task-details">${details.join('')}</div>` : '';
-
-  return `
-    <div class="task-card" id="card-${task.ref}">
-      <div class="task-project">${esc(task.projectName)}</div>
-      <div class="task-name">${esc(task.taskName)}</div>
+  return `<div class="task-card" id="card-${task.ref}">
+    <div class="card-header">
+      <div class="icon">&#9889;</div>
+      <h3>${esc(task.projectName)}</h3>
+    </div>
+    <div class="card-body">
+      <div style="font-size:14px; color:var(--gray); margin-bottom:14px; font-weight:600;">${esc(task.taskName)}</div>
       ${detailsHtml}
       ${fieldsHtml}
       ${fileHtml}
       <div id="action-${task.ref}">
-        <button class="btn-done disabled" id="btn-${task.ref}" onclick="handleDone('${task.ref}')"
-          ${canComplete(task) ? '' : 'disabled'}>
-          &#10003; &#1489;&#1493;&#1510;&#1506;
-        </button>
+        <button class="btn-done disabled" id="btn-${task.ref}" onclick="handleDone('${task.ref}')" ${canComplete(task) ? '' : 'disabled'}>&#10003; בוצע</button>
       </div>
-    </div>`;
+    </div>
+  </div>`;
 }
 
-// ── Field & File Handlers ────────────────────────────────────────────────
+// ── Field & File Handlers ──
 function onFieldChange(ref, fieldId, value) {
   if (!fieldValues[ref]) fieldValues[ref] = {};
   fieldValues[ref][fieldId] = value;
@@ -357,21 +369,16 @@ function onFieldChange(ref, fieldId, value) {
 async function onFileSelect(ref, input) {
   const file = input.files[0];
   if (!file) return;
-
   const area = document.getElementById(`file-area-${ref}`);
   area.classList.add('has-file');
-  area.innerHTML = `
-    <div class="file-name">
-      &#128206; ${esc(file.name)}
-      <button class="file-remove" onclick="event.stopPropagation(); removeFile('${ref}')">&times;</button>
-    </div>
+  area.innerHTML = `<div class="file-name">&#128206; ${esc(file.name)}
+    <button class="file-remove" onclick="event.stopPropagation(); removeFile('${ref}')">&times;</button></div>
     <div class="file-uploading">מעלה...</div>`;
 
-  // Upload immediately (or simulate in demo mode)
   if (IS_DEMO) {
     uploadedFiles[ref] = { name: file.name, uploaded: true };
     area.querySelector('.file-uploading').textContent = '[דמו] הועלה בהצלחה ✓';
-    area.querySelector('.file-uploading').style.color = 'var(--green)';
+    area.querySelector('.file-uploading').style.color = 'var(--green-dark)';
     showToast('קובץ הועלה (דמו)', 'success');
     updateDoneButton(ref);
     return;
@@ -379,59 +386,41 @@ async function onFileSelect(ref, input) {
   try {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${API}/v/api/upload?token=${TOKEN}&ref=${ref}`, {
-      method: 'POST', body: formData,
-    });
+    const res = await fetch(`${API}/v/api/upload?token=${TOKEN}&ref=${ref}`, { method: 'POST', body: formData });
     const data = await res.json();
     if (data.success) {
       uploadedFiles[ref] = { name: file.name, uploaded: true };
       area.querySelector('.file-uploading').textContent = 'הועלה בהצלחה ✓';
-      area.querySelector('.file-uploading').style.color = 'var(--green)';
+      area.querySelector('.file-uploading').style.color = 'var(--green-dark)';
       showToast('קובץ הועלה', 'success');
-    } else {
-      throw new Error(data.error);
-    }
+    } else { throw new Error(data.error); }
   } catch (e) {
     area.querySelector('.file-uploading').textContent = 'שגיאה בהעלאה';
     area.querySelector('.file-uploading').style.color = 'var(--red)';
     showToast('שגיאה: ' + e.message, 'error');
     uploadedFiles[ref] = null;
   }
-
   updateDoneButton(ref);
 }
 
 function removeFile(ref) {
   uploadedFiles[ref] = null;
   const task = tasks.find(t => t.ref === ref);
-  if (!task) return;
-  const rules = task.taskRules || {};
+  const rules = task?.taskRules || {};
   const area = document.getElementById(`file-area-${ref}`);
   area.classList.remove('has-file');
-  area.innerHTML = `
-    <div class="file-icon">&#128206;</div>
-    <div class="file-label">${esc(rules.fileLabel || 'צרף קובץ')}</div>
-    <input type="file" id="file-${ref}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" capture="environment"
-      onchange="onFileSelect('${ref}', this)">`;
+  area.innerHTML = `<div class="file-icon">&#128206;</div><div class="file-label">${esc(rules.fileLabel || 'צרף קובץ')}</div>
+    <input type="file" id="file-${ref}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" capture="environment" onchange="onFileSelect('${ref}', this)">`;
   updateDoneButton(ref);
 }
 
-// ── Validation ───────────────────────────────────────────────────────────
+// ── Validation ──
 function canComplete(task) {
   const rules = task.taskRules || {};
-  const fields = rules.fields || [];
-
-  // Check required file
   if (rules.requireFile && !uploadedFiles[task.ref]?.uploaded) return false;
-
-  // Check required fields
-  for (const f of fields) {
-    if (f.required) {
-      const val = (fieldValues[task.ref] || {})[f.id];
-      if (!val || !val.trim()) return false;
-    }
+  for (const f of (rules.fields || [])) {
+    if (f.required && !(fieldValues[task.ref] || {})[f.id]?.trim()) return false;
   }
-
   return true;
 }
 
@@ -445,52 +434,30 @@ function updateDoneButton(ref) {
   btn.disabled = !ok;
 }
 
-// ── Done with Undo ───────────────────────────────────────────────────────
+// ── Done with Undo ──
 function handleDone(ref) {
   const task = tasks.find(t => t.ref === ref);
   if (!task || !canComplete(task)) return;
-
   const card = document.getElementById(`card-${ref}`);
   const actionEl = document.getElementById(`action-${ref}`);
   let cancelled = false;
   let countdown = 5;
-
-  // Visual: mark as completing
   card.classList.add('completing');
 
-  // Show undo bar
-  actionEl.innerHTML = `
-    <div class="undo-bar">
-      <button class="undo-btn" id="undo-${ref}">&#8617; &#1489;&#1497;&#1496;&#1493;&#1500;</button>
-      <span>&#1502;&#1505;&#1502;&#1503; &#1499;&#1489;&#1493;&#1510;&#1506;...</span>
-      <span class="undo-countdown" id="cd-${ref}">${countdown}</span>
-    </div>`;
+  actionEl.innerHTML = `<div class="undo-bar">
+    <button class="undo-btn" id="undo-${ref}">&#8617; ביטול</button>
+    <span>מסמן כבוצע...</span>
+    <span class="undo-countdown" id="cd-${ref}">${countdown}</span>
+  </div>`;
 
-  const interval = setInterval(() => {
-    countdown--;
-    const cdEl = document.getElementById(`cd-${ref}`);
-    if (cdEl) cdEl.textContent = countdown;
-    if (countdown <= 0) clearInterval(interval);
-  }, 1000);
-
-  const timeout = setTimeout(async () => {
-    clearInterval(interval);
-    if (cancelled) return;
-    await executeDone(ref, task);
-  }, 5000);
+  const interval = setInterval(() => { countdown--; const c = document.getElementById(`cd-${ref}`); if (c) c.textContent = countdown; if (countdown <= 0) clearInterval(interval); }, 1000);
+  const timeout = setTimeout(async () => { clearInterval(interval); if (!cancelled) await executeDone(ref, task); }, 5000);
 
   document.getElementById(`undo-${ref}`).onclick = () => {
-    cancelled = true;
-    clearTimeout(timeout);
-    clearInterval(interval);
+    cancelled = true; clearTimeout(timeout); clearInterval(interval);
     card.classList.remove('completing');
-    // Restore button
     const ok = canComplete(task);
-    actionEl.innerHTML = `
-      <button class="btn-done ${ok ? 'ready' : 'disabled'}" id="btn-${ref}"
-        onclick="handleDone('${ref}')" ${ok ? '' : 'disabled'}>
-        &#10003; &#1489;&#1493;&#1510;&#1506;
-      </button>`;
+    actionEl.innerHTML = `<button class="btn-done ${ok ? 'ready' : 'disabled'}" id="btn-${ref}" onclick="handleDone('${ref}')" ${ok ? '' : 'disabled'}>&#10003; בוצע</button>`;
     showToast('הפעולה בוטלה', 'success');
   };
 }
@@ -498,97 +465,59 @@ function handleDone(ref) {
 async function executeDone(ref, task) {
   if (IS_DEMO) {
     const card = document.getElementById(`card-${ref}`);
-    card.classList.remove('completing');
-    card.classList.add('done-exit');
+    card.classList.remove('completing'); card.classList.add('done-exit');
     showToast(`[דמו] ${task.projectName} — בוצע ✓`, 'success');
-    setTimeout(() => { tasks = tasks.filter(t => t.ref !== ref); document.getElementById('taskCount').textContent = tasks.length > 0 ? `${tasks.length} משימות פתוחות` : 'אין משימות'; if (tasks.length === 0) render(); }, 400);
+    setTimeout(() => { tasks = tasks.filter(t => t.ref !== ref); document.getElementById('taskCount').textContent = tasks.length > 0 ? `${tasks.length} הזמנות` : 'אין הזמנות'; document.getElementById('subtitle').textContent = tasks.length > 0 ? `${tasks.length} הזמנות ממתינות לטיפול` : ''; if (tasks.length === 0) render(); }, 400);
     return;
   }
   const card = document.getElementById(`card-${ref}`);
   const actionEl = document.getElementById(`action-${ref}`);
-
-  // Build form data
   const fields = {};
-  const taskFields = task.taskRules?.fields || [];
-  for (const f of taskFields) {
-    const val = (fieldValues[ref] || {})[f.id];
-    if (val) fields[f.label] = val;
-  }
+  for (const f of (task.taskRules?.fields || [])) { const val = (fieldValues[ref] || {})[f.id]; if (val) fields[f.label] = val; }
 
   try {
     const res = await fetch(`${API}/v/api/done`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: TOKEN, taskRef: ref, fields, note: '' }),
     });
     const data = await res.json();
-
     if (data.success) {
-      card.classList.remove('completing');
-      card.classList.add('done-exit');
+      card.classList.remove('completing'); card.classList.add('done-exit');
       showToast(`${task.projectName} — בוצע ✓`, 'success');
-      setTimeout(() => {
-        tasks = tasks.filter(t => t.ref !== ref);
-        document.getElementById('taskCount').textContent = tasks.length > 0
-          ? `${tasks.length} משימות פתוחות`
-          : 'אין משימות';
-        if (tasks.length === 0) render();
-      }, 400);
-    } else {
-      throw new Error(data.error);
-    }
+      setTimeout(() => { tasks = tasks.filter(t => t.ref !== ref); document.getElementById('taskCount').textContent = tasks.length > 0 ? `${tasks.length} הזמנות` : 'אין הזמנות'; document.getElementById('subtitle').textContent = tasks.length > 0 ? `${tasks.length} הזמנות ממתינות לטיפול` : ''; if (tasks.length === 0) render(); }, 400);
+    } else { throw new Error(data.error); }
   } catch (e) {
     card.classList.remove('completing');
     const ok = canComplete(task);
-    actionEl.innerHTML = `
-      <button class="btn-done ${ok ? 'ready' : 'disabled'}" id="btn-${ref}"
-        onclick="handleDone('${ref}')" ${ok ? '' : 'disabled'}>
-        &#10003; &#1489;&#1493;&#1510;&#1506;
-      </button>`;
+    actionEl.innerHTML = `<button class="btn-done ${ok ? 'ready' : 'disabled'}" id="btn-${ref}" onclick="handleDone('${ref}')" ${ok ? '' : 'disabled'}>&#10003; בוצע</button>`;
     showToast('שגיאה: ' + e.message, 'error');
   }
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────
 async function updateDate(ref, date) {
   if (IS_DEMO) { showToast('[דמו] תאריך עודכן', 'success'); return; }
   try {
     const res = await fetch(`${API}/v/api/date`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: TOKEN, taskRef: ref, date }),
     });
     const data = await res.json();
-    if (data.success) {
-      showToast('תאריך עודכן', 'success');
-    } else {
-      showToast('שגיאה: ' + data.error, 'error');
-    }
-  } catch (e) {
-    showToast('שגיאה: ' + e.message, 'error');
-  }
+    if (data.success) showToast('תאריך עודכן', 'success');
+    else showToast('שגיאה: ' + data.error, 'error');
+  } catch (e) { showToast('שגיאה: ' + e.message, 'error'); }
 }
 
 function showError(msg) {
-  document.getElementById('content').innerHTML = `
-    <div class="empty-state">
-      <div class="empty-icon">&#9888;&#65039;</div>
-      <div class="empty-title">שגיאה</div>
-      <div class="empty-text">${esc(msg)}</div>
-    </div>`;
+  document.getElementById('content').innerHTML = `<div class="empty-state">
+    <div class="empty-icon">&#9888;&#65039;</div>
+    <div class="empty-title">שגיאה</div>
+    <div class="empty-text">${esc(msg)}</div>
+  </div>`;
 }
-
-function esc(s) {
-  const el = document.createElement('span');
-  el.textContent = s || '';
-  return el.innerHTML;
-}
-
+function esc(s) { const el = document.createElement('span'); el.textContent = s || ''; return el.innerHTML; }
 function showToast(msg, type = 'success') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast ${type} visible`;
-  clearTimeout(el._t);
+  const el = document.getElementById('toast'); el.textContent = msg;
+  el.className = `toast ${type} visible`; clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('visible'), 3000);
 }
 </script>
