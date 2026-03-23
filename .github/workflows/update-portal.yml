@@ -1,0 +1,48 @@
+name: Update Portal Registry
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.html"
+      - "!portal.html"
+  workflow_dispatch:
+
+jobs:
+  update-registry:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate modules manifest
+        run: |
+          echo "// Auto-generated module manifest - $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > portal-manifest.js
+          echo "// Lists all HTML dashboards/modules in this repo" >> portal-manifest.js
+          echo "const REPO_HTML_FILES = [" >> portal-manifest.js
+          for f in *.html; do
+            if [ "$f" != "portal.html" ] && [ "$f" != "portal-manifest.js" ] && [ "$f" != "solar-quote-template.html" ]; then
+              SIZE=$(wc -c < "$f")
+              TITLE=$(grep -oP "<title>\K[^<]+" "$f" | head -1 || echo "$f")
+              echo "  { file: '$f', size: $SIZE, title: '$TITLE' }," >> portal-manifest.js
+            fi
+          done
+          echo "];" >> portal-manifest.js
+          echo "" >> portal-manifest.js
+          echo "// To use: load this script in portal.html and compare REPO_HTML_FILES" >> portal-manifest.js
+          echo "// against MODULES array to detect new unregistered dashboards." >> portal-manifest.js
+          cat portal-manifest.js
+      
+      - name: Commit manifest if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add portal-manifest.js
+          if git diff --cached --quiet; then
+            echo "No changes to manifest"
+          else
+            git commit -m "auto: update portal manifest"
+            git push
+          fi
