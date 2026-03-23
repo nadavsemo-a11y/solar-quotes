@@ -21,6 +21,7 @@ const SUPPLIER_BOARD_ID    = 5089266595;
 const SUBITEMS_BOARD_ID    = 5089266636;
 const PROJECTS_BOARD_ID    = 5089265830;
 const STATUS_COLUMN_ID     = 'color_mkywhgg6';
+const VENDOR_FILE_COL_ID   = 'file_mm1qw5m2';
 const VENDOR_CONFIG_COL_ID = 'long_text_mm1qf7wq';
 const SUPPLIER_RELATION_COL = 'board_relation_mkywenar';
 const TOKEN_LENGTH         = 12;
@@ -154,7 +155,7 @@ export class VendorService {
         items(ids: [${batch.join(',')}]) {
           id
           name
-          column_values(ids: ["${STATUS_COLUMN_ID}"]) {
+          column_values(ids: ["${STATUS_COLUMN_ID}", "${VENDOR_FILE_COL_ID}"]) {
             id text
           }
           parent_item { id name
@@ -201,8 +202,12 @@ export class VendorService {
       }
 
       for (const item of items) {
-        const status = item.column_values?.[0]?.text || '';
+        const statusCol = item.column_values?.find(c => c.id === STATUS_COLUMN_ID);
+        const status = statusCol?.text || '';
         if (status !== 'בתהליך') continue;
+
+        const fileCol = item.column_values?.find(c => c.id === VENDOR_FILE_COL_ID);
+        const hasFile = !!(fileCol?.text);
 
         const parentName = item.parent_item?.name || '';
         const parentCols = item.parent_item?.column_values || [];
@@ -220,6 +225,7 @@ export class VendorService {
           address,
           roofType,
           phone,
+          hasFile,
           taskRules,
         });
       }
@@ -294,7 +300,7 @@ export class VendorService {
   }
 
   /**
-   * Upload a file to a task (as a Monday update with attachment).
+   * Upload a file to a task's files column on the subitems board.
    *
    * @param {string} token    — vendor token
    * @param {string} taskRef  — encoded task reference
@@ -311,18 +317,9 @@ export class VendorService {
 
     await this._verifyOwnership(vendor.supplierId, subitemId);
 
-    // 1. Create an update on the subitem
-    const updateBody = `📎 קובץ מספק: ${vendor.supplierName}\nשם קובץ: ${filename}`;
-    const createUpdate = `mutation {
-      create_update(item_id: ${subitemId}, body: ${JSON.stringify(updateBody)}) { id }
-    }`;
-    const updateRes = await this._mondayQuery(createUpdate);
-    const updateId = updateRes.data?.create_update?.id;
-    if (!updateId) throw new Error('Failed to create update');
-
-    // 2. Upload file to the update
+    // Upload file directly to the "קובץ ספק" column
     const formData = new FormData();
-    formData.append('query', `mutation ($file: File!) { add_file_to_update(update_id: ${updateId}, file: $file) { id url } }`);
+    formData.append('query', `mutation ($file: File!) { add_file_to_column(item_id: ${subitemId}, column_id: "${VENDOR_FILE_COL_ID}", file: $file) { id url } }`);
     formData.append('map', '{"image":"variables.file"}');
     formData.append('image', file, filename);
 
@@ -334,7 +331,7 @@ export class VendorService {
     const uploadData = await uploadRes.json();
 
     if (uploadData.errors) throw new Error(JSON.stringify(uploadData.errors));
-    return { success: true, fileUrl: uploadData.data?.add_file_to_update?.url };
+    return { success: true, fileUrl: uploadData.data?.add_file_to_column?.url };
   }
 
   // ── Internal Helpers ────────────────────────────────────────────────
