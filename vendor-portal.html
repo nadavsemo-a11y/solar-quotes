@@ -211,9 +211,12 @@ const fieldValues = {};   // ref -> { fieldId: value }
 document.getElementById('vendorName').textContent = V.supplierName || '';
 loadTasks();
 
+const IS_DEMO = new URLSearchParams(window.location.search).get('demo') === 'true';
+
 async function loadTasks() {
   try {
-    const res = await fetch(`${API}/v/api/tasks?token=${TOKEN}`);
+    const demoParam = IS_DEMO ? '&demo=true' : '';
+    const res = await fetch(`${API}/v/api/tasks?token=${TOKEN}${demoParam}`);
     const data = await res.json();
 
     if (!data.success) {
@@ -326,7 +329,15 @@ async function onFileSelect(ref, input) {
     </div>
     <div class="file-uploading">מעלה...</div>`;
 
-  // Upload immediately
+  // Upload immediately (or simulate in demo mode)
+  if (IS_DEMO) {
+    uploadedFiles[ref] = { name: file.name, uploaded: true };
+    area.querySelector('.file-uploading').textContent = '[דמו] הועלה בהצלחה ✓';
+    area.querySelector('.file-uploading').style.color = 'var(--green)';
+    showToast('קובץ הועלה (דמו)', 'success');
+    updateDoneButton(ref);
+    return;
+  }
   try {
     const formData = new FormData();
     formData.append('file', file);
@@ -447,6 +458,14 @@ function handleDone(ref) {
 }
 
 async function executeDone(ref, task) {
+  if (IS_DEMO) {
+    const card = document.getElementById(`card-${ref}`);
+    card.classList.remove('completing');
+    card.classList.add('done-exit');
+    showToast(`[דמו] ${task.projectName} — בוצע ✓`, 'success');
+    setTimeout(() => { tasks = tasks.filter(t => t.ref !== ref); document.getElementById('taskCount').textContent = tasks.length > 0 ? `${tasks.length} משימות פתוחות` : 'אין משימות'; if (tasks.length === 0) render(); }, 400);
+    return;
+  }
   const card = document.getElementById(`card-${ref}`);
   const actionEl = document.getElementById(`action-${ref}`);
 
