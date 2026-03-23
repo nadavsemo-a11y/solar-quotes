@@ -22,6 +22,7 @@ const SUBITEMS_BOARD_ID    = 5089266636;
 const PROJECTS_BOARD_ID    = 5089265830;
 const STATUS_COLUMN_ID     = 'color_mkywhgg6';
 const VENDOR_FILE_COL_ID   = 'file_mm1qw5m2';
+const PLANNED_DATE_COL_ID  = 'date_mm1qrxf0';
 const VENDOR_CONFIG_COL_ID = 'long_text_mm1qf7wq';
 const SUPPLIER_RELATION_COL = 'board_relation_mkywenar';
 const BUTTONS_BOARD_ID     = 5093182974;
@@ -161,7 +162,7 @@ export class VendorService {
         items(ids: [${batch.join(',')}]) {
           id
           name
-          column_values(ids: ["${STATUS_COLUMN_ID}", "${VENDOR_FILE_COL_ID}"]) {
+          column_values(ids: ["${STATUS_COLUMN_ID}", "${VENDOR_FILE_COL_ID}", "${PLANNED_DATE_COL_ID}"]) {
             id text
           }
           parent_item { id name
@@ -214,6 +215,8 @@ export class VendorService {
 
         const fileCol = item.column_values?.find(c => c.id === VENDOR_FILE_COL_ID);
         const hasFile = !!(fileCol?.text);
+        const dateCol = item.column_values?.find(c => c.id === PLANNED_DATE_COL_ID);
+        const plannedDate = dateCol?.text || '';
 
         const parentName = item.parent_item?.name || '';
         const parentCols = item.parent_item?.column_values || [];
@@ -232,12 +235,53 @@ export class VendorService {
           roofType,
           phone,
           hasFile,
+          plannedDate,
           taskRules,
         });
       }
     }
 
     return tasks;
+  }
+
+  /**
+   * Update planned date on a task.
+   */
+  async updatePlannedDate(token, taskRef, date) {
+    const vendor = await this.getVendorByToken(token);
+    if (!vendor) throw new Error('Invalid vendor token');
+    const subitemId = decodeId(taskRef);
+    if (!subitemId) throw new Error('Invalid task reference');
+    await this._verifyOwnership(vendor.supplierId, subitemId);
+
+    const dateValue = JSON.stringify({ date });
+    const mutation = `mutation {
+      change_column_value(
+        board_id: ${SUBITEMS_BOARD_ID},
+        item_id: ${subitemId},
+        column_id: "${PLANNED_DATE_COL_ID}",
+        value: ${JSON.stringify(dateValue)}
+      ) { id }
+    }`;
+    await this._mondayQuery(mutation);
+    return { success: true };
+  }
+
+  /**
+   * Set planned date to today (called when vendor is ordered).
+   */
+  async setInitialPlannedDate(subitemId) {
+    const today = new Date().toISOString().slice(0, 10);
+    const dateValue = JSON.stringify({ date: today });
+    const mutation = `mutation {
+      change_column_value(
+        board_id: ${SUBITEMS_BOARD_ID},
+        item_id: ${subitemId},
+        column_id: "${PLANNED_DATE_COL_ID}",
+        value: ${JSON.stringify(dateValue)}
+      ) { id }
+    }`;
+    await this._mondayQuery(mutation);
   }
 
   /**
