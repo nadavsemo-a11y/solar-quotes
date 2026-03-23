@@ -65,11 +65,13 @@ input, textarea { font-family: inherit; }
   border-radius: 2px; flex-shrink: 0;
 }
 .task-name { font-size: 14px; color: var(--text-2); margin-bottom: 8px; padding-right: 12px; }
-.task-address {
-  font-size: 13px; color: var(--text-3); margin-bottom: 16px; padding-right: 12px;
-  display: flex; align-items: center; gap: 6px;
+.task-details {
+  margin-bottom: 16px; padding-right: 12px; display: flex; flex-direction: column; gap: 6px;
 }
-.task-address::before { content: '\1F4CD'; font-size: 12px; }
+.task-detail {
+  font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 8px;
+}
+.detail-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
 
 /* ── Dynamic Fields ─────────────────────── */
 .field-group { margin-bottom: 14px; }
@@ -282,13 +284,17 @@ function renderCard(task) {
         onchange="onFileSelect('${task.ref}', this)">
     </div>` : '';
 
-  const address = task.address ? `<div class="task-address">${esc(task.address)}</div>` : '';
+  const details = [];
+  if (task.address) details.push(`<div class="task-detail"><span class="detail-icon">&#128205;</span>${esc(task.address)}</div>`);
+  if (task.roofType) details.push(`<div class="task-detail"><span class="detail-icon">&#127968;</span>סוג גג: ${esc(task.roofType)}</div>`);
+  if (task.phone) details.push(`<div class="task-detail"><span class="detail-icon">&#128222;</span><a href="tel:${esc(task.phone)}" style="color:var(--accent);text-decoration:none;">${esc(task.phone)}</a></div>`);
+  const detailsHtml = details.length > 0 ? `<div class="task-details">${details.join('')}</div>` : '';
 
   return `
     <div class="task-card" id="card-${task.ref}">
       <div class="task-project">${esc(task.projectName)}</div>
       <div class="task-name">${esc(task.taskName)}</div>
-      ${address}
+      ${detailsHtml}
       ${fieldsHtml}
       ${fileHtml}
       <div id="action-${task.ref}">
