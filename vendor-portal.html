@@ -80,6 +80,12 @@ input, textarea { font-family: inherit; }
   font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 8px;
 }
 .detail-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+.date-edit {
+  padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text); font-family: inherit;
+  font-size: 13px; direction: ltr; margin-right: 6px;
+}
+.date-edit:focus { outline: none; border-color: var(--accent); }
 
 /* ── Dynamic Fields ─────────────────────── */
 .field-group { margin-bottom: 14px; }
@@ -316,6 +322,13 @@ function renderCard(task) {
   if (task.address) details.push(`<div class="task-detail"><span class="detail-icon">&#128205;</span>${esc(task.address)}</div>`);
   if (task.roofType) details.push(`<div class="task-detail"><span class="detail-icon">&#127968;</span>סוג גג: ${esc(task.roofType)}</div>`);
   if (task.phone) details.push(`<div class="task-detail"><span class="detail-icon">&#128222;</span><a href="tel:${esc(task.phone)}" style="color:var(--accent);text-decoration:none;">${esc(task.phone)}</a></div>`);
+  const dateVal = task.plannedDate ? task.plannedDate.split(' ')[0] : '';
+  details.push(`<div class="task-detail">
+    <span class="detail-icon">&#128197;</span>
+    <span>תאריך מתוכנן:</span>
+    <input type="date" class="date-edit" id="date-${task.ref}" value="${dateVal}"
+      onchange="updateDate('${task.ref}', this.value)">
+  </div>`);
   const detailsHtml = details.length > 0 ? `<div class="task-details">${details.join('')}</div>` : '';
 
   return `
@@ -537,6 +550,25 @@ async function executeDone(ref, task) {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
+async function updateDate(ref, date) {
+  if (IS_DEMO) { showToast('[דמו] תאריך עודכן', 'success'); return; }
+  try {
+    const res = await fetch(`${API}/v/api/date`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: TOKEN, taskRef: ref, date }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('תאריך עודכן', 'success');
+    } else {
+      showToast('שגיאה: ' + data.error, 'error');
+    }
+  } catch (e) {
+    showToast('שגיאה: ' + e.message, 'error');
+  }
+}
+
 function showError(msg) {
   document.getElementById('content').innerHTML = `
     <div class="empty-state">
