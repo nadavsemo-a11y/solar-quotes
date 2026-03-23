@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEMO AGS — מוקאפ הצעת מחיר</title>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sun: #F4A200;
+  --sun-light: #FFD166;
+  --sky: #0A1628;
+  --sky-mid: #112240;
+  --sky-light: #1D3461;
+  --green: #2ECC71;
+  --green-dark: #1a9e52;
+  --text: #1a1a2e;
+  --gray: #6B7280;
+  --gray-light: #9CA3AF;
+  --light: #F7F9FC;
+  --white: #ffffff;
+  --border: #E2E8F0;
+  --radius: 16px;
+  --shadow: 0 2px 20px rgba(0,0,0,0.07);
+  --shadow-lg: 0 8px 48px rgba(0,0,0,0.14);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Assistant', sans-serif;
+  background: #eef1f7;
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Topbar ── */
+.topbar {
+  background: var(--sky);
+  padding: 13px 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.topbar-logo { display: flex; align-items: center; gap: 10px; }
+.topbar-logo .sun {
+  width: 30px; height: 30px; background: var(--sun); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.topbar-logo span { font-weight: 800; font-size: 16px; }
+.topbar-actions { display: flex; gap: 10px; }
+.btn-sm {
+  padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  cursor: pointer; border: none; font-family: inherit;
+}
+.btn-outline { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: white; }
+.btn-primary { background: var(--sun); color: white; box-shadow: 0 4px 14px rgba(244,162,0,0.4); }
+
+/* ── Page ── */
+.qpage { max-width: 860px; margin: 0 auto; padding: 32px 20px 70px; }
+
+/* ── Hero ── */
+.q-hero {
+  background: linear-gradient(140deg, var(--sky) 0%, var(--sky-light) 50%, #1e4080 100%);
+  border-radius: 22px; padding: 44px 48px; color: white;
+  position: relative; overflow: hidden; margin-bottom: 18px;
+  box-shadow: var(--shadow-lg);
+}
+.q-hero::before {
+  content: '☀'; position: absolute; top: -50px; left: -50px;
+  font-size: 240px; opacity: 0.035; pointer-events: none;
+}
+.hero-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
+}
+.hero-title { font-size: 32px; font-weight: 900; line-height: 1.1; margin-bottom: 5px; }
+.hero-title span { color: var(--sun-light); }
+.hero-sub { font-size: 13px; opacity: 0.6; }
+.hero-badge {
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 50px; padding: 9px 20px; font-size: 12px;
+  backdrop-filter: blur(10px); white-space: nowrap;
+}
+.hero-badge strong { color: var(--sun-light); }
+.client-strip {
+  background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 14px; padding: 18px 22px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+}
+.cs-field label {
+  font-size: 10px; opacity: 0.5; text-transform: uppercase;
+  letter-spacing: 1px; display: block; margin-bottom: 3px;
+}
+.cs-field span { font-size: 16px; font-weight: 700; }
+
+/* ── Stats ── */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; margin-bottom: 18px; }
+.stat-card {
+  background: white; border-radius: 15px; padding: 20px 14px; text-align: center;
+  box-shadow: var(--shadow); border: 1px solid var(--border); transition: transform 0.2s;
+}
+.stat-card:hover { transform: translateY(-3px); }
+.stat-icon {
+  width: 40px; height: 40px; border-radius: 11px; display: flex;
+  align-items: center; justify-content: center; font-size: 18px; margin: 0 auto 11px;
+}
+.ic-y { background: rgba(244,162,0,0.12); }
+.ic-b { background: rgba(10,22,40,0.08); }
+.ic-g { background: rgba(46,204,113,0.12); }
+.ic-o { background: rgba(232,89,10,0.1); }
+.stat-val { font-size: 24px; font-weight: 900; color: var(--sky); display: block; }
+.stat-unit { font-size: 11px; color: var(--gray); font-weight: 600; margin-top: 3px; }
+.stat-label { font-size: 12px; color: var(--gray); margin-top: 5px; font-weight: 600; }
+
+/* ── Section Card ── */
+.sec {
+  background: white; border-radius: 20px; padding: 30px 32px;
+  margin-bottom: 18px; box-shadow: var(--shadow); border: 1px solid var(--border);
+}
+.sec-title {
+  font-size: 19px; font-weight: 900; color: var(--sky); margin-bottom: 22px;
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 14px; border-bottom: 2px solid var(--border);
+}
+.sec-title .bar { width: 5px; height: 26px; background: var(--sun); border-radius: 3px; flex-shrink: 0; }
+.sec-title .bar.green { background: var(--green); }
+.sec-title .bar.blue { background: #3B82F6; }
+
+/* ── Price Table ── */
+.price-table { width: 100%; border-collapse: collapse; }
+.price-table th {
+  background: var(--sky); color: white; padding: 11px 16px;
+  font-size: 13px; font-weight: 700; text-align: right;
+}
+.price-table td { padding: 11px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+.price-table tr:hover td { background: var(--light); }
+.amount-col { font-weight: 800; color: var(--sky); direction: ltr; text-align: left; }
+.total-row td { font-size: 16px; font-weight: 800; color: var(--sky); border-top: 2px solid var(--sky); background: rgba(244,162,0,0.07) !important; }
+.vat-row td { font-size: 13px; color: var(--gray); font-style: italic; }
+
+/* ── Financial Cards ── */
+.fin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.fin-card {
+  background: var(--light); border-radius: 13px; padding: 18px 20px; border: 1px solid var(--border);
+}
+.fin-card.dark {
+  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-light) 100%);
+  border: none; color: white;
+}
+.fin-card.dark .fin-val { color: var(--sun-light); }
+.fin-card.dark .fin-lbl { opacity: 0.75; }
+.fin-val { font-size: 26px; font-weight: 900; color: var(--sky); display: block; line-height: 1; }
+.fin-lbl { font-size: 13px; color: var(--gray); font-weight: 700; margin-top: 6px; }
+
+.roi-section { margin-top: 22px; }
+.roi-labels { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--sky-mid); }
+.roi-track { height: 11px; background: var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+.roi-fill { height: 100%; background: linear-gradient(90deg, var(--sun) 0%, var(--green) 100%); border-radius: 6px; width: 0; transition: width 1.6s cubic-bezier(0.25,1,0.5,1); }
+.roi-caption { font-size: 11px; color: var(--gray); text-align: center; }
+
+/* ── Payment Table ── */
+.payment-table { width: 100%; border-collapse: collapse; }
+.payment-table th {
+  background: var(--sky); color: white; padding: 11px 16px;
+  font-size: 13px; font-weight: 700; text-align: right;
+}
+.payment-table td { padding: 11px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+.payment-table tr:last-child td { border-bottom: none; font-weight: 800; background: rgba(244,162,0,0.07); }
+.pay-amount { font-weight: 800; color: var(--sky); direction: ltr; text-align: left; }
+.pay-pct { display: inline-block; background: var(--light); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; color: var(--sun); margin-inline-start: 8px; }
+
+/* ── Warranty Cards ── */
+.warranty-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.warranty-card {
+  background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+  border: 1px solid #fde68a; border-radius: 12px; padding: 18px;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px;
+}
+.warranty-icon { font-size: 32px; }
+.warranty-title { font-size: 14px; font-weight: 800; color: #92400e; }
+.warranty-years { font-size: 28px; font-weight: 900; color: var(--sun); }
+.warranty-desc { font-size: 12px; color: #78350f; line-height: 1.5; }
+
+/* ── Signature ── */
+.sig-wrapper {
+  background: linear-gradient(135deg, var(--sky), var(--sky-light));
+  border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-lg); margin-bottom: 18px;
+}
+.sig-header {
+  padding: 24px 28px; display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sig-header-icon {
+  width: 44px; height: 44px; background: rgba(244,162,0,0.15);
+  border-radius: 12px; display: flex; align-items: center;
+  justify-content: center; font-size: 22px;
+}
+.sig-header h3 { color: white; font-size: 18px; font-weight: 800; }
+.sig-header p { color: rgba(255,255,255,0.5); font-size: 13px; margin-top: 2px; }
+.sig-body { padding: 28px; }
+.sig-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.sig-field label { display: block; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.sig-field input {
+  width: 100%; background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 10px; padding: 11px 14px; color: white; font-size: 14px;
+  font-family: inherit; outline: none;
+}
+.sig-field input::placeholder { color: rgba(255,255,255,0.25); }
+.sig-field input:focus { border-color: var(--sun); background: rgba(255,255,255,0.1); }
+.sig-canvas-area {
+  border: 1.5px dashed rgba(255,255,255,0.2); border-radius: 12px;
+  height: 100px; display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.3); font-size: 14px; margin-bottom: 16px;
+  cursor: crosshair; background: rgba(255,255,255,0.03);
+}
+.sig-agree {
+  display: flex; align-items: flex-start; gap: 10px; color: rgba(255,255,255,0.7);
+  font-size: 13px; line-height: 1.6; margin-bottom: 20px;
+}
+.sig-agree input { margin-top: 4px; accent-color: var(--sun); }
+.sig-submit {
+  width: 100%; padding: 15px; background: linear-gradient(135deg, var(--sun), #e8890a);
+  color: white; border: none; border-radius: 13px; font-size: 17px; font-weight: 900;
+  cursor: pointer; font-family: inherit; letter-spacing: 0.5px;
+  box-shadow: 0 8px 28px rgba(244,162,0,0.4); transition: all 0.2s;
+}
+.sig-submit:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(244,162,0,0.6); }
+
+/* ── Footer ── */
+.q-footer {
+  text-align: center; padding: 28px; border-top: 1px solid var(--border);
+  margin-top: 18px; color: var(--gray); font-size: 12px;
+}
+.q-footer .brand { font-size: 20px; font-weight: 900; color: var(--sky); margin-bottom: 5px; }
+.q-footer .brand span { color: var(--sun); }
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .q-hero { padding: 28px 20px; }
+  .hero-title { font-size: 24px; }
+  .client-strip { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .fin-grid { grid-template-columns: 1fr; }
+  .warranty-grid { grid-template-columns: 1fr; }
+  .sig-fields { grid-template-columns: 1fr; }
+  .sec { padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="sun">☀</div>
+    <span>SEMO AGS</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn-sm btn-outline">🔗 שתף</button>
+    <button class="btn-sm btn-outline">🖨️ הדפס</button>
+    <button class="btn-sm btn-primary">📧 שלח ללקוח</button>
+  </div>
+</div>
+
+<div class="qpage">
+
+<!-- ══ HERO ══ -->
+<div class="q-hero">
+  <div class="hero-head">
+    <div>
+      <div class="hero-title">הצעת מחיר — <span>מערכת סולארית</span></div>
+      <div class="hero-sub">סמו א.ג.ס בע"מ | ח.פ. 515942282</div>
+    </div>
+    <div class="hero-badge">מס׳ הצעה: <strong>Q-250320-001</strong></div>
+  </div>
+  <div class="client-strip">
+    <div class="cs-field"><label>שם הלקוח</label><span>ישראל ישראלי</span></div>
+    <div class="cs-field"><label>טלפון</label><span>052-5247272</span></div>
+    <div class="cs-field"><label>כתובת</label><span>סביון 4, קריית טבעון</span></div>
+  </div>
+</div>
+
+<!-- ══ STATS ══ -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon ic-y">☀️</div>
+    <span class="stat-val">12.5</span>
+    <span class="stat-unit">kWp</span>
+    <div class="stat-label">הספק המערכת</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon ic-b">▦</div>
+    <span class="stat-val">25</span>
+    <span class="stat-unit">יחידות</span>
+    <div class="stat-label">פנלים סולאריים</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon ic-g">⚡</div>
+    <span class="stat-val">18,500</span>
+    <span class="stat-unit">kWh / שנה</span>
+    <div class="stat-label">ייצור שנתי</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon ic-o">💰</div>
+    <span class="stat-val">₪8,200</span>
+    <span class="stat-unit">לשנה</span>
+    <div class="stat-label">הכנסה צפויה</div>
+  </div>
+</div>
+
+<!-- ══ PRICE BREAKDOWN ══ -->
+<div class="sec">
+  <div class="sec-title"><span class="bar"></span> פירוט מחיר ההצעה</div>
+  <table class="price-table">
+    <tr><th>פריט</th><th style="text-align:left">מחיר</th></tr>
+    <tr><td>מערכת פנלים סולאריים Tier 1 — 580W</td><td class="amount-col">₪42,000</td></tr>
+    <tr><td>ממיר SolarEdge + אופטימייזרים</td><td class="amount-col">₪8,500</td></tr>
+    <tr><td>עבודות התקנה, קונסטרוקציה ותשתיות</td><td class="amount-col">₪12,000</td></tr>
+    <tr class="total-row"><td><strong>סה"כ לא כולל מע"מ</strong></td><td class="amount-col">₪62,500</td></tr>
+    <tr class="vat-row"><td>סה"כ כולל מע"מ (18%)</td><td class="amount-col" style="font-weight:600">₪73,750</td></tr>
+  </table>
+</div>
+
+<!-- ══ FINANCIAL FORECAST ══ -->
+<div class="sec">
+  <div class="sec-title"><span class="bar green"></span> תחזית כלכלית</div>
+  <div class="fin-grid">
+    <div class="fin-card dark">
+      <span class="fin-val">₪8,200</span>
+      <div class="fin-lbl">הכנסות שנה ראשונה</div>
+    </div>
+    <div class="fin-card dark">
+      <span class="fin-val">13.1%</span>
+      <div class="fin-lbl">תשואה שנה ראשונה</div>
+    </div>
+    <div class="fin-card">
+      <span class="fin-val">7.6 שנה</span>
+      <div class="fin-lbl">זמן החזר השקעה</div>
+    </div>
+    <div class="fin-card">
+      <span class="fin-val">₪213,200</span>
+      <div class="fin-lbl">סה"כ הכנסות 26 שנה</div>
+    </div>
+    <div class="fin-card">
+      <span class="fin-val">₪8,200</span>
+      <div class="fin-lbl">ממוצע שנתי</div>
+    </div>
+    <div class="fin-card dark">
+      <span class="fin-val">₪150,700</span>
+      <div class="fin-lbl">רווח נטו 26 שנה</div>
+    </div>
+  </div>
+  <div class="roi-section">
+    <div class="roi-labels"><span>השקעה: ₪62,500</span><span>רווח: ₪150,700</span></div>
+    <div class="roi-track"><div class="roi-fill" id="roiFill"></div></div>
+    <div class="roi-caption">תשואה מצטברת — החזר מלא תוך 7.6 שנים</div>
+  </div>
+</div>
+
+<!-- ══ PAYMENT TERMS ══ -->
+<div class="sec">
+  <div class="sec-title"><span class="bar blue"></span> לוח תשלומים</div>
+  <table class="payment-table">
+    <tr><th>שלב</th><th>תיאור</th><th style="text-align:left">סכום</th></tr>
+    <tr>
+      <td>1 — מקדמה <span class="pay-pct">15%</span></td>
+      <td>בחתימת ההסכם</td>
+      <td class="pay-amount">₪9,375</td>
+    </tr>
+    <tr>
+      <td>2 — השלמה <span class="pay-pct">35%</span></td>
+      <td>בקבלת תוכניות ביצוע</td>
+      <td class="pay-amount">₪12,500</td>
+    </tr>
+    <tr>
+      <td>3 — השלמה <span class="pay-pct">95%</span></td>
+      <td>7 ימי עסקים לפני אספקת פנלים לאתר</td>
+      <td class="pay-amount">₪37,500</td>
+    </tr>
+    <tr>
+      <td>4 — יתרה <span class="pay-pct">5%</span></td>
+      <td>ביום החיבור לחברת החשמל</td>
+      <td class="pay-amount">₪3,125</td>
+    </tr>
+    <tr>
+      <td colspan="2"><strong>סה"כ לא כולל מע"מ</strong></td>
+      <td class="pay-amount">₪62,500</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ══ WARRANTY ══ -->
+<div class="sec">
+  <div class="sec-title"><span class="bar"></span> ציוד ואחריות</div>
+  <div class="warranty-grid">
+    <div class="warranty-card">
+      <div class="warranty-icon">🔆</div>
+      <div class="warranty-title">פנלים Tier 1 — 580W</div>
+      <div class="warranty-years">30 שנה</div>
+      <div class="warranty-desc">אחריות יצרן על ביצועים<br>ירידה מקסימלית 0.4% בשנה</div>
+    </div>
+    <div class="warranty-card">
+      <div class="warranty-icon">⚙️</div>
+      <div class="warranty-title">ממיר SolarEdge</div>
+      <div class="warranty-years">10 שנים</div>
+      <div class="warranty-desc">אחריות יצרן<br>ניטור מרחוק באפליקציה</div>
+    </div>
+    <div class="warranty-card">
+      <div class="warranty-icon">🛡️</div>
+      <div class="warranty-title">עבודת התקנה</div>
+      <div class="warranty-years">5 שנים</div>
+      <div class="warranty-desc">אחריות על עבודה<br>קונסטרוקציה וחיווט</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SIGNATURE ══ -->
+<div class="sig-wrapper">
+  <div class="sig-header">
+    <div class="sig-header-icon">✍️</div>
+    <div>
+      <h3>חתימה ואישור</h3>
+      <p>חתימה דיגיטלית מאובטחת</p>
+    </div>
+  </div>
+  <div class="sig-body">
+    <div class="sig-fields">
+      <div class="sig-field">
+        <label>מספר תעודת זהות *</label>
+        <input type="text" placeholder="000000000" maxlength="9">
+      </div>
+      <div class="sig-field">
+        <label>שם מלא</label>
+        <input type="text" value="ישראל ישראלי">
+      </div>
+      <div class="sig-field">
+        <label>תאריך</label>
+        <input type="text" value="20/03/2026" readonly>
+      </div>
+    </div>
+    <div class="sig-canvas-area">חתום כאן ↓</div>
+    <div class="sig-agree">
+      <input type="checkbox">
+      <span>קראתי את ההסכם, הבנתי את תנאיו ואני מאשר/ת את כל הפרטים. ידוע לי כי חתימה זו מהווה התחייבות משפטית.</span>
+    </div>
+    <button class="sig-submit">✅ אשר וחתום על ההסכם</button>
+  </div>
+</div>
+
+<!-- ══ FOOTER ══ -->
+<div class="q-footer">
+  <div class="brand">SEMO <span>AGS</span></div>
+  <div>סמו א.ג.ס בע"מ | ח.פ. 515942282 | סביון 4, קריית טבעון | 052-5247272</div>
+</div>
+
+</div>
+
+<!-- ROI Animation -->
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      document.getElementById('roiFill').style.width = '76%';
+    }, 400);
+  });
+</script>
+
+</body>
+</html>
