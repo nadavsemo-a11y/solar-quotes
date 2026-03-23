@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SEMO AGS — פורטל ספק</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface-2: #232730;
+  --surface-3: #2a2e3a;
+  --accent: #4f8ef7;
+  --sun: #F4A200;
+  --green: #2ECC71;
+  --green-dark: #1a9e52;
+  --red: #e74c3c;
+  --text: #e1e4ea;
+  --text-2: #8b8f9a;
+  --text-3: #5a5e6b;
+  --border: #2d313d;
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+button { font-family: inherit; cursor: pointer; border: none; }
+input, textarea { font-family: inherit; }
+
+/* ── Header ─────────────────────────────── */
+.header {
+  background: linear-gradient(135deg, #0A1628 0%, #112240 60%, #1D3461 100%);
+  padding: 18px 20px; display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50;
+}
+.header-logo { height: 34px; filter: brightness(0) invert(1); }
+.header-info { flex: 1; }
+.header-title { font-size: 14px; font-weight: 700; }
+.header-name { font-size: 18px; font-weight: 800; color: var(--sun); margin-top: 2px; }
+.header-badge {
+  background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3);
+  padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+
+/* ── Main ───────────────────────────────── */
+.main { max-width: 600px; margin: 0 auto; padding: 16px; }
+
+/* ── Task Card ──────────────────────────── */
+.task-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; margin-bottom: 14px; transition: all 0.3s;
+}
+.task-card.completing { opacity: 0.5; transform: scale(0.98); }
+.task-card.done-exit { opacity: 0; transform: translateX(-100%); height: 0; padding: 0; margin: 0; overflow: hidden; }
+
+.task-project {
+  font-size: 18px; font-weight: 700; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 8px;
+}
+.task-project::before {
+  content: ''; width: 4px; height: 20px; background: var(--accent);
+  border-radius: 2px; flex-shrink: 0;
+}
+.task-name { font-size: 14px; color: var(--text-2); margin-bottom: 8px; padding-right: 12px; }
+.task-address {
+  font-size: 13px; color: var(--text-3); margin-bottom: 16px; padding-right: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.task-address::before { content: '\1F4CD'; font-size: 12px; }
+
+/* ── Dynamic Fields ─────────────────────── */
+.field-group { margin-bottom: 14px; }
+.field-label {
+  font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 5px;
+  display: flex; align-items: center; gap: 4px;
+}
+.field-label .req { color: var(--red); }
+.field-input {
+  width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text); font-size: 14px; direction: rtl;
+}
+.field-input:focus { outline: none; border-color: var(--accent); }
+.field-input.error { border-color: var(--red); }
+.field-error { font-size: 11px; color: var(--red); margin-top: 4px; }
+textarea.field-input { min-height: 70px; resize: vertical; }
+
+/* ── File Upload ────────────────────────── */
+.file-area {
+  border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 16px;
+  text-align: center; margin-bottom: 14px; transition: all 0.2s; cursor: pointer;
+}
+.file-area:hover { border-color: var(--accent); background: rgba(79,142,247,0.05); }
+.file-area.has-file { border-color: var(--green); border-style: solid; background: rgba(46,204,113,0.05); }
+.file-area.error { border-color: var(--red); }
+.file-icon { font-size: 28px; margin-bottom: 6px; }
+.file-label { font-size: 13px; color: var(--text-2); }
+.file-name {
+  font-size: 13px; color: var(--green); font-weight: 600; margin-top: 6px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.file-remove {
+  background: rgba(231,76,60,0.15); color: var(--red); border: none; width: 22px; height: 22px;
+  border-radius: 50%; font-size: 14px; cursor: pointer; display: inline-flex;
+  align-items: center; justify-content: center;
+}
+.file-uploading { font-size: 12px; color: var(--accent); margin-top: 6px; }
+input[type="file"] { display: none; }
+
+/* ── Done Button ────────────────────────── */
+.btn-done {
+  width: 100%; padding: 14px; border-radius: var(--radius-sm); font-size: 16px;
+  font-weight: 700; transition: all 0.2s; display: flex; align-items: center;
+  justify-content: center; gap: 8px;
+}
+.btn-done.ready {
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+  color: #fff; box-shadow: 0 4px 16px rgba(46,204,113,0.3);
+}
+.btn-done.ready:hover { box-shadow: 0 6px 24px rgba(46,204,113,0.5); transform: translateY(-1px); }
+.btn-done.disabled {
+  background: var(--surface-2); color: var(--text-3); cursor: not-allowed;
+  border: 1px solid var(--border);
+}
+.btn-done.disabled:hover { transform: none; box-shadow: none; }
+
+/* ── Undo Bar ───────────────────────────── */
+.undo-bar {
+  width: 100%; padding: 14px; border-radius: var(--radius-sm); font-size: 15px;
+  font-weight: 600; background: var(--surface-3); color: var(--text);
+  display: flex; align-items: center; justify-content: space-between;
+  border: 1px solid var(--border); animation: fadeIn 0.2s;
+}
+.undo-countdown { color: var(--accent); font-weight: 700; font-size: 18px; direction: ltr; }
+.undo-btn {
+  background: rgba(231,76,60,0.15); color: var(--red); border: 1px solid rgba(231,76,60,0.3);
+  padding: 6px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+}
+.undo-btn:hover { background: rgba(231,76,60,0.3); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Empty State ────────────────────────── */
+.empty-state {
+  text-align: center; padding: 60px 20px; color: var(--text-3);
+}
+.empty-icon { font-size: 64px; margin-bottom: 16px; }
+.empty-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.empty-text { font-size: 14px; line-height: 1.6; }
+
+/* ── Loading ────────────────────────────── */
+.loading { text-align: center; padding: 60px 20px; }
+.spinner {
+  width: 40px; height: 40px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast ──────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  padding: 12px 24px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+  z-index: 200; box-shadow: 0 8px 32px rgba(0,0,0,0.5); transition: all 0.3s;
+  opacity: 0; pointer-events: none; white-space: nowrap;
+}
+.toast.visible { opacity: 1; }
+.toast.success { background: var(--green); color: #fff; }
+.toast.error { background: var(--red); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <img src="ags-logo.png" alt="SEMO AGS" class="header-logo">
+  <div class="header-info">
+    <div class="header-title">פורטל ספק</div>
+    <div class="header-name" id="vendorName">—</div>
+  </div>
+  <div class="header-badge" id="taskCount">—</div>
+</header>
+
+<!-- Main Content -->
+<div class="main" id="content">
+  <div class="loading">
+    <div class="spinner"></div>
+    <div style="color:var(--text-2)">טוען משימות...</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config (injected by Worker) ──────────────────────────────────────────
+const V = window.__VENDOR__ || {};
+const API = V.apiBase || '';
+const TOKEN = V.token || '';
+
+// ── State ────────────────────────────────────────────────────────────────
+let tasks = [];
+const uploadedFiles = {}; // ref -> { file, name, uploaded }
+const fieldValues = {};   // ref -> { fieldId: value }
+
+// ── Init ─────────────────────────────────────────────────────────────────
+document.getElementById('vendorName').textContent = V.supplierName || '';
+loadTasks();
+
+async function loadTasks() {
+  try {
+    const res = await fetch(`${API}/v/api/tasks?token=${TOKEN}`);
+    const data = await res.json();
+
+    if (!data.success) {
+      showError(data.error || 'שגיאה בטעינת משימות');
+      return;
+    }
+
+    document.getElementById('vendorName').textContent = data.supplierName || V.supplierName || '';
+    tasks = data.tasks || [];
+    document.getElementById('taskCount').textContent = tasks.length > 0
+      ? `${tasks.length} משימות פתוחות`
+      : 'אין משימות';
+
+    render();
+  } catch (e) {
+    showError('שגיאת חיבור: ' + e.message);
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render() {
+  const el = document.getElementById('content');
+
+  if (tasks.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">&#9728;&#65039;</div>
+        <div class="empty-title">אין משימות פתוחות</div>
+        <div class="empty-text">כל הכבוד! אין כרגע משימות שדורשות טיפול.</div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = tasks.map(t => renderCard(t)).join('');
+}
+
+function renderCard(task) {
+  const rules = task.taskRules || {};
+  const fields = rules.fields || [];
+  const needsFile = rules.requireFile || false;
+  const fileLabel = rules.fileLabel || 'צרף קובץ';
+
+  // Initialize field values for this task
+  if (!fieldValues[task.ref]) fieldValues[task.ref] = {};
+
+  const fieldsHtml = fields.map(f => {
+    const req = f.required ? '<span class="req">*</span>' : '';
+    if (f.type === 'textarea') {
+      return `<div class="field-group">
+        <label class="field-label">${esc(f.label)} ${req}</label>
+        <textarea class="field-input" id="field-${task.ref}-${f.id}"
+          placeholder="${esc(f.label)}" oninput="onFieldChange('${task.ref}','${f.id}',this.value)"></textarea>
+      </div>`;
+    }
+    return `<div class="field-group">
+      <label class="field-label">${esc(f.label)} ${req}</label>
+      <input class="field-input" type="${f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}"
+        id="field-${task.ref}-${f.id}" placeholder="${esc(f.label)}"
+        oninput="onFieldChange('${task.ref}','${f.id}',this.value)">
+    </div>`;
+  }).join('');
+
+  const fileHtml = needsFile ? `
+    <div class="file-area" id="file-area-${task.ref}" onclick="document.getElementById('file-${task.ref}').click()">
+      <div class="file-icon">&#128206;</div>
+      <div class="file-label">${esc(fileLabel)}</div>
+      <input type="file" id="file-${task.ref}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" capture="environment"
+        onchange="onFileSelect('${task.ref}', this)">
+    </div>` : '';
+
+  const address = task.address ? `<div class="task-address">${esc(task.address)}</div>` : '';
+
+  return `
+    <div class="task-card" id="card-${task.ref}">
+      <div class="task-project">${esc(task.projectName)}</div>
+      <div class="task-name">${esc(task.taskName)}</div>
+      ${address}
+      ${fieldsHtml}
+      ${fileHtml}
+      <div id="action-${task.ref}">
+        <button class="btn-done disabled" id="btn-${task.ref}" onclick="handleDone('${task.ref}')"
+          ${canComplete(task) ? '' : 'disabled'}>
+          &#10003; &#1489;&#1493;&#1510;&#1506;
+        </button>
+      </div>
+    </div>`;
+}
+
+// ── Field & File Handlers ────────────────────────────────────────────────
+function onFieldChange(ref, fieldId, value) {
+  if (!fieldValues[ref]) fieldValues[ref] = {};
+  fieldValues[ref][fieldId] = value;
+  updateDoneButton(ref);
+}
+
+async function onFileSelect(ref, input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const area = document.getElementById(`file-area-${ref}`);
+  area.classList.add('has-file');
+  area.innerHTML = `
+    <div class="file-name">
+      &#128206; ${esc(file.name)}
+      <button class="file-remove" onclick="event.stopPropagation(); removeFile('${ref}')">&times;</button>
+    </div>
+    <div class="file-uploading">מעלה...</div>`;
+
+  // Upload immediately
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API}/v/api/upload?token=${TOKEN}&ref=${ref}`, {
+      method: 'POST', body: formData,
+    });
+    const data = await res.json();
+    if (data.success) {
+      uploadedFiles[ref] = { name: file.name, uploaded: true };
+      area.querySelector('.file-uploading').textContent = 'הועלה בהצלחה ✓';
+      area.querySelector('.file-uploading').style.color = 'var(--green)';
+      showToast('קובץ הועלה', 'success');
+    } else {
+      throw new Error(data.error);
+    }
+  } catch (e) {
+    area.querySelector('.file-uploading').textContent = 'שגיאה בהעלאה';
+    area.querySelector('.file-uploading').style.color = 'var(--red)';
+    showToast('שגיאה: ' + e.message, 'error');
+    uploadedFiles[ref] = null;
+  }
+
+  updateDoneButton(ref);
+}
+
+function removeFile(ref) {
+  uploadedFiles[ref] = null;
+  const task = tasks.find(t => t.ref === ref);
+  if (!task) return;
+  const rules = task.taskRules || {};
+  const area = document.getElementById(`file-area-${ref}`);
+  area.classList.remove('has-file');
+  area.innerHTML = `
+    <div class="file-icon">&#128206;</div>
+    <div class="file-label">${esc(rules.fileLabel || 'צרף קובץ')}</div>
+    <input type="file" id="file-${ref}" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" capture="environment"
+      onchange="onFileSelect('${ref}', this)">`;
+  updateDoneButton(ref);
+}
+
+// ── Validation ───────────────────────────────────────────────────────────
+function canComplete(task) {
+  const rules = task.taskRules || {};
+  const fields = rules.fields || [];
+
+  // Check required file
+  if (rules.requireFile && !uploadedFiles[task.ref]?.uploaded) return false;
+
+  // Check required fields
+  for (const f of fields) {
+    if (f.required) {
+      const val = (fieldValues[task.ref] || {})[f.id];
+      if (!val || !val.trim()) return false;
+    }
+  }
+
+  return true;
+}
+
+function updateDoneButton(ref) {
+  const task = tasks.find(t => t.ref === ref);
+  if (!task) return;
+  const btn = document.getElementById(`btn-${ref}`);
+  if (!btn) return;
+  const ok = canComplete(task);
+  btn.className = `btn-done ${ok ? 'ready' : 'disabled'}`;
+  btn.disabled = !ok;
+}
+
+// ── Done with Undo ───────────────────────────────────────────────────────
+function handleDone(ref) {
+  const task = tasks.find(t => t.ref === ref);
+  if (!task || !canComplete(task)) return;
+
+  const card = document.getElementById(`card-${ref}`);
+  const actionEl = document.getElementById(`action-${ref}`);
+  let cancelled = false;
+  let countdown = 5;
+
+  // Visual: mark as completing
+  card.classList.add('completing');
+
+  // Show undo bar
+  actionEl.innerHTML = `
+    <div class="undo-bar">
+      <button class="undo-btn" id="undo-${ref}">&#8617; &#1489;&#1497;&#1496;&#1493;&#1500;</button>
+      <span>&#1502;&#1505;&#1502;&#1503; &#1499;&#1489;&#1493;&#1510;&#1506;...</span>
+      <span class="undo-countdown" id="cd-${ref}">${countdown}</span>
+    </div>`;
+
+  const interval = setInterval(() => {
+    countdown--;
+    const cdEl = document.getElementById(`cd-${ref}`);
+    if (cdEl) cdEl.textContent = countdown;
+    if (countdown <= 0) clearInterval(interval);
+  }, 1000);
+
+  const timeout = setTimeout(async () => {
+    clearInterval(interval);
+    if (cancelled) return;
+    await executeDone(ref, task);
+  }, 5000);
+
+  document.getElementById(`undo-${ref}`).onclick = () => {
+    cancelled = true;
+    clearTimeout(timeout);
+    clearInterval(interval);
+    card.classList.remove('completing');
+    // Restore button
+    const ok = canComplete(task);
+    actionEl.innerHTML = `
+      <button class="btn-done ${ok ? 'ready' : 'disabled'}" id="btn-${ref}"
+        onclick="handleDone('${ref}')" ${ok ? '' : 'disabled'}>
+        &#10003; &#1489;&#1493;&#1510;&#1506;
+      </button>`;
+    showToast('הפעולה בוטלה', 'success');
+  };
+}
+
+async function executeDone(ref, task) {
+  const card = document.getElementById(`card-${ref}`);
+  const actionEl = document.getElementById(`action-${ref}`);
+
+  // Build form data
+  const fields = {};
+  const taskFields = task.taskRules?.fields || [];
+  for (const f of taskFields) {
+    const val = (fieldValues[ref] || {})[f.id];
+    if (val) fields[f.label] = val;
+  }
+
+  try {
+    const res = await fetch(`${API}/v/api/done`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: TOKEN, taskRef: ref, fields, note: '' }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      card.classList.remove('completing');
+      card.classList.add('done-exit');
+      showToast(`${task.projectName} — בוצע ✓`, 'success');
+      setTimeout(() => {
+        tasks = tasks.filter(t => t.ref !== ref);
+        document.getElementById('taskCount').textContent = tasks.length > 0
+          ? `${tasks.length} משימות פתוחות`
+          : 'אין משימות';
+        if (tasks.length === 0) render();
+      }, 400);
+    } else {
+      throw new Error(data.error);
+    }
+  } catch (e) {
+    card.classList.remove('completing');
+    const ok = canComplete(task);
+    actionEl.innerHTML = `
+      <button class="btn-done ${ok ? 'ready' : 'disabled'}" id="btn-${ref}"
+        onclick="handleDone('${ref}')" ${ok ? '' : 'disabled'}>
+        &#10003; &#1489;&#1493;&#1510;&#1506;
+      </button>`;
+    showToast('שגיאה: ' + e.message, 'error');
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+function showError(msg) {
+  document.getElementById('content').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">&#9888;&#65039;</div>
+      <div class="empty-title">שגיאה</div>
+      <div class="empty-text">${esc(msg)}</div>
+    </div>`;
+}
+
+function esc(s) {
+  const el = document.createElement('span');
+  el.textContent = s || '';
+  return el.innerHTML;
+}
+
+function showToast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} visible`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('visible'), 3000);
+}
+</script>
+</body>
+</html>
