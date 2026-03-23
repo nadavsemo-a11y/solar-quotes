@@ -953,6 +953,40 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Escape') searchInput.blur();
 });
+
+// ── Auto-Discovery: detect new HTML files not in registry ──
+(async function checkForNewModules() {
+  try {
+    const res = await fetch('https://api.github.com/repos/nadavsemo-a11y/solar-quotes/contents/?ref=main');
+    if (!res.ok) return;
+    const files = await res.json();
+    const htmlFiles = files
+      .filter(f => f.name.endsWith('.html'))
+      .map(f => f.name)
+      .filter(f => f !== 'portal.html' && f !== 'solar-quote-template.html');
+
+    // Collect all URLs referenced in MODULES
+    const knownFiles = new Set();
+    MODULES.forEach(m => {
+      m.links.forEach(l => {
+        const match = l.url.match(/solar-quotes\/([^/]+\.html)/);
+        if (match) knownFiles.add(match[1]);
+      });
+    });
+    // Also add known external dashboard files
+    knownFiles.add('solar-quote-full.html');
+
+    const newFiles = htmlFiles.filter(f => !knownFiles.has(f));
+
+    if (newFiles.length > 0) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:rgba(244,162,0,0.1);border:1px solid rgba(244,162,0,0.3);border-radius:10px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+      banner.innerHTML = '<span style="font-size:20px">&#9888;</span><span style="font-weight:600;color:var(--sun)">זוהו מודולים חדשים שלא רשומים בפורטל:</span>' +
+        newFiles.map(f => `<a href="https://nadavsemo-a11y.github.io/solar-quotes/${f}" target="_blank" style="background:var(--surface-3);padding:4px 10px;border-radius:6px;font-size:12px;color:var(--text)">${f}</a>`).join('');
+      document.querySelector('.main').insertBefore(banner, document.querySelector('.stats-bar'));
+    }
+  } catch(e) { /* silent fail */ }
+})();
 </script>
 </body>
 </html>
