@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEMO AGS — Command Center</title>
+  <link rel="icon" type="image/png" href="ags-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ── Design Tokens ───────────────────────────────── */
+:root {
+  --bg: #080a10;
+  --bg-2: #0d1018;
+  --surface: #141822;
+  --surface-2: #1a2030;
+  --surface-3: #222a3a;
+  --surface-hover: #1e2638;
+  --accent: #4f8ef7;
+  --accent-glow: rgba(79,142,247,0.15);
+  --sun: #F4A200;
+  --sun-light: #FFD166;
+  --sun-glow: rgba(244,162,0,0.12);
+  --green: #2ECC71;
+  --green-glow: rgba(46,204,113,0.12);
+  --purple: #a47bfc;
+  --purple-glow: rgba(164,123,252,0.12);
+  --pink: #f472b6;
+  --pink-glow: rgba(244,114,182,0.12);
+  --cyan: #22d3ee;
+  --cyan-glow: rgba(34,211,238,0.12);
+  --red: #ef4444;
+  --orange: #f59e0b;
+  --text: #e8ecf4;
+  --text-2: #8892a4;
+  --text-3: #515b6e;
+  --border: #1e2536;
+  --border-2: #2a3348;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Reset & Base ────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Heebo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+/* ── Animated Background ─────────────────────────── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(79,142,247,0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(244,162,0,0.03) 0%, transparent 50%);
+}
+.bg-grid::after {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+/* ── Header ──────────────────────────────────────── */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(8,10,16,0.85);
+  backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+}
+.header-inner {
+  max-width: 1400px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 64px; gap: 16px;
+}
+.header-brand {
+  display: flex; align-items: center; gap: 12px;
+}
+.header-logo {
+  height: 32px;
+  filter: brightness(0) invert(1);
+}
+.header-title {
+  font-size: 18px; font-weight: 700;
+  background: linear-gradient(135deg, var(--text), var(--sun-light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.header-subtitle {
+  font-size: 11px; color: var(--text-3); font-weight: 400;
+  letter-spacing: 2px; text-transform: uppercase;
+}
+
+/* ── Search Bar ──────────────────────────────────── */
+.search-wrap {
+  position: relative; flex: 0 1 320px;
+}
+.search-wrap svg {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; color: var(--text-3);
+}
+.search-input {
+  width: 100%; padding: 10px 14px 10px 42px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-size: 14px; font-family: inherit;
+  transition: var(--transition);
+}
+.search-input::placeholder { color: var(--text-3); }
+.search-input:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* ── Clock ───────────────────────────────────────── */
+.header-clock {
+  font-size: 13px; color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; gap: 8px;
+}
+.clock-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(46,204,113,0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(46,204,113,0); }
+}
+
+/* ── Main Layout ─────────────────────────────────── */
+.main {
+  position: relative; z-index: 1;
+  max-width: 1400px; margin: 0 auto;
+  padding: 32px 24px 60px;
+}
+
+/* ── Hero Stats Bar ──────────────────────────────── */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 36px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px;
+  transition: var(--transition);
+}
+.stat-card:hover {
+  border-color: var(--border-2);
+  transform: translateY(-1px);
+}
+.stat-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.stat-icon.sun { background: var(--sun-glow); }
+.stat-icon.blue { background: var(--accent-glow); }
+.stat-icon.green { background: var(--green-glow); }
+.stat-icon.purple { background: var(--purple-glow); }
+.stat-value { font-size: 24px; font-weight: 800; line-height: 1; }
+.stat-label { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+/* ── Category Filter ─────────────────────────────── */
+.category-bar {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.cat-btn {
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13px; font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  transition: var(--transition);
+}
+.cat-btn:hover { border-color: var(--border-2); color: var(--text); }
+.cat-btn.active {
+  background: var(--accent); border-color: var(--accent);
+  color: #fff; font-weight: 600;
+}
+
+/* ── Section Title ───────────────────────────────── */
+.section {
+  margin-bottom: 36px;
+}
+.section-title {
+  font-size: 15px; font-weight: 600; color: var(--text-2);
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+  text-transform: uppercase; letter-spacing: 1.5px;
+}
+.section-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(to left, transparent, var(--border));
+}
+
+/* ── Module Cards Grid ───────────────────────────── */
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* ── Module Card ─────────────────────────────────── */
+.module-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex; flex-direction: column; gap: 14px;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.module-card::before {
+  content: '';
+  position: absolute; top: 0; right: 0; left: 0; height: 3px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  opacity: 0; transition: var(--transition);
+}
+.module-card:hover {
+  border-color: var(--border-2);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+.module-card:hover::before { opacity: 1; }
+.module-card[data-color="sun"]::before { background: linear-gradient(90deg, var(--sun), var(--sun-light)); }
+.module-card[data-color="blue"]::before { background: linear-gradient(90deg, var(--accent), #7bb3ff); }
+.module-card[data-color="green"]::before { background: linear-gradient(90deg, var(--green), #5eeea0); }
+.module-card[data-color="purple"]::before { background: linear-gradient(90deg, var(--purple), #c9a8ff); }
+.module-card[data-color="pink"]::before { background: linear-gradient(90deg, var(--pink), #f9a8d4); }
+.module-card[data-color="cyan"]::before { background: linear-gradient(90deg, var(--cyan), #67e8f9); }
+
+.module-top {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.module-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; flex-shrink: 0;
+}
+.module-icon.sun { background: var(--sun-glow); }
+.module-icon.blue { background: var(--accent-glow); }
+.module-icon.green { background: var(--green-glow); }
+.module-icon.purple { background: var(--purple-glow); }
+.module-icon.pink { background: var(--pink-glow); }
+.module-icon.cyan { background: var(--cyan-glow); }
+
+.module-badge {
+  padding: 4px 10px; border-radius: 12px;
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.badge-live { background: rgba(46,204,113,0.15); color: var(--green); }
+.badge-dev { background: rgba(244,162,0,0.15); color: var(--sun); }
+.badge-local { background: rgba(164,123,252,0.15); color: var(--purple); }
+.badge-tool { background: rgba(34,211,238,0.15); color: var(--cyan); }
+
+.module-name {
+  font-size: 18px; font-weight: 700; line-height: 1.3;
+}
+.module-desc {
+  font-size: 13px; color: var(--text-2); line-height: 1.6;
+  flex: 1;
+}
+
+.module-tech {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.tech-tag {
+  padding: 3px 8px; border-radius: var(--radius-xs);
+  font-size: 11px; font-weight: 500;
+  background: var(--surface-3); color: var(--text-2);
+}
+
+.module-links {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.module-link {
+  padding: 7px 14px; border-radius: var(--radius-xs);
+  font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; gap: 6px;
+  transition: var(--transition);
+}
+.module-link.primary {
+  background: var(--accent); color: #fff;
+}
+.module-link.primary:hover { background: #3d7be5; }
+.module-link.secondary {
+  background: var(--surface-3); color: var(--text);
+}
+.module-link.secondary:hover { background: var(--surface-hover); }
+
+/* ── Quick Actions ───────────────────────────────── */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 36px;
+}
+.quick-action {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px 14px;
+  text-align: center;
+  transition: var(--transition);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.quick-action:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+  transform: translateY(-2px);
+}
+.quick-action .qa-icon { font-size: 28px; }
+.quick-action .qa-label { font-size: 12px; font-weight: 600; color: var(--text-2); }
+
+/* ── Footer ──────────────────────────────────────── */
+.footer {
+  text-align: center; padding: 24px;
+  font-size: 12px; color: var(--text-3);
+  border-top: 1px solid var(--border);
+}
+.footer-ver { opacity: 0.5; }
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width: 768px) {
+  .header-inner { height: 56px; }
+  .header-subtitle { display: none; }
+  .search-wrap { flex: 1; min-width: 0; }
+  .header-clock { display: none; }
+  .main { padding: 20px 14px 40px; }
+  .stats-bar { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-card { padding: 12px; gap: 10px; }
+  .stat-icon { width: 36px; height: 36px; font-size: 16px; }
+  .stat-value { font-size: 20px; }
+  .modules-grid { grid-template-columns: 1fr; gap: 12px; }
+  .module-card { padding: 18px; }
+  .quick-actions { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .quick-action { padding: 12px 8px; }
+  .category-bar { gap: 6px; }
+  .cat-btn { padding: 6px 14px; font-size: 12px; }
+}
+@media (max-width: 480px) {
+  .stats-bar { grid-template-columns: repeat(2, 1fr); }
+  .quick-actions { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Animations ──────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.module-card, .stat-card, .quick-action {
+  animation: fadeUp 0.5s ease both;
+}
+.module-card:nth-child(1) { animation-delay: 0.03s; }
+.module-card:nth-child(2) { animation-delay: 0.06s; }
+.module-card:nth-child(3) { animation-delay: 0.09s; }
+.module-card:nth-child(4) { animation-delay: 0.12s; }
+.module-card:nth-child(5) { animation-delay: 0.15s; }
+.module-card:nth-child(6) { animation-delay: 0.18s; }
+.module-card:nth-child(7) { animation-delay: 0.21s; }
+.module-card:nth-child(8) { animation-delay: 0.24s; }
+.module-card:nth-child(9) { animation-delay: 0.27s; }
+.module-card:nth-child(10) { animation-delay: 0.3s; }
+
+/* ── No Results ──────────────────────────────────── */
+.no-results {
+  text-align: center; padding: 48px 24px;
+  color: var(--text-3); font-size: 15px;
+  display: none;
+}
+.no-results.visible { display: block; }
+.no-results .nr-icon { font-size: 48px; margin-bottom: 12px; }
+
+/* ── Hidden ──────────────────────────────────────── */
+.hidden { display: none !important; }
+
+/* ── Scroll indicator ────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- ══════ Header ══════ -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <img src="ags-logo.png" alt="SEMO AGS" class="header-logo">
+      <div>
+        <div class="header-title">Command Center</div>
+        <div class="header-subtitle">SEMO AGS</div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="search-input" id="searchInput" placeholder="...חיפוש מודול, דשבורד, כלי">
+    </div>
+    <div class="header-clock">
+      <span class="clock-dot"></span>
+      <span id="clock"></span>
+    </div>
+  </div>
+</header>
+
+<!-- ══════ Main ══════ -->
+<main class="main">
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-icon sun">&#9728;</div>
+      <div><div class="stat-value" id="statModules">0</div><div class="stat-label">מודולים פעילים</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon blue">&#9729;</div>
+      <div><div class="stat-value" id="statWorkers">5</div><div class="stat-label">Cloudflare Workers</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">&#9889;</div>
+      <div><div class="stat-value" id="statIntegrations">6</div><div class="stat-label">אינטגרציות</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">&#128202;</div>
+      <div><div class="stat-value" id="statDashboards">0</div><div class="stat-label">דשבורדים</div></div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="section">
+    <div class="section-title">גישה מהירה</div>
+    <div class="quick-actions" id="quickActions">
+      <a class="quick-action" href="https://s-a.gs/q/new" target="_blank" title="הצעת מחיר חדשה">
+        <div class="qa-icon">&#128196;</div>
+        <div class="qa-label">הצעה חדשה</div>
+      </a>
+      <a class="quick-action" href="https://nadavsemo-a11y.github.io/solar-quotes/hubspot-contacts.html" target="_blank" title="אנשי קשר HubSpot">
+        <div class="qa-icon">&#128101;</div>
+        <div class="qa-label">אנשי קשר</div>
+      </a>
+      <a class="quick-action" href="https://nadavsemo-a11y.github.io/solar-quotes/income-report.html" target="_blank" title="דוח הכנסות">
+        <div class="qa-icon">&#128176;</div>
+        <div class="qa-label">דוח הכנסות</div>
+      </a>
+      <a class="quick-action" href="https://nadavsemo-a11y.github.io/solar-quotes/links-dashboard.html" target="_blank" title="ניהול קיצורים">
+        <div class="qa-icon">&#128279;</div>
+        <div class="qa-label">קיצורי URL</div>
+      </a>
+      <a class="quick-action" href="https://nadavsemo-a11y.github.io/solar-quotes/extras-manager.html" target="_blank" title="ניהול תוספות">
+        <div class="qa-icon">&#9881;</div>
+        <div class="qa-label">תוספות מערכת</div>
+      </a>
+      <a class="quick-action" href="https://nadavsemo-a11y.github.io/solar-quotes/quote-analysis.html" target="_blank" title="ניתוח הצעות">
+        <div class="qa-icon">&#128200;</div>
+        <div class="qa-label">ניתוח הצעות</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Category Filter -->
+  <div class="category-bar" id="categoryBar">
+    <button class="cat-btn active" data-cat="all">הכל</button>
+    <button class="cat-btn" data-cat="core">מערכת ליבה</button>
+    <button class="cat-btn" data-cat="dashboard">דשבורדים</button>
+    <button class="cat-btn" data-cat="tool">כלים ואוטומציה</button>
+    <button class="cat-btn" data-cat="integration">אינטגרציות</button>
+  </div>
+
+  <!-- Modules Container -->
+  <div id="modulesContainer"></div>
+
+  <!-- No Results -->
+  <div class="no-results" id="noResults">
+    <div class="nr-icon">&#128269;</div>
+    <div>לא נמצאו תוצאות מתאימות</div>
+  </div>
+
+</main>
+
+<!-- ══════ Footer ══════ -->
+<footer class="footer">
+  <div>SEMO AGS Command Center &mdash; כל המודולים והפיתוחים במקום אחד</div>
+  <div class="footer-ver">v1.0.0 &bull; עודכן לאחרונה: <span id="lastUpdate"></span></div>
+</footer>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// MODULES REGISTRY — מאגר מודולים מרכזי
+// כדי להוסיף מודול חדש, פשוט הוסף אובייקט לרשימה הזו.
+// הפורטל יתעדכן אוטומטית.
+// ══════════════════════════════════════════════════════════════════════════
+
+const MODULES = [
+  // ── Core Systems ──────────────────────────────────
+  {
+    id: 'semo-os',
+    name: 'SEMO OS',
+    subtitle: 'Solar Operations System',
+    desc: 'מערכת הליבה להצעות מחיר סולאריות — מחשבון, הצעה, חתימה דיגיטלית, סנכרון HubSpot, ומעקב.',
+    icon: '&#9728;',
+    color: 'sun',
+    badge: 'live',
+    category: 'core',
+    tech: ['Cloudflare Workers', 'GitHub Pages', 'KV Store', 'HubSpot API'],
+    links: [
+      { label: 'פתח מערכת', url: 'https://nadavsemo-a11y.github.io/solar-quotes/index.html', type: 'primary' },
+      { label: 'Worker API', url: 'https://s-a.gs/health', type: 'secondary' },
+    ]
+  },
+  {
+    id: 'quote-analysis',
+    name: 'ניתוח הצעות מחיר',
+    subtitle: 'Quote Analysis',
+    desc: 'דשבורד לניתוח סטטיסטי של כלל ההצעות — שיעור המרה, ערך ממוצע, פילוח לפי תקופה ולקוח.',
+    icon: '&#128200;',
+    color: 'blue',
+    badge: 'live',
+    category: 'dashboard',
+    tech: ['HTML/JS', 'KV Store'],
+    links: [
+      { label: 'פתח דשבורד', url: 'https://nadavsemo-a11y.github.io/solar-quotes/quote-analysis.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'hubspot-contacts',
+    name: 'אנשי קשר HubSpot',
+    subtitle: 'HubSpot Contacts Sync',
+    desc: 'ממשק חיפוש ותצוגת אנשי קשר מ-HubSpot CRM, עם סנכרון דו-כיווני ויצירת עסקאות.',
+    icon: '&#128101;',
+    color: 'blue',
+    badge: 'live',
+    category: 'core',
+    tech: ['HubSpot API', 'REST'],
+    links: [
+      { label: 'פתח', url: 'https://nadavsemo-a11y.github.io/solar-quotes/hubspot-contacts.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'vendor-portal',
+    name: 'פורטל ספקים',
+    subtitle: 'Vendor Portal',
+    desc: 'ממשק ניהול ספקים — ציוד סולארי, ממירים, פאנלים. השוואת מחירים וניהול קטלוג.',
+    icon: '&#128230;',
+    color: 'green',
+    badge: 'live',
+    category: 'core',
+    tech: ['Cloudflare Workers', 'KV Store'],
+    links: [
+      { label: 'פתח פורטל', url: 'https://nadavsemo-a11y.github.io/solar-quotes/vendor-portal.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'work-order',
+    name: 'הזמנות עבודה',
+    subtitle: 'Work Orders',
+    desc: 'יצירת הזמנות עבודה לפרויקטים סולאריים — כולל פרטי ציוד, כתובת, ולוחות זמנים.',
+    icon: '&#128221;',
+    color: 'sun',
+    badge: 'live',
+    category: 'core',
+    tech: ['HTML/JS'],
+    links: [
+      { label: 'פתח', url: 'https://nadavsemo-a11y.github.io/solar-quotes/work-order.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'income-report',
+    name: 'דוח הכנסות',
+    subtitle: 'Income Report',
+    desc: 'מעקב אחרי הכנסות, חשבוניות וגביה — חיבור לחשבון הבנק ולנתוני EZCount.',
+    icon: '&#128176;',
+    color: 'green',
+    badge: 'live',
+    category: 'dashboard',
+    tech: ['Bank Scraper', 'EZCount API'],
+    links: [
+      { label: 'פתח דוח', url: 'https://nadavsemo-a11y.github.io/solar-quotes/income-report.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'spec-page',
+    name: 'דף מפרט טכני',
+    subtitle: 'Spec Page',
+    desc: 'דף מפרט טכני להצעה — פרטי ציוד, אחריות, מיקום ההתקנה ותכניות.',
+    icon: '&#128203;',
+    color: 'cyan',
+    badge: 'live',
+    category: 'core',
+    tech: ['HTML/JS'],
+    links: [
+      { label: 'פתח', url: 'https://nadavsemo-a11y.github.io/solar-quotes/spec-page.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'payment-editor',
+    name: 'ניהול תשלומים',
+    subtitle: 'Payment Editor',
+    desc: 'ממשק לעריכת תנאי תשלום, אבני דרך ומבנה תשלומים בהצעה.',
+    icon: '&#128179;',
+    color: 'green',
+    badge: 'live',
+    category: 'core',
+    tech: ['HTML/JS'],
+    links: [
+      { label: 'פתח', url: 'https://nadavsemo-a11y.github.io/solar-quotes/payment-editor.html', type: 'primary' },
+    ]
+  },
+
+  // ── Dashboards ────────────────────────────────────
+  {
+    id: 'yaron-dashboard',
+    name: 'דשבורד ירון',
+    subtitle: 'Yaron Monday Dashboard',
+    desc: 'דשבורד מותאם אישית לירון — תצוגת פרויקטים, סטטוסים ומשימות מ-Monday.com.',
+    icon: '&#128203;',
+    color: 'purple',
+    badge: 'live',
+    category: 'dashboard',
+    tech: ['Cloudflare Workers', 'Monday.com API', 'Netlify'],
+    links: [
+      { label: 'פתח דשבורד', url: 'https://yaron-dashboard.netlify.app/', type: 'primary' },
+    ]
+  },
+  {
+    id: 'shimrit-monday',
+    name: 'דשבורד שמרית',
+    subtitle: 'Shimrit Task Dashboard',
+    desc: 'ניהול משימות לשמרית ביטון סמו — 85 תתי-משימות, עדכון סטטוס ישיר ל-Monday.com.',
+    icon: '&#10004;',
+    color: 'pink',
+    badge: 'live',
+    category: 'dashboard',
+    tech: ['Cloudflare Workers', 'Monday.com API', 'GitHub Actions'],
+    links: [
+      { label: 'פתח דשבורד', url: 'https://nadavsemo-a11y.github.io/shimrit-dashboard/', type: 'primary' },
+    ]
+  },
+  {
+    id: 'shimrit-data',
+    name: 'דשבורד נתונים שמרית',
+    subtitle: 'Shimrit Data Dashboard',
+    desc: 'דשבורד מיילים והצעות מחיר לשמרית — חיבור Gmail ו-Google Sheets.',
+    icon: '&#128231;',
+    color: 'pink',
+    badge: 'local',
+    category: 'dashboard',
+    tech: ['Node.js', 'Gmail API', 'Google Sheets'],
+    links: [
+      { label: 'הפעלה מקומית', url: '#', type: 'secondary', local: true, cmd: 'cd Shimrit-dashboard && node server.js' },
+    ]
+  },
+
+  // ── Tools & Automation ────────────────────────────
+  {
+    id: 'url-shortener',
+    name: 'מקצר קישורים',
+    subtitle: 'URL Shortener + QR',
+    desc: 'שירות קיצור URL עם יצירת QR Code אוטומטית — מופעל על דומיין s-a.gs.',
+    icon: '&#128279;',
+    color: 'cyan',
+    badge: 'live',
+    category: 'tool',
+    tech: ['Cloudflare Workers', 'KV Store'],
+    links: [
+      { label: 'פתח פורטל', url: 'https://nadavsemo-a11y.github.io/solar-quotes/links-dashboard.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'intersol-sync',
+    name: 'INTERSOL Sync',
+    subtitle: 'Smart View Scraper',
+    desc: 'סקריפט לסריקת פרויקטים מ-INTERSOL Smart View וסנכרון ל-Monday.com — כולל מיפוי עמודות.',
+    icon: '&#9889;',
+    color: 'sun',
+    badge: 'tool',
+    category: 'tool',
+    tech: ['Python', 'Playwright', 'Monday.com API'],
+    links: [
+      { label: 'תיעוד', url: '#', type: 'secondary' },
+    ]
+  },
+  {
+    id: 'intersol-module',
+    name: 'INTERSOL Module (SEMO OS)',
+    subtitle: 'In-App INTERSOL Sync',
+    desc: 'מודול סנכרון INTERSOL מובנה בתוך SEMO OS — השוואת פרויקטים, התאמה אוטומטית ועדכון.',
+    icon: '&#128260;',
+    color: 'sun',
+    badge: 'live',
+    category: 'integration',
+    tech: ['JavaScript', 'INTERSOL API'],
+    links: [
+      { label: 'פתח ב-SEMO OS', url: 'https://nadavsemo-a11y.github.io/solar-quotes/index.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'email-sender',
+    name: 'שליחת מיילים',
+    subtitle: 'Email Sender (Apps Script)',
+    desc: 'שירות שליחת מיילים דרך Google Apps Script — הצעות, אישורי חתימה והודעות.',
+    icon: '&#9993;',
+    color: 'blue',
+    badge: 'live',
+    category: 'integration',
+    tech: ['Google Apps Script', 'Gmail API'],
+    links: [
+      { label: 'בדיקת מייל', url: 'https://nadavsemo-a11y.github.io/solar-quotes/test-email.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'powerdoc',
+    name: 'PowerDoc Integration',
+    subtitle: 'Forms & Webhooks',
+    desc: 'שליפת טפסים מ-PowerDoc, הרשמה ל-Webhooks, וניתוח מסמכי הסכמים.',
+    icon: '&#128196;',
+    color: 'purple',
+    badge: 'tool',
+    category: 'integration',
+    tech: ['Python', 'PowerDoc API', 'Webhooks'],
+    links: [
+      { label: 'תיעוד API', url: '#', type: 'secondary' },
+    ]
+  },
+  {
+    id: 'ezcount',
+    name: 'EZCount',
+    subtitle: 'חשבוניות והנהלת חשבונות',
+    desc: 'חיבור ל-EZCount API לניהול חשבוניות, קבלות ומעקב פיננסי.',
+    icon: '&#128178;',
+    color: 'green',
+    badge: 'tool',
+    category: 'integration',
+    tech: ['REST API'],
+    links: [
+      { label: 'תיעוד API', url: '#', type: 'secondary' },
+    ]
+  },
+  {
+    id: 'content-editor',
+    name: 'עורך תוכן הצעה',
+    subtitle: 'Quote Content Editor',
+    desc: 'עורך תוכן ויזואלי להצעות — עריכת טקסטים, סעיפים ותנאים.',
+    icon: '&#9997;',
+    color: 'cyan',
+    badge: 'live',
+    category: 'core',
+    tech: ['HTML/JS'],
+    links: [
+      { label: 'פתח עורך', url: 'https://nadavsemo-a11y.github.io/solar-quotes/quote-content-editor.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'extras-manager',
+    name: 'ניהול תוספות',
+    subtitle: 'Extras Manager',
+    desc: 'ניהול קטלוג תוספות — מוצרים נוספים, שדרוגים ואופציות שניתן לצרף להצעה.',
+    icon: '&#9881;',
+    color: 'cyan',
+    badge: 'live',
+    category: 'core',
+    tech: ['HTML/JS', 'KV Store'],
+    links: [
+      { label: 'פתח', url: 'https://nadavsemo-a11y.github.io/solar-quotes/extras-manager.html', type: 'primary' },
+    ]
+  },
+  {
+    id: 'monday-deps',
+    name: 'Monday Dependencies',
+    subtitle: 'Subitem Dependencies Setup',
+    desc: 'סקריפט להגדרת תלויות בין תתי-משימות ב-Monday.com — אוטומציה של רצף עבודה.',
+    icon: '&#128260;',
+    color: 'purple',
+    badge: 'tool',
+    category: 'tool',
+    tech: ['Python', 'Monday.com API'],
+    links: [
+      { label: 'קוד', url: '#', type: 'secondary' },
+    ]
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// Render Engine
+// ══════════════════════════════════════════════════════════════════════════
+
+const container = document.getElementById('modulesContainer');
+const searchInput = document.getElementById('searchInput');
+const noResults = document.getElementById('noResults');
+let activeCategory = 'all';
+
+function badgeLabel(badge) {
+  const map = { live: 'LIVE', dev: 'DEV', local: 'LOCAL', tool: 'TOOL' };
+  return map[badge] || badge;
+}
+
+function renderCard(mod) {
+  const linksHtml = mod.links.map(l => {
+    if (l.local) {
+      return `<span class="module-link secondary" title="${l.cmd || ''}">&#128187; ${l.label}</span>`;
+    }
+    return `<a class="module-link ${l.type}" href="${l.url}" target="_blank" onclick="event.stopPropagation()">${l.label} ${l.type === 'primary' ? '&#8592;' : ''}</a>`;
+  }).join('');
+
+  const techHtml = mod.tech.map(t => `<span class="tech-tag">${t}</span>`).join('');
+
+  return `
+    <div class="module-card" data-color="${mod.color}" data-cat="${mod.category}" data-id="${mod.id}" data-search="${mod.name} ${mod.subtitle} ${mod.desc} ${mod.tech.join(' ')}">
+      <div class="module-top">
+        <div class="module-icon ${mod.color}">${mod.icon}</div>
+        <span class="module-badge badge-${mod.badge}">${badgeLabel(mod.badge)}</span>
+      </div>
+      <div class="module-name">${mod.name}</div>
+      <div class="module-desc">${mod.desc}</div>
+      <div class="module-tech">${techHtml}</div>
+      <div class="module-links">${linksHtml}</div>
+    </div>
+  `;
+}
+
+function groupByCategory(modules) {
+  const groups = {
+    core: { title: 'מערכת ליבה — SEMO OS', modules: [] },
+    dashboard: { title: 'דשבורדים', modules: [] },
+    tool: { title: 'כלים ואוטומציה', modules: [] },
+    integration: { title: 'אינטגרציות', modules: [] },
+  };
+  modules.forEach(m => {
+    if (groups[m.category]) groups[m.category].modules.push(m);
+  });
+  return groups;
+}
+
+function render() {
+  const query = searchInput.value.trim().toLowerCase();
+  let filtered = MODULES;
+
+  if (query) {
+    filtered = MODULES.filter(m => {
+      const hay = `${m.name} ${m.subtitle} ${m.desc} ${m.tech.join(' ')} ${m.category}`.toLowerCase();
+      return hay.includes(query);
+    });
+  }
+
+  if (activeCategory !== 'all') {
+    filtered = filtered.filter(m => m.category === activeCategory);
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '';
+    noResults.classList.add('visible');
+    return;
+  }
+
+  noResults.classList.remove('visible');
+
+  if (activeCategory !== 'all' || query) {
+    container.innerHTML = `
+      <div class="section">
+        <div class="modules-grid">${filtered.map(renderCard).join('')}</div>
+      </div>
+    `;
+  } else {
+    const groups = groupByCategory(filtered);
+    container.innerHTML = Object.values(groups)
+      .filter(g => g.modules.length > 0)
+      .map(g => `
+        <div class="section">
+          <div class="section-title">${g.title}</div>
+          <div class="modules-grid">${g.modules.map(renderCard).join('')}</div>
+        </div>
+      `).join('');
+  }
+
+  // Update stats
+  document.getElementById('statModules').textContent = MODULES.length;
+  document.getElementById('statDashboards').textContent = MODULES.filter(m => m.category === 'dashboard').length;
+}
+
+// ── Category Filter ─────────────────────────────────
+document.getElementById('categoryBar').addEventListener('click', e => {
+  const btn = e.target.closest('.cat-btn');
+  if (!btn) return;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCategory = btn.dataset.cat;
+  render();
+});
+
+// ── Search ──────────────────────────────────────────
+searchInput.addEventListener('input', () => render());
+
+// ── Card click → primary link ───────────────────────
+container.addEventListener('click', e => {
+  const card = e.target.closest('.module-card');
+  if (!card || e.target.closest('.module-link')) return;
+  const mod = MODULES.find(m => m.id === card.dataset.id);
+  if (!mod) return;
+  const primary = mod.links.find(l => l.type === 'primary');
+  if (primary && primary.url !== '#') window.open(primary.url, '_blank');
+});
+
+// ── Clock ───────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+  document.getElementById('clock').textContent = now.toLocaleTimeString('he-IL', opts);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Last Update ─────────────────────────────────────
+document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('he-IL');
+
+// ── Init ────────────────────────────────────────────
+render();
+
+// ── Keyboard shortcut: Ctrl+K → Search ──────────────
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+  }
+  if (e.key === 'Escape') searchInput.blur();
+});
+</script>
+</body>
+</html>
