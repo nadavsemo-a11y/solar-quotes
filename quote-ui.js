@@ -660,8 +660,7 @@ class QuoteUI {
 
   async _syncToHubspot(vals, quoteUrl) {
     try {
-      const email = document.getElementById('clientEmail')?.value?.trim();
-      if (!email) return;
+      const email = document.getElementById('clientEmail')?.value?.trim() || '';
       const nameParts = (vals.name || '').trim().split(/\s+/);
       const firstname = nameParts[0] || '';
       const lastname = nameParts.slice(1).join(' ') || '';
