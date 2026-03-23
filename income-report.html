@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>הכנסות — בנק מזרחי טפחות</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      text-align: center;
+      color: #aaa;
+      margin-bottom: 30px;
+      font-size: 0.95rem;
+    }
+    .summary {
+      background: rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 30px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .summary-item { text-align: center; }
+    .summary-item .label { color: #aaa; font-size: 0.85rem; margin-bottom: 4px; }
+    .summary-item .value { font-size: 1.5rem; font-weight: bold; color: #4ade80; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    thead th {
+      background: rgba(255,255,255,0.1);
+      padding: 14px 12px;
+      text-align: right;
+      font-weight: 600;
+      color: #ddd;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 12px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.9rem;
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.05); }
+    .amount { color: #4ade80; font-weight: 600; direction: ltr; text-align: left; white-space: nowrap; }
+    .muted { color: #888; }
+    .empty { text-align: center; padding: 40px; color: #888; }
+    .footer { text-align: center; color: #555; margin-top: 30px; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>הכנסות — בנק מזרחי טפחות</h1>
+    <p class="subtitle">7 ימים אחרונים | נוצר ב-10.3.2026 15:57</p>
+
+    <div class="summary">
+      <div class="summary-item">
+        <div class="label">סה"כ הכנסות</div>
+        <div class="value">₪155,814.55</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">מספר תנועות</div>
+        <div class="value">6</div>
+      </div>
+    </div>
+
+    
+    <table>
+      <thead>
+        <tr>
+          <th>תאריך</th>
+          <th>תיאור</th>
+          <th>שם המעביר</th>
+          <th>בנק</th>
+          <th>סניף</th>
+          <th>חשבון</th>
+          <th>הערות</th>
+          <th>סכום</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td>9.3.2026</td>
+          <td>זיכוי - בנק דיסקונט(י)</td>
+          <td>אוסובסקי עמי אוס</td>
+          <td>11-בנק דיסקונט לישראל בעמ</td>
+          <td>2-עפולה‎</td>
+          <td>3004130</td>
+          <td class="muted">העברה</td>
+          <td class="amount">₪22,050.00</td>
+        </tr>
+        <tr>
+          <td>9.3.2026</td>
+          <td>זיכוי - בנק הפועלים(י)</td>
+          <td>שטרול אורה ויצחק</td>
+          <td>12-בנק הפועלים בע'מ</td>
+          <td>549-כפר תבור‎</td>
+          <td>125469</td>
+          <td class="muted">חשמל סולרי</td>
+          <td class="amount">₪49,510.44</td>
+        </tr>
+        <tr>
+          <td>8.3.2026</td>
+          <td>זיכוי - בנק מסד (י)</td>
+          <td>רוזנברג לאוניד ו</td>
+          <td>46-בנק מסד</td>
+          <td>514-נצרת‎</td>
+          <td>72393</td>
+          <td class="muted">התקנת פאנלים סולריים (הערת לקוח)</td>
+          <td class="amount">₪36,932.11</td>
+        </tr>
+        <tr>
+          <td>5.3.2026</td>
+          <td>זיכוי - בנק לאומי (י)</td>
+          <td>יוסף אבראהים אשק</td>
+          <td>10-בנק לאומי לישראל בע'מ</td>
+          <td>973-תרשיחא‎</td>
+          <td>1386120</td>
+          <td class="muted">מערכת יוסף אשקר</td>
+          <td class="amount">₪20,000.00</td>
+        </tr>
+        <tr>
+          <td>5.3.2026</td>
+          <td>זיכוי - בנק בינלאומ(י)</td>
+          <td>עיזבון המנוחה כץ</td>
+          <td>31-בנק הבינ'ל הראשון בע'מ</td>
+          <td>111-עפולה‎</td>
+          <td>386766</td>
+          <td class="muted">סולארי (הערת לקוח)</td>
+          <td class="amount">₪20,122.00</td>
+        </tr>
+        <tr>
+          <td>4.3.2026</td>
+          <td>פרעון שיק דחוי לגביה</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="muted">—</td>
+          <td class="amount">₪7,200.00</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="footer">SEMO OS — Solar Operations System</p>
+  </div>
+</body>
+</html>
