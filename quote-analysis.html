@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>SEMO AGS — מחשבון הצעת מחיר סולארית</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   ORIGINAL TEMPLATE CSS — copied exactly from solar-quote-template.html
+   ══════════════════════════════════════════════════════════════════════════ */
+@page { size: A4 portrait; margin: 20mm 16mm 26mm 16mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Assistant', 'Heebo', sans-serif; font-size: 10pt; color: #111; direction: rtl; line-height: 1.6; padding: 24px 32px; max-width: 860px; margin: 0 auto; }
+
+.page-logo { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #1a3a5c; padding-bottom: 8px; margin-bottom: 18px; }
+.logo-area { display: flex; align-items: center; gap: 10px; }
+.logo-area img { height: 32px; }
+.company-name { font-size: 12pt; font-weight: 700; color: #1a3a5c; }
+.doc-meta { text-align: left; font-size: 8pt; color: #555; }
+
+h1 { font-size: 16pt; color: #1a3a5c; margin-bottom: 4px; }
+h2 { font-size: 10.5pt; color: #1a3a5c; border-right: 4px solid #F4A200; padding-right: 8px; margin-bottom: 10px; }
+
+.doc-title-block { text-align: center; padding: 14px 0 12px; border-bottom: 1px solid #ddd; margin-bottom: 18px; }
+.doc-title-block p { color: #555; font-size: 9pt; margin-top: 4px; }
+.ref-tag { display: inline-block; background: #1a3a5c; color: #F4A200; font-weight: 700; font-size: 8pt; padding: 2px 10px; border-radius: 20px; margin-top: 6px; }
+
+.section { margin-bottom: 20px; page-break-inside: avoid; }
+.doc-list { margin: 6px 0 0; padding-right: 18px; font-size: 9.5pt; line-height: 1.8; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 16px; }
+.field { display: flex; gap: 6px; font-size: 9.5pt; }
+.field .label { color: #555; white-space: nowrap; }
+.field .val { font-weight: 600; }
+
+table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-top: 4px; }
+th { background: #1a3a5c; color: white; padding: 5px 10px; text-align: right; font-weight: 600; }
+td { padding: 4px 10px; border-bottom: 1px solid #e8e8e8; }
+tr:nth-child(even) td { background: #f7f9fc; }
+td.num { text-align: left; font-family: inherit; font-weight: 600; }
+.total-row td { border-top: 2px solid #1a3a5c; font-weight: 700; background: #eef3f9 !important; }
+.vat-row td { font-size: 8.5pt; color: #555; background: #f9f9f9 !important; }
+
+.fin-box { background: #f0f7ff; border: 1px solid #b8d4f0; border-radius: 8px; padding: 12px 14px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 4px; }
+.fin-item { text-align: center; }
+.fin-val { font-size: 13pt; font-weight: 800; color: #1a3a5c; }
+.fin-lbl { font-size: 7.5pt; color: #666; margin-top: 2px; }
+
+.declaration { background: #f0fff4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; font-size: 9.5pt; line-height: 1.7; margin-bottom: 16px; }
+.extras-note { font-size: 8.5pt; color: #666; margin-bottom: 8px; font-style: italic; }
+
+.sig-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 14px; }
+.sig-field label { display: block; font-size: 8.5pt; color: #555; margin-bottom: 6px; }
+.mandatory-star { color: #dc2626; font-weight: 700; }
+.sig-field input[type=text] { width: 100%; border: none; border-bottom: 1.5px solid #333; background: transparent; font-size: 11pt; padding: 2px 4px; font-family: inherit; outline: none; }
+.sig-canvas-wrap { border: 1.5px solid #333; border-radius: 4px; background: #fff; height: 88px; display: flex; align-items: center; justify-content: center; color: #bbb; font-size: 9pt; }
+.agree-row { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; font-size: 9pt; }
+.agree-row input { margin-top: 2px; flex-shrink: 0; }
+.submit-btn { background: linear-gradient(135deg, #F4A200, #f59e0b); color: #0A1628; border: none; border-radius: 10px; padding: 13px 30px; font-size: 13pt; font-weight: 900; font-family: inherit; cursor: pointer; display: block; margin: 14px auto 0; }
+
+footer { font-size: 7.5pt; color: #888; text-align: center; margin-top: 18px; border-top: 1px solid #e0e0e0; padding-top: 7px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ANALYSIS OVERLAY — color markers only
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Floating legend bar */
+.analysis-legend {
+  position: sticky; top: 0; z-index: 999;
+  background: #0f172a; color: white; padding: 10px 20px; border-radius: 0 0 12px 12px;
+  display: flex; gap: 20px; align-items: center; justify-content: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4); margin: -24px -32px 20px -32px;
+  font-size: 10pt; flex-wrap: wrap;
+}
+.analysis-legend b { font-size: 11pt; margin-left: 12px; }
+.lg { display: flex; align-items: center; gap: 6px; }
+.lg-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+/* Marker overlays — subtle colored left/right borders + light tint */
+.m-static   { border-right: 5px solid #9ca3af; background: rgba(156,163,175,0.08); border-radius: 4px; padding: 8px 12px; margin-bottom: 2px; }
+.m-constant { border-right: 5px solid #8b5cf6; background: rgba(139,92,250,0.06); border-radius: 4px; padding: 8px 12px; margin-bottom: 2px; }
+.m-plan     { border-right: 5px solid #f59e0b; background: rgba(245,158,11,0.10); border-radius: 4px; padding: 8px 12px; margin-bottom: 2px; }
+.m-upgrade  { border-right: 5px solid #ec4899; background: rgba(236,72,153,0.08); border-radius: 4px; padding: 8px 12px; margin-bottom: 2px; }
+.m-sig      { border-right: 5px solid #3b82f6; background: rgba(59,130,246,0.08); border-radius: 4px; padding: 8px 12px; margin-bottom: 2px; }
+
+/* Inline marker tag */
+.mtag {
+  display: inline-block; font-size: 6.5pt; font-weight: 800; padding: 1px 5px;
+  border-radius: 3px; vertical-align: middle; letter-spacing: 0.3px; margin-left: 4px;
+}
+.mtag-s  { background: #9ca3af; color: white; }
+.mtag-c  { background: #8b5cf6; color: white; }
+.mtag-p  { background: #f59e0b; color: #1a1a2e; }
+.mtag-u  { background: #ec4899; color: white; }
+.mtag-sg { background: #3b82f6; color: white; }
+
+/* Upgrade row highlight inside tables */
+tr.row-upgrade td { background: rgba(236,72,153,0.12) !important; border-right: 4px solid #ec4899; }
+tr.row-plan td { background: rgba(245,158,11,0.12) !important; }
+</style>
+</head>
+<body>
+
+<!-- ── ANALYSIS LEGEND ─────────────────────────────────────────────────── -->
+<div class="analysis-legend">
+  <b>SEMO AGS — מיפוי סטטי / דינאמי</b>
+  <div class="lg"><div class="lg-dot" style="background:#9ca3af"></div> סטטי</div>
+  <div class="lg"><div class="lg-dot" style="background:#8b5cf6"></div> קבוע</div>
+  <div class="lg"><div class="lg-dot" style="background:#f59e0b"></div> דינאמי — תוכנית</div>
+  <div class="lg"><div class="lg-dot" style="background:#ec4899"></div> דינאמי — שדרוגים</div>
+  <div class="lg"><div class="lg-dot" style="background:#3b82f6"></div> דינאמי — חתימה</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- HEADER                                                               -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="page-logo">
+  <div class="logo-area">
+    <div style="width:32px;height:32px;background:radial-gradient(circle,#ffe066 0%,#F4A200 60%,#e8890a 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 12px rgba(244,162,0,0.5)">&#9728;</div>
+    <div class="company-name">סמו א.ג.ס בע"מ <span class="mtag mtag-c">CONSTANT</span></div>
+  </div>
+  <div class="doc-meta">
+    ח.פ. 515942282 <span class="mtag mtag-c">CONSTANT</span><br>
+    תאריך: 23/03/2026 <span class="mtag mtag-s">STATIC</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- TITLE                                                                -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="doc-title-block m-constant">
+  <h1>הסכם הצעת מחיר — מערכת סולארית</h1>
+  <p>מסמך זה מהווה הצעת מחיר מחייבת לאספקה והתקנה של מערכת סולארית</p>
+  <div class="ref-tag">SEMO-5u6e6c <span class="mtag mtag-s">STATIC</span></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- CLIENT DETAILS                                                       -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section m-static">
+  <h2>פרטי הלקוח <span class="mtag mtag-s">STATIC</span></h2>
+  <div class="grid2">
+    <div class="field"><span class="label">שם מלא:</span><span class="val">אניה ויעקב כהן</span></div>
+    <div class="field"><span class="label">טלפון:</span><span class="val">054-7891234</span></div>
+    <div class="field"><span class="label">כתובת:</span><span class="val">הזית 12</span></div>
+    <div class="field"><span class="label">עיר:</span><span class="val">כרמיאל</span></div>
+    <div class="field"><span class="label">תאריך הצעה:</span><span class="val">23/03/2026</span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- TECHNICAL SPEC                                                       -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section m-static">
+  <h2>מפרט טכני <span class="mtag mtag-s">STATIC</span></h2>
+  <table>
+    <tr><th>פרט</th><th>ערך</th></tr>
+    <tr><td>הספק DC</td><td>24 kWp</td></tr>
+    <tr><td>הספק AC</td><td>17 kW</td></tr>
+    <tr><td>פאנלים</td><td>38 יח' × 640W</td></tr>
+    <tr><td>שטח פאנלים</td><td>91.96 מ"ר</td></tr>
+    <tr><td>סוג גג</td><td>רעפים</td></tr>
+    <tr><td>ממיר</td><td>Huawei SUN2000</td></tr>
+    <tr><td>ייצור שנתי צפוי</td><td>42,000 קוט"ש</td></tr>
+    <tr><td>מפסק ראשי</td><td>3×25A</td></tr>
+    <tr><td>לוח מונים</td><td>כלול (AC > 15kW)</td></tr>
+    <tr><td>סוללות גיבוי</td><td>2 יח'</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- PRICE BREAKDOWN                                                      -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <h2>פירוט מחיר ההצעה (לא כולל מע"מ)</h2>
+  <table>
+    <tr><th>פריט</th><th style="text-align:left">מחיר</th></tr>
+    <tr><td>מערכת סולארית 24 kW × ₪2,800/kW <span class="mtag mtag-s">STATIC</span></td><td class="num">₪67,200</td></tr>
+    <tr><td>לוח מונים (AC > 15kW) <span class="mtag mtag-s">STATIC</span></td><td class="num">₪2,500</td></tr>
+    <tr><td>סוללות × 2 (ראשונה + נוספת) <span class="mtag mtag-s">STATIC</span></td><td class="num">₪15,400</td></tr>
+    <tr class="row-upgrade"><td>פאנלים פרימיום שחורים (Full Black) <span class="mtag mtag-u">UPGRADE</span></td><td class="num">₪8,760</td></tr>
+    <tr class="row-upgrade"><td>מטען רכב חשמלי 7kW <span class="mtag mtag-u">UPGRADE</span></td><td class="num">₪3,500</td></tr>
+    <tr class="row-upgrade"><td>אופטימייזרים <span class="mtag mtag-u">UPGRADE</span></td><td class="num">₪4,800</td></tr>
+    <tr class="total-row">
+      <td><strong>סה"כ לא כולל מע"מ</strong></td>
+      <td class="num"><strong>₪102,160</strong></td>
+    </tr>
+    <tr class="vat-row">
+      <td>סה"כ כולל מע"מ (18%)</td>
+      <td class="num">₪120,549</td>
+    </tr>
+  </table>
+  <p style="font-size:7.5pt;color:#888;margin-top:4px">מחיר בסיס: ₪85,100 <span class="mtag mtag-s">STATIC</span> &nbsp;+&nbsp; שדרוגים: ₪17,060 <span class="mtag mtag-u">DYNAMIC</span></p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- PAYMENT STAGES                                                       -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section m-static">
+  <h2>תנאי תשלום (4 שלבים) <span class="mtag mtag-s">STATIC</span></h2>
+  <table>
+    <tr><th>שלב</th><th>תיאור</th><th style="text-align:left">סכום (לא כולל מע"מ)</th></tr>
+    <tr><td>1 — מקדמה</td><td>בחתימת ההסכם</td><td class="num">₪6,000</td></tr>
+    <tr><td>2 — השלמה ל-35%</td><td>בקבלת תוכניות ביצוע</td><td class="num">₪23,785</td></tr>
+    <tr><td>3 — השלמה ל-95%</td><td>7 ימי עסקים בטרם אספקת פנלים לאתר</td><td class="num">₪51,060</td></tr>
+    <tr><td>4 — 5% אחרון</td><td>ביום החיבור לחברת החשמל</td><td class="num">₪4,255</td></tr>
+    <tr class="total-row"><td colspan="2"><strong>סה"כ</strong></td><td class="num"><strong>₪85,100</strong></td></tr>
+    <tr class="vat-row"><td colspan="2">סה"כ כולל מע"מ</td><td class="num">₪100,418</td></tr>
+  </table>
+  <p style="font-size:7.5pt;color:#888;margin-top:4px">שלבי התשלום מבוססים על המחיר הבסיסי בלבד — אינם מושפעים משדרוגים</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- FINANCIAL FORECAST                                                   -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section m-plan">
+  <h2>תחזית כלכלית (הערכה) <span class="mtag mtag-p">DYNAMIC — PLAN</span></h2>
+  <div class="fin-box">
+    <div class="fin-item"><div class="fin-val">₪16,380</div><div class="fin-lbl">הכנסות שנה 1</div></div>
+    <div class="fin-item"><div class="fin-val">19.2%</div><div class="fin-lbl">תשואה שנה 1</div></div>
+    <div class="fin-item"><div class="fin-val">5.2 שנה</div><div class="fin-lbl">החזר השקעה</div></div>
+    <div class="fin-item"><div class="fin-val">₪425,880</div><div class="fin-lbl">סה"כ הכנסות 26 שנה</div></div>
+    <div class="fin-item"><div class="fin-val">₪16,380</div><div class="fin-lbl">ממוצע שנתי</div></div>
+    <div class="fin-item"><div class="fin-val">₪340,780</div><div class="fin-lbl">רווח נטו 26 שנה</div></div>
+  </div>
+  <p style="font-size:8pt;color:#888;margin-top:6px">תעריף רגיל, כולל פרמיה עירונית (0.06 ₪/קוט"ש, 10 שנים ראשונות) — כל הנתונים הפיננסיים הם הערכות בלבד.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- EXTRAS / UPGRADES                                                    -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section m-upgrade">
+  <h2>שדרוגים ותוספות <span class="mtag mtag-u">DYNAMIC — UPGRADES</span></h2>
+  <p class="extras-note">הלקוח יכול לבחור שדרוגים — מחיר השדרוגים מתווסף למחיר הבסיסי</p>
+  <table>
+    <tr><th>שדרוג</th><th style="text-align:left">מחיר</th></tr>
+    <tr class="row-upgrade"><td>&#9745; פאנלים פרימיום שחורים (Full Black)</td><td class="num">₪8,760</td></tr>
+    <tr class="row-upgrade"><td>&#9745; מטען רכב חשמלי 7kW</td><td class="num">₪3,500</td></tr>
+    <tr class="row-upgrade"><td>&#9745; אופטימייזרים</td><td class="num">₪4,800</td></tr>
+    <tr><td style="color:#bbb">&#9744; ממיר היברידי</td><td class="num" style="color:#bbb">₪5,200</td></tr>
+    <tr class="total-row"><td><strong>סה"כ שדרוגים</strong></td><td class="num"><strong>₪17,060</strong></td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- WARRANTY TABLE                                                       -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section m-static">
+  <h2>מפרט ציוד ואחריות <span class="mtag mtag-s">STATIC</span></h2>
+  <table>
+    <tr><th>רכיב</th><th>ערך</th></tr>
+    <tr><td>פנלים Tier 1 בהספק 640 וואט</td><td>אחריות יצרן 30 שנה</td></tr>
+    <tr><td>אינוורטר Huawei SUN2000</td><td>אחריות יצרן 10 שנים</td></tr>
+    <tr><td>עבודת התקנה</td><td>אחריות 5 שנים</td></tr>
+    <tr><td>קונסטרוקציה ותשתיות</td><td>נירוסטה, ברגים אירופאים</td></tr>
+    <tr><td>ציוד מיתוג ABB</td><td>יצרת שוויץ או שווה ערך</td></tr>
+    <tr><td>אפליקציה ניטור</td><td>כלול</td></tr>
+    <tr><td>חיווט בתעלות</td><td>כלול</td></tr>
+    <tr><td>הגנות ברקים DC</td><td>כלול</td></tr>
+    <tr><td>סוללות גיבוי 2 יח'</td><td>אחריות יצרן 10 שנים</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- GENERAL TERMS                                                        -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section m-constant">
+  <h2>תנאים כלליים <span class="mtag mtag-c">CONSTANT</span></h2>
+  <p style="font-size:9pt;line-height:1.8;color:#333">
+    1. הצעה זו בתוקף למשך 30 יום מתאריך הנפקתה.<br>
+    2. לכל הסכומים יצורף מע"מ כחוק (18%).<br>
+    3. לוח זמנים צפוי: עד 60 ימי עסקים מחתימת ההסכם.<br>
+    4. כל שינוי בהסכם ייעשה בכתב ובהסכמת שני הצדדים.<br>
+    5. הסכם זה כפוף לדין הישראלי וסמכות השיפוט לבתי המשפט בישראל.
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- CLIENT DECLARATION                                                   -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section m-constant">
+  <h2>הצהרת הלקוח <span class="mtag mtag-c">CONSTANT</span></h2>
+  <div class="declaration">אני הח"מ מאשר/ת כי קראתי את הצעת המחיר, הבנתי את כל תנאיה, ואני מסכים/ת לפרטים הטכניים, למחיר וללוח התשלומים. אני מסכים/ת לאספקת המערכת ולהתקנתה על פי המפרט הנ"ל ומתחייב/ת לשלם בהתאם ללוח התשלומים המוסכם.</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- SIGNATURE BLOCK                                                      -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section m-sig">
+  <h2>חתימה ואישור <span class="mtag mtag-sg">DYNAMIC — SIGNATURE</span></h2>
+
+  <div class="sig-row">
+    <div class="sig-field">
+      <label>מספר תעודת זהות <span class="mandatory-star">*</span></label>
+      <input type="text" placeholder="000000000" disabled>
+    </div>
+    <div class="sig-field">
+      <label>שם מלא</label>
+      <input type="text" value="אניה ויעקב כהן" disabled>
+    </div>
+    <div class="sig-field">
+      <label>תאריך</label>
+      <input type="text" value="23/03/2026" disabled>
+    </div>
+  </div>
+
+  <div style="margin-bottom:10px">
+    <label style="font-size:8.5pt;color:#555;display:block;margin-bottom:5px">חתימה <span class="mandatory-star">*</span></label>
+    <div class="sig-canvas-wrap">חתימה דיגיטלית על canvas</div>
+  </div>
+
+  <div class="agree-row">
+    <input type="checkbox" disabled>
+    <label>קראתי את ההסכם, הבנתי את תנאיו ואני מאשר/ת את כל הפרטים. ידוע לי כי חתימה זו מהווה התחייבות משפטית.</label>
+  </div>
+
+  <button class="submit-btn" disabled>&#10004; אשר וחתום על ההסכם</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- FOOTER                                                               -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<footer>
+  סמו א.ג.ס בע"מ | ח.פ. 515942282 | סביון 4, קריית טבעון | 052-5247272
+  <span class="mtag mtag-c">CONSTANT</span>
+</footer>
+
+</body>
+</html>
