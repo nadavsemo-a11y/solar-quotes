@@ -208,10 +208,10 @@ const uploadedFiles = {}; // ref -> { file, name, uploaded }
 const fieldValues = {};   // ref -> { fieldId: value }
 
 // ── Init ─────────────────────────────────────────────────────────────────
+const IS_DEMO = new URLSearchParams(window.location.search).get('demo') === 'true';
+
 document.getElementById('vendorName').textContent = V.supplierName || '';
 loadTasks();
-
-const IS_DEMO = new URLSearchParams(window.location.search).get('demo') === 'true';
 
 async function loadTasks() {
   try {
