@@ -158,19 +158,57 @@ export class VendorService {
             id text
           }
           parent_item { id name
-            column_values(ids: ["lookup_mkywmsse"]) { text }
+            column_values(ids: ["lookup_mkywmsse", "dropdown_mkywtpq4"]) { id text }
           }
         }
       }`;
       const subRes = await this._mondayQuery(subQuery);
       const items = subRes.data?.items || [];
 
+      // Collect parent IDs to fetch client phone numbers
+      const parentIds = new Set();
+      for (const item of items) {
+        if (item.parent_item?.id) parentIds.add(item.parent_item.id);
+      }
+
+      // Fetch client phones from parent items' client relation
+      const phoneMap = {};
+      if (parentIds.size > 0) {
+        try {
+          const phoneQuery = `query { items(ids: [${[...parentIds].join(',')}]) { id column_values(ids: ["board_relation_mkywy46r"]) { ... on BoardRelationValue { linked_item_ids } } } }`;
+          const phoneRes = await this._mondayQuery(phoneQuery);
+          const clientIds = new Set();
+          const parentToClient = {};
+          for (const p of phoneRes.data?.items || []) {
+            const cIds = p.column_values?.[0]?.linked_item_ids || [];
+            if (cIds.length > 0) {
+              parentToClient[p.id] = cIds[0];
+              clientIds.add(cIds[0]);
+            }
+          }
+          if (clientIds.size > 0) {
+            const clientQuery = `query { items(ids: [${[...clientIds].join(',')}]) { id column_values(ids: ["phone_mkyw1rbw"]) { text } } }`;
+            const clientRes = await this._mondayQuery(clientQuery);
+            const clientPhones = {};
+            for (const c of clientRes.data?.items || []) {
+              clientPhones[c.id] = c.column_values?.[0]?.text || '';
+            }
+            for (const [pid, cid] of Object.entries(parentToClient)) {
+              phoneMap[pid] = clientPhones[cid] || '';
+            }
+          }
+        } catch { /* phone is best-effort */ }
+      }
+
       for (const item of items) {
         const status = item.column_values?.[0]?.text || '';
         if (status !== 'בתהליך') continue;
 
         const parentName = item.parent_item?.name || '';
-        const address = item.parent_item?.column_values?.[0]?.text || '';
+        const parentCols = item.parent_item?.column_values || [];
+        const address = parentCols.find(c => c.id === 'lookup_mkywmsse')?.text || '';
+        const roofType = parentCols.find(c => c.id === 'dropdown_mkywtpq4')?.text || '';
+        const phone = phoneMap[item.parent_item?.id] || '';
 
         // Determine task-specific rules from vendor config
         const taskRules = this._getTaskRules(vendor.config, item.name);
@@ -180,6 +218,8 @@ export class VendorService {
           projectName: parentName,
           taskName: item.name,
           address,
+          roofType,
+          phone,
           taskRules,
         });
       }
