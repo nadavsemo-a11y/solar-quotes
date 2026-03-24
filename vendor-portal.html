@@ -278,8 +278,10 @@ function render() {
 
   const needsFile = tasks.some(t => t.taskRules?.requireFile);
   const hasWorkOrder = tasks.some(t => t.workOrderUrl);
+  const hasDesignFiles = tasks.some(t => t.designFiles?.length > 0);
 
   let cols = `<th>פרויקט</th><th>משימה</th><th>כתובת</th><th>טלפון</th><th>תאריך מתוכנן</th>`;
+  if (hasDesignFiles) cols += `<th>מפרט התקנה</th>`;
   if (needsFile) cols += `<th>קובץ</th>`;
   if (hasWorkOrder) cols += `<th>הזמנת עבודה</th>`;
   cols += `<th>פעולה</th>`;
@@ -288,6 +290,19 @@ function render() {
     if (t.hasFile) uploadedFiles[t.ref] = { name: 'קיים', uploaded: true };
     const dateVal = t.plannedDate ? t.plannedDate.split(' ')[0] : '';
     const rules = t.taskRules || {};
+
+    // Design files column
+    let designTd = '';
+    if (hasDesignFiles) {
+      if (t.designFiles?.length > 0) {
+        const links = t.designFiles.map(f =>
+          `<a class="btn-doc" href="${esc(f.url)}" target="_blank" style="margin-bottom:3px;">&#128196; ${esc(f.name)}</a>`
+        ).join('');
+        designTd = `<td data-label="מפרט התקנה"><div style="display:flex;flex-direction:column;gap:3px;">${links}</div></td>`;
+      } else {
+        designTd = `<td data-label="מפרט התקנה"><span style="color:var(--gray-light)">—</span></td>`;
+      }
+    }
 
     let fileTd = '';
     if (needsFile) {
@@ -320,7 +335,7 @@ function render() {
     if (rules.serialNumbers) {
       if (!fieldValues[t.ref]) fieldValues[t.ref] = {};
       if (!fieldValues[t.ref]._serials) fieldValues[t.ref]._serials = [''];
-      const colSpan = 5 + (needsFile ? 1 : 0) + (hasWorkOrder ? 1 : 0) + 1;
+      const colSpan = 5 + (hasDesignFiles ? 1 : 0) + (needsFile ? 1 : 0) + (hasWorkOrder ? 1 : 0) + 1;
       fieldsRow = `<tr class="fields-row" id="fields-${t.ref}"><td colspan="${colSpan}">
         <div class="fields-content">
           <div class="field-label">${esc(rules.serialLabel || 'מספרים סיריאליים')} <span style="color:var(--red)">*</span></div>
@@ -341,6 +356,7 @@ function render() {
       <td data-label="כתובת" class="td-address">${esc(t.address || '—')}</td>
       <td data-label="טלפון" class="td-phone">${t.phone ? `<a href="tel:${esc(t.phone)}">${esc(t.phone)}</a>` : '—'}</td>
       <td data-label="תאריך" class="td-date"><input type="date" value="${dateVal}" onchange="updateDate('${t.ref}', this.value)"></td>
+      ${designTd}
       ${fileTd}
       ${woTd}
       <td data-label="פעולה" class="td-actions" id="action-${t.ref}">
