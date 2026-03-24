@@ -249,7 +249,7 @@ export class VendorService {
 
         // Auto-generate work order URL for installation tasks
         let workOrderUrl = '';
-        if (item.name.includes(INSTALLATION_TASK) && dcPower && pricePerKw) {
+        if (item.name.includes(INSTALLATION_TASK)) {
           const dc = parseFloat(dcPower) || 0;
           const ppk = parseFloat(pricePerKw) || 0;
           const ac = parseFloat(acPower) || 0;
