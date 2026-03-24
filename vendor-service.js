@@ -24,6 +24,7 @@ const STATUS_COLUMN_ID     = 'color_mkywhgg6';
 const VENDOR_FILE_COL_ID   = 'file_mm1qw5m2';
 const PLANNED_DATE_COL_ID  = 'date_mm1qrxf0';
 const DESIGN_PLAN_COL_ID   = 'file_mm1rdfhs';
+const SIGNED_WO_COL_ID    = 'link_mm1rdbfd';
 const PRICE_COL_ID         = 'numeric_mkyw7ky';
 const AC_POWER_COL_ID      = 'numeric_mkyxfrg9';
 const DC_POWER_COL_ID      = 'numeric_mm1bdmv6';
@@ -167,7 +168,7 @@ export class VendorService {
         items(ids: [${batch.join(',')}]) {
           id
           name
-          column_values(ids: ["${STATUS_COLUMN_ID}", "${VENDOR_FILE_COL_ID}", "${PLANNED_DATE_COL_ID}", "${PRICE_COL_ID}"]) {
+          column_values(ids: ["${STATUS_COLUMN_ID}", "${VENDOR_FILE_COL_ID}", "${PLANNED_DATE_COL_ID}", "${PRICE_COL_ID}", "${SIGNED_WO_COL_ID}"]) {
             id text
           }
           parent_item { id name
@@ -229,6 +230,8 @@ export class VendorService {
         const plannedDate = dateCol?.text || '';
         const priceCol = item.column_values?.find(c => c.id === PRICE_COL_ID);
         const pricePerKw = priceCol?.text || '';
+        const signedWoCol = item.column_values?.find(c => c.id === SIGNED_WO_COL_ID);
+        const isWorkOrderSigned = !!(signedWoCol?.text);
 
         const parentName = item.parent_item?.name || '';
         const parentCols = item.parent_item?.column_values || [];
@@ -275,18 +278,9 @@ export class VendorService {
           plannedDate,
           designFiles,
           workOrderUrl: workOrderUrl || undefined,
-          workOrderSigned: false, // Will be checked via KV
+          workOrderSigned: isWorkOrderSigned,
           taskRules,
         });
-      }
-    }
-
-    // Check work order signature status from KV
-    for (const task of tasks) {
-      if (task.workOrderUrl) {
-        const sigKey = `sig:work-order:${task.ref}`;
-        const sigData = await this._kv.get(sigKey);
-        if (sigData) task.workOrderSigned = true;
       }
     }
 
