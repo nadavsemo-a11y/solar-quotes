@@ -23,6 +23,7 @@ const PROJECTS_BOARD_ID    = 5089265830;
 const STATUS_COLUMN_ID     = 'color_mkywhgg6';
 const VENDOR_FILE_COL_ID   = 'file_mm1qw5m2';
 const PLANNED_DATE_COL_ID  = 'date_mm1qrxf0';
+const DESIGN_PLAN_COL_ID   = 'file_mm1rdfhs';
 const VENDOR_CONFIG_COL_ID = 'long_text_mm1qf7wq';
 const SUPPLIER_RELATION_COL = 'board_relation_mkywenar';
 const BUTTONS_BOARD_ID     = 5093182974;
@@ -166,7 +167,12 @@ export class VendorService {
             id text
           }
           parent_item { id name
-            column_values(ids: ["lookup_mkywmsse", "dropdown_mkywtpq4"]) { id text }
+            column_values(ids: ["lookup_mkywmsse", "dropdown_mkywtpq4", "${DESIGN_PLAN_COL_ID}"]) {
+              id text
+              ... on FileValue {
+                files { ... on FileAssetValue { name asset { id name public_url } } }
+              }
+            }
           }
         }
       }`;
@@ -224,6 +230,12 @@ export class VendorService {
         const roofType = parentCols.find(c => c.id === 'dropdown_mkywtpq4')?.text || '';
         const phone = phoneMap[item.parent_item?.id] || '';
 
+        // Design plan files from parent project
+        const designCol = parentCols.find(c => c.id === DESIGN_PLAN_COL_ID);
+        const designFiles = (designCol?.files || [])
+          .filter(f => f.asset?.public_url)
+          .map(f => ({ name: f.name || f.asset?.name || 'קובץ', url: f.asset.public_url }));
+
         // Determine task-specific rules from buttons board (per task type)
         const taskRules = this._getTaskRules(taskReqMap, item.name);
 
@@ -236,6 +248,7 @@ export class VendorService {
           phone,
           hasFile,
           plannedDate,
+          designFiles,
           taskRules,
         });
       }
