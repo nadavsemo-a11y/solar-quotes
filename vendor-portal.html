@@ -280,7 +280,7 @@ function render() {
   const hasWorkOrder = tasks.some(t => t.workOrderUrl);
   const hasDesignFiles = tasks.some(t => t.designFiles?.length > 0);
 
-  let cols = `<th>פרויקט</th><th>משימה</th><th>כתובת</th><th>טלפון</th><th>תאריך מתוכנן</th>`;
+  let cols = `<th>פרויקט</th><th>הספק DC</th><th>כתובת</th><th>טלפון</th><th>תאריך מתוכנן</th>`;
   if (hasDesignFiles) cols += `<th>מפרט התקנה</th>`;
   if (needsFile) cols += `<th>קובץ</th>`;
   if (hasWorkOrder) cols += `<th>הזמנת עבודה</th>`;
@@ -352,7 +352,7 @@ function render() {
 
     return `<tr id="row-${t.ref}">
       <td data-label="פרויקט" class="td-project">${esc(t.projectName)}</td>
-      <td data-label="משימה" class="td-task">${esc(t.taskName)}</td>
+      <td data-label="הספק DC" class="td-task">${t.dcPower ? esc(t.dcPower) + ' kWp' : '—'}</td>
       <td data-label="כתובת" class="td-address">${esc(t.address || '—')}</td>
       <td data-label="טלפון" class="td-phone">${t.phone ? `<a href="tel:${esc(t.phone)}">${esc(t.phone)}</a>` : '—'}</td>
       <td data-label="תאריך" class="td-date"><input type="date" value="${dateVal}" onchange="updateDate('${t.ref}', this.value)"></td>
