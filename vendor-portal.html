@@ -375,17 +375,27 @@ function render() {
 // ── File ──
 // Track when vendor opens the work order — on return, check if signed
 function markWoOpened(ref) {
-  // Listen for when the user comes back to this tab
-  const handler = () => {
-    // In demo mode, auto-mark as signed
+  const handler = async () => {
     if (IS_DEMO) {
       woSignedRefs.add(ref);
       const cell = document.querySelector(`#row-${ref} .btn-doc`)?.closest('td');
       if (cell) cell.innerHTML = `<span class="file-btn done">&#10003; נחתם</span>`;
       updateDoneButton(ref);
       showToast('הזמנת עבודה נחתמה (דמו)', 'success');
+    } else {
+      // Check signature status via API
+      try {
+        const res = await fetch(`${API}/sign/${ref}`);
+        const data = await res.json();
+        if (data.signed) {
+          woSignedRefs.add(ref);
+          const cell = document.querySelector(`#row-${ref} .btn-doc`)?.closest('td');
+          if (cell) cell.innerHTML = `<span class="file-btn done">&#10003; נחתם</span>`;
+          updateDoneButton(ref);
+          showToast('הזמנת עבודה נחתמה', 'success');
+        }
+      } catch {}
     }
-    // In production: would check signature status via API
     window.removeEventListener('focus', handler);
   };
   setTimeout(() => window.addEventListener('focus', handler), 1000);
