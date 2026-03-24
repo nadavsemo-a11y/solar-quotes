@@ -242,6 +242,7 @@ const HIGHLIGHT_REF = URL_PARAMS.get('highlight') || '';
 let tasks = [];
 const uploadedFiles = {};
 const fieldValues = {};
+const woSignedRefs = new Set();
 
 document.getElementById('vendorName').textContent = V.supplierName || '';
 loadTasks();
@@ -304,9 +305,14 @@ function render() {
 
     let woTd = '';
     if (hasWorkOrder) {
-      woTd = t.workOrderUrl
-        ? `<td data-label="הזמנת עבודה"><a class="btn-doc" href="${esc(t.workOrderUrl)}" target="_blank">&#128196; צפה</a></td>`
-        : `<td data-label="הזמנת עבודה">—</td>`;
+      if (t.workOrderUrl) {
+        const woSigned = t.workOrderSigned || false;
+        woTd = woSigned
+          ? `<td data-label="הזמנת עבודה"><span class="file-btn done">&#10003; נחתם</span></td>`
+          : `<td data-label="הזמנת עבודה"><a class="btn-doc" href="${esc(t.workOrderUrl)}" target="_blank" onclick="markWoOpened('${t.ref}')">&#9997; חתום</a></td>`;
+      } else {
+        woTd = `<td data-label="הזמנת עבודה">—</td>`;
+      }
     }
 
     // Serial numbers row
@@ -351,6 +357,24 @@ function render() {
 }
 
 // ── File ──
+// Track when vendor opens the work order — on return, check if signed
+function markWoOpened(ref) {
+  // Listen for when the user comes back to this tab
+  const handler = () => {
+    // In demo mode, auto-mark as signed
+    if (IS_DEMO) {
+      woSignedRefs.add(ref);
+      const cell = document.querySelector(`#row-${ref} .btn-doc`)?.closest('td');
+      if (cell) cell.innerHTML = `<span class="file-btn done">&#10003; נחתם</span>`;
+      updateDoneButton(ref);
+      showToast('הזמנת עבודה נחתמה (דמו)', 'success');
+    }
+    // In production: would check signature status via API
+    window.removeEventListener('focus', handler);
+  };
+  setTimeout(() => window.addEventListener('focus', handler), 1000);
+}
+
 function onFieldChange(ref, fieldId, value) {
   if (!fieldValues[ref]) fieldValues[ref] = {};
   fieldValues[ref][fieldId] = value;
@@ -428,6 +452,7 @@ function canComplete(task) {
   const r = task.taskRules || {};
   if (r.requireFile && !uploadedFiles[task.ref]?.uploaded) return false;
   if (r.serialNumbers && getSerials(task.ref).length === 0) return false;
+  if (task.workOrderUrl && !task.workOrderSigned && !woSignedRefs.has(task.ref)) return false;
   for (const f of (r.fields || [])) { if (f.required && !(fieldValues[task.ref] || {})[f.id]?.trim()) return false; }
   return true;
 }
