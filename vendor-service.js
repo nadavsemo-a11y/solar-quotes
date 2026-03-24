@@ -167,7 +167,7 @@ export class VendorService {
             id text
           }
           parent_item { id name
-            column_values(ids: ["lookup_mkywmsse", "dropdown_mkywtpq4", "${DESIGN_PLAN_COL_ID}"]) {
+            column_values(ids: ["lookup_mkywmsse", "dropdown_mkywtpq4", "numeric_mm1bdmv6", "${DESIGN_PLAN_COL_ID}"]) {
               id text
               ... on FileValue {
                 files { ... on FileAssetValue { name asset { id name public_url } } }
@@ -228,6 +228,7 @@ export class VendorService {
         const parentCols = item.parent_item?.column_values || [];
         const address = parentCols.find(c => c.id === 'lookup_mkywmsse')?.text || '';
         const roofType = parentCols.find(c => c.id === 'dropdown_mkywtpq4')?.text || '';
+        const dcPower = parentCols.find(c => c.id === 'numeric_mm1bdmv6')?.text || '';
         const phone = phoneMap[item.parent_item?.id] || '';
 
         // Design plan files from parent project
@@ -245,6 +246,7 @@ export class VendorService {
           taskName: item.name,
           address,
           roofType,
+          dcPower,
           phone,
           hasFile,
           plannedDate,
