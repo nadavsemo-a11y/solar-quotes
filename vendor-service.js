@@ -24,6 +24,10 @@ const STATUS_COLUMN_ID     = 'color_mkywhgg6';
 const VENDOR_FILE_COL_ID   = 'file_mm1qw5m2';
 const PLANNED_DATE_COL_ID  = 'date_mm1qrxf0';
 const DESIGN_PLAN_COL_ID   = 'file_mm1rdfhs';
+const PRICE_COL_ID         = 'numeric_mkyw7ky';
+const AC_POWER_COL_ID      = 'numeric_mkyxfrg9';
+const DC_POWER_COL_ID      = 'numeric_mm1bdmv6';
+const INSTALLATION_TASK    = 'התקנת מערכת';
 const VENDOR_CONFIG_COL_ID = 'long_text_mm1qf7wq';
 const SUPPLIER_RELATION_COL = 'board_relation_mkywenar';
 const BUTTONS_BOARD_ID     = 5093182974;
@@ -163,11 +167,11 @@ export class VendorService {
         items(ids: [${batch.join(',')}]) {
           id
           name
-          column_values(ids: ["${STATUS_COLUMN_ID}", "${VENDOR_FILE_COL_ID}", "${PLANNED_DATE_COL_ID}"]) {
+          column_values(ids: ["${STATUS_COLUMN_ID}", "${VENDOR_FILE_COL_ID}", "${PLANNED_DATE_COL_ID}", "${PRICE_COL_ID}"]) {
             id text
           }
           parent_item { id name
-            column_values(ids: ["lookup_mkywmsse", "dropdown_mkywtpq4", "numeric_mm1bdmv6", "${DESIGN_PLAN_COL_ID}"]) {
+            column_values(ids: ["lookup_mkywmsse", "dropdown_mkywtpq4", "${DC_POWER_COL_ID}", "${AC_POWER_COL_ID}", "${DESIGN_PLAN_COL_ID}"]) {
               id text
               ... on FileValue {
                 files { ... on FileAssetValue { name asset { id name public_url } } }
@@ -223,12 +227,15 @@ export class VendorService {
         const hasFile = !!(fileCol?.text);
         const dateCol = item.column_values?.find(c => c.id === PLANNED_DATE_COL_ID);
         const plannedDate = dateCol?.text || '';
+        const priceCol = item.column_values?.find(c => c.id === PRICE_COL_ID);
+        const pricePerKw = priceCol?.text || '';
 
         const parentName = item.parent_item?.name || '';
         const parentCols = item.parent_item?.column_values || [];
         const address = parentCols.find(c => c.id === 'lookup_mkywmsse')?.text || '';
         const roofType = parentCols.find(c => c.id === 'dropdown_mkywtpq4')?.text || '';
-        const dcPower = parentCols.find(c => c.id === 'numeric_mm1bdmv6')?.text || '';
+        const dcPower = parentCols.find(c => c.id === DC_POWER_COL_ID)?.text || '';
+        const acPower = parentCols.find(c => c.id === AC_POWER_COL_ID)?.text || '';
         const phone = phoneMap[item.parent_item?.id] || '';
 
         // Design plan files from parent project
@@ -239,6 +246,22 @@ export class VendorService {
 
         // Determine task-specific rules from buttons board (per task type)
         const taskRules = this._getTaskRules(taskReqMap, item.name);
+
+        // Auto-generate work order URL for installation tasks
+        let workOrderUrl = '';
+        if (item.name.includes(INSTALLATION_TASK) && dcPower && pricePerKw) {
+          const dc = parseFloat(dcPower) || 0;
+          const ppk = parseFloat(pricePerKw) || 0;
+          const ac = parseFloat(acPower) || 0;
+          const totalPrice = Math.round(dc * ppk);
+          workOrderUrl = `${this._baseUrl}/v/wo/${encodeId(item.id)}?p=${encodeURIComponent(parentName)}&c=${encodeURIComponent(vendor.supplierName)}&dc=${dc}&ac=${ac}&ppk=${ppk}&total=${totalPrice}`;
+        }
+
+        // For installation tasks: require serial numbers
+        if (item.name.includes(INSTALLATION_TASK)) {
+          taskRules.serialNumbers = true;
+          taskRules.serialLabel = 'מספרים סיריאליים — ממירים';
+        }
 
         tasks.push({
           ref: encodeId(item.id),
@@ -251,8 +274,19 @@ export class VendorService {
           hasFile,
           plannedDate,
           designFiles,
+          workOrderUrl: workOrderUrl || undefined,
+          workOrderSigned: false, // Will be checked via KV
           taskRules,
         });
+      }
+    }
+
+    // Check work order signature status from KV
+    for (const task of tasks) {
+      if (task.workOrderUrl) {
+        const sigKey = `sig:work-order:${task.ref}`;
+        const sigData = await this._kv.get(sigKey);
+        if (sigData) task.workOrderSigned = true;
       }
     }
 
