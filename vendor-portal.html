@@ -278,12 +278,13 @@ function render() {
 
   const needsFile = tasks.some(t => t.taskRules?.requireFile);
   const hasWorkOrder = tasks.some(t => t.workOrderUrl);
+  const hasNeedsPrice = tasks.some(t => t.needsPrice);
   const hasDesignFiles = tasks.some(t => t.designFiles?.length > 0);
 
   let cols = `<th>פרויקט</th><th>הספק DC</th><th>כתובת</th><th>טלפון</th><th>תאריך מתוכנן</th>`;
   if (hasDesignFiles) cols += `<th>מפרט התקנה</th>`;
   if (needsFile) cols += `<th>קובץ</th>`;
-  if (hasWorkOrder) cols += `<th>הזמנת עבודה</th>`;
+  if (hasWorkOrder || hasNeedsPrice) cols += `<th>הזמנת עבודה</th>`;
   cols += `<th>פעולה</th>`;
 
   const rows = tasks.map(t => {
@@ -319,8 +320,15 @@ function render() {
     }
 
     let woTd = '';
-    if (hasWorkOrder) {
-      if (t.workOrderUrl) {
+    if (hasWorkOrder || hasNeedsPrice) {
+      if (t.needsPrice) {
+        woTd = `<td data-label="הזמנת עבודה" id="wo-cell-${t.ref}">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="number" id="price-${t.ref}" placeholder="מחיר ל-kW" style="width:90px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--light);font-size:13px;direction:ltr;">
+            <button class="btn-doc" onclick="setPrice('${t.ref}')">&#10003;</button>
+          </div>
+        </td>`;
+      } else if (t.workOrderUrl) {
         const woSigned = t.workOrderSigned || false;
         woTd = woSigned
           ? `<td data-label="הזמנת עבודה"><span class="file-btn done">&#10003; נחתם</span></td>`
@@ -335,7 +343,7 @@ function render() {
     if (rules.serialNumbers) {
       if (!fieldValues[t.ref]) fieldValues[t.ref] = {};
       if (!fieldValues[t.ref]._serials) fieldValues[t.ref]._serials = [''];
-      const colSpan = 5 + (hasDesignFiles ? 1 : 0) + (needsFile ? 1 : 0) + (hasWorkOrder ? 1 : 0) + 1;
+      const colSpan = 5 + (hasDesignFiles ? 1 : 0) + (needsFile ? 1 : 0) + ((hasWorkOrder || hasNeedsPrice) ? 1 : 0) + 1;
       fieldsRow = `<tr class="fields-row" id="fields-${t.ref}"><td colspan="${colSpan}">
         <div class="fields-content">
           <div class="field-label">${esc(rules.serialLabel || 'מספרים סיריאליים')} <span style="color:var(--red)">*</span></div>
@@ -373,6 +381,35 @@ function render() {
 }
 
 // ── File ──
+async function setPrice(ref) {
+  const input = document.getElementById(`price-${ref}`);
+  const price = input?.value?.trim();
+  if (!price || isNaN(price) || parseFloat(price) <= 0) {
+    showToast('יש להזין מחיר תקין', 'error');
+    return;
+  }
+  if (IS_DEMO) {
+    showToast('[דמו] מחיר עודכן — רענן את הדף', 'success');
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/v/api/set-price`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: TOKEN, taskRef: ref, price }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('מחיר עודכן — טוען מחדש...', 'success');
+      setTimeout(() => loadTasks(), 1500);
+    } else {
+      showToast('שגיאה: ' + (data.error || ''), 'error');
+    }
+  } catch (e) {
+    showToast('שגיאה: ' + e.message, 'error');
+  }
+}
+
 // Track when vendor opens the work order — on return, check if signed
 function markWoOpened(ref) {
   const handler = async () => {
