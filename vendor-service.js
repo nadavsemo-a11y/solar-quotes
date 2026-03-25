@@ -250,14 +250,19 @@ export class VendorService {
         // Determine task-specific rules from buttons board (per task type)
         const taskRules = this._getTaskRules(taskReqMap, item.name);
 
-        // Auto-generate work order URL for installation tasks
+        // Auto-generate work order URL for installation tasks (only if price exists)
         let workOrderUrl = '';
+        let needsPrice = false;
         if (item.name.includes(INSTALLATION_TASK)) {
           const dc = parseFloat(dcPower) || 0;
           const ppk = parseFloat(pricePerKw) || 0;
           const ac = parseFloat(acPower) || 0;
-          const totalPrice = Math.round(dc * ppk);
-          workOrderUrl = `${this._baseUrl}/v/wo/${encodeId(item.id)}?p=${encodeURIComponent(parentName)}&c=${encodeURIComponent(vendor.supplierName)}&dc=${dc}&ac=${ac}&ppk=${ppk}&total=${totalPrice}`;
+          if (ppk > 0) {
+            const totalPrice = Math.round(dc * ppk);
+            workOrderUrl = `${this._baseUrl}/v/wo/${encodeId(item.id)}?p=${encodeURIComponent(parentName)}&c=${encodeURIComponent(vendor.supplierName)}&dc=${dc}&ac=${ac}&ppk=${ppk}&total=${totalPrice}`;
+          } else {
+            needsPrice = true;
+          }
         }
 
         // For installation tasks: require serial numbers
@@ -279,6 +284,7 @@ export class VendorService {
           designFiles,
           workOrderUrl: workOrderUrl || undefined,
           workOrderSigned: isWorkOrderSigned,
+          needsPrice: needsPrice || undefined,
           taskRules,
         });
       }
