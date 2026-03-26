@@ -28,8 +28,7 @@ const TemplateEngine = (() => {
       ['ייצור שנתי משוער',  `${fmt(d.annualKwh)} קו"ט`],
       ['מפסק ראשי',         `${d.breaker.size}A (${d.breaker.current}A חישובי)`],
     ];
-    if (d.batt > 0) rows.push(['מצברי אגירה', `${d.batt} × 5 קו"ט`]);
-    if (d.evCharger === 'כן') rows.push(['עמדת טעינה EV', d.evModel || 'כלול']);
+    // Battery & EV charger specs driven by extras upgrade system — not hardcoded
     if (d.needsMeter) rows.push(['לוח מונה ייצור', 'נדרש (AC > 15kW)']);
     return rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('\n    ');
   }
@@ -39,15 +38,14 @@ const TemplateEngine = (() => {
     const rows = [];
     rows.push([`מערכת סולארית ${d.dcKW} קו"ט`, `₪${fmt(d.dcKW * d.ppkw)}`]);
     if (d.roof === 'בטון') rows.push(['תוספת גג בטון', `₪${fmt(d.dcKW * d.concretePerKw)}`]);
-    if (d.batt > 0)        rows.push([`מצברי אגירה ${d.batt} × 5 קו"ט`, `₪${fmt(d.batteryPrice)}`]);
+    // Battery price driven by extras upgrade system — not hardcoded
     if (d.needsMeter)       rows.push(['לוח מונה ייצור', `₪${fmt(d.meterPanelPrice)}`]);
     return rows.map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join('\n    ');
   }
 
-  // ── שורת אחריות מצבר ──────────────────────────────────────────────────
+  // ── שורת אחריות מצבר — legacy stub (warranty now in content-manager) ──
   function buildBatteryWarrantyRow(d) {
-    if (d.batt <= 0) return '';
-    return `<tr><td>מצברי אגירה ${d.batt} × 5 קו"ט</td><td>אחריות יצרן 10 שנים</td></tr>`;
+    return '';
   }
 
   // ── שדה ת.ז. (אופציונלי) ──────────────────────────────────────────────
