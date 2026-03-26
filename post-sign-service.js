@@ -40,20 +40,12 @@ class PostSignService {
       try { onLock(); } catch (e) { /* UI lock is best-effort */ }
     }
 
-    // Step 3: Notify company + confirm client (best-effort, parallel)
-    progress('notify', null);
-    const [notifyResult, confirmResult] = await Promise.allSettled([
-      PostSignService._notifyCompany(docType, docId, signature, emailData),
-      emailData.clientEmail
-        ? PostSignService._confirmClient(docType, signature, emailData)
-        : Promise.resolve({ ok: true, skipped: true }),
-    ]);
+    // Step 3: Notifications are now handled SERVER-SIDE by the Worker's trigger engine.
+    // The POST /sign response includes action_results with notification status.
+    const notified = saveResult.action_results?.notify_company?.ok || false;
+    const confirmed = saveResult.action_results?.send_client_confirmation?.ok || false;
 
-    const notified = notifyResult.status === 'fulfilled' && notifyResult.value.ok;
-    const confirmed = confirmResult.status === 'fulfilled' && confirmResult.value.ok;
-
-    if (!notified) errors.push('notify: ' + (notifyResult.reason || notifyResult.value?.error || 'failed'));
-    if (!confirmed && !confirmResult.value?.skipped) errors.push('confirm: ' + (confirmResult.reason || confirmResult.value?.error || 'failed'));
+    if (!notified) errors.push('notify: server-side notification may have failed');
 
     progress('done', true);
     return { saved: true, notified, confirmed, errors };
@@ -69,7 +61,9 @@ class PostSignService {
       });
       const data = await resp.json();
       if (resp.status === 409) return { ok: false, error: 'המסמך כבר נחתם' };
-      return data.success ? { ok: true } : { ok: false, error: data.error };
+      return data.success
+        ? { ok: true, event_id: data.event_id, action_results: data.action_results }
+        : { ok: false, error: data.error };
     } catch (err) {
       return { ok: false, error: err.message };
     }
