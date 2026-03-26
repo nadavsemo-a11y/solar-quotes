@@ -34,6 +34,10 @@ class SignatureService {
     this._lastPoint  = null;
     this._points     = [];
 
+    // Stroke data for forensic richness
+    this._strokes       = [];
+    this._currentStroke = null;
+
     this._strokeColor = options.strokeColor || '#0A1628';
     this._lineWidth   = options.lineWidth   || 2.5;
   }
@@ -75,13 +79,28 @@ class SignatureService {
     if (!this._canvas) return;
     const rect = this._canvas.getBoundingClientRect();
     const dpr  = window.devicePixelRatio || 1;
-    this._canvas.width  = rect.width  * dpr;
-    this._canvas.height = rect.height * dpr;
+    const newW = rect.width  * dpr;
+    const newH = rect.height * dpr;
+
+    // Early return if dimensions haven't changed — avoids clearing canvas
+    if (this._canvas.width === newW && this._canvas.height === newH) return;
+
+    this._canvas.width  = newW;
+    this._canvas.height = newH;
     this._ctx.scale(dpr, dpr);
     this._ctx.strokeStyle = this._strokeColor;
     this._ctx.lineWidth   = this._lineWidth;
     this._ctx.lineCap     = 'round';
     this._ctx.lineJoin    = 'round';
+
+    // Canvas was cleared by dimension change — reset signature state
+    if (this._hasSig) {
+      this._hasSig  = false;
+      this._strokes = [];
+      // Visual indicator: add class so UI can show re-sign prompt
+      const wrapper = this._canvas.parentElement;
+      if (wrapper) wrapper.classList.add('sig-needs-resign');
+    }
   }
 
   _getPos(e) {
@@ -95,6 +114,11 @@ class SignatureService {
     const p = this._getPos(e);
     this._points = [p];
     this._lastPoint = p;
+    // Start a new stroke with timestamp
+    this._currentStroke = [{ x: p.x, y: p.y, t: Date.now() }];
+    // Remove re-sign indicator when user starts signing again
+    const wrapper = this._canvas.parentElement;
+    if (wrapper) wrapper.classList.remove('sig-needs-resign');
   }
 
   _onMove(e) {
@@ -126,12 +150,21 @@ class SignatureService {
 
     this._lastPoint = p;
     this._hasSig = true;
+    // Track stroke point with timestamp
+    if (this._currentStroke) {
+      this._currentStroke.push({ x: p.x, y: p.y, t: Date.now() });
+    }
   }
 
   _onEnd() {
     this._drawing = false;
     this._points = [];
     this._lastPoint = null;
+    // Finalize stroke — only keep if it has >1 point (actual movement)
+    if (this._currentStroke && this._currentStroke.length > 1) {
+      this._strokes.push(this._currentStroke);
+    }
+    this._currentStroke = null;
   }
 
   // ── ממשק ציבורי ──────────────────────────────────────────────────────────
@@ -141,12 +174,18 @@ class SignatureService {
     if (this._ctx && this._canvas) {
       this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
     }
-    this._hasSig = false;
+    this._hasSig  = false;
+    this._strokes = [];
   }
 
   /** האם נחתם */
   get hasSig() {
     return this._hasSig;
+  }
+
+  /** נתוני stroke גולמיים לאימות פורנזי */
+  get strokeData() {
+    return this._strokes;
   }
 
   /** מחזיר תמונת החתימה כ-base64 PNG */
@@ -195,6 +234,22 @@ class SignatureService {
     if (!this._hasSig)                             errors.push('canvas');
     if (!agreed)                                   errors.push('agree');
     return { valid: errors.length === 0, errors };
+  }
+
+  // ── SHA-256 content hash ────────────────────────────────────────────────
+
+  /**
+   * hashSnapshot(obj)
+   * מחשב SHA-256 של snapshot ההצעה לצורך אימות שלמות.
+   * @param {object} obj
+   * @returns {Promise<string>} hex digest
+   */
+  static async hashSnapshot(obj) {
+    const json = JSON.stringify(obj, Object.keys(obj).sort());
+    const buf = new TextEncoder().encode(json);
+    const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hashBuf))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   // ── איסוף מטא-דאטה ──────────────────────────────────────────────────────
@@ -256,6 +311,9 @@ class SignatureService {
       hour: '2-digit', minute: '2-digit',
     });
 
+    // SHA-256 of the quote snapshot for integrity verification
+    const snapshotHash = await SignatureService.hashSnapshot(quoteSnapshot);
+
     const signature = {
       // זיהוי
       refID,
@@ -267,6 +325,10 @@ class SignatureService {
       idNum:  String(idNum).replace(/\D/g, '').padStart(9, '0'),
       sigImg,
 
+      // נתוני stroke פורנזיים
+      strokeData:  this.strokeData,
+      strokeCount: this._strokes.length,
+
       // לקוח
       clientData,
 
@@ -274,8 +336,9 @@ class SignatureService {
       ipAddr,
       ...meta,
 
-      // snapshot של ההצעה
+      // snapshot של ההצעה + hash שלמות
       quoteSnapshot,
+      snapshotHash,
     };
 
     return { ok: true, signature };
