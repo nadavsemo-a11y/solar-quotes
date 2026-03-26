@@ -1158,10 +1158,7 @@ class QuoteUI {
     const profit      = Math.round(p.totalInc - d.price);
     const fullAddress = `${d.city}${vals.address ? ', ' + vals.address : ''}`;
 
-    const meterLine   = d.needsMeter ? `<li>לוח מונה ייצור — <strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : '';
     const meterInc    = d.needsMeter ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">לוח מונה ייצור</div></div>` : '';
-    const battLine    = d.batt > 0 ? `<li>מצברי אגירה ${d.batt*5} קו"ט (${d.batt} יח') — <strong>₪${fmt(d.batteryPrice)}</strong></li>` : '';
-    const battInc     = d.batt > 0 ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">${d.batt} מצברי 5 קו"ט לגיבוי אנרגיה</div></div>` : '';
     const noteBox     = vals.note ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--sky-mid);display:flex;gap:10px;"><span style="font-size:18px;flex-shrink:0">💬</span><span>${vals.note}</span></div>` : '';
     const concreteLine = d.roof === 'בטון' ? `<li>תוספת גג בטון — <strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong> כלולה במחיר</li>` : '';
     // Split extras into upgrades vs potential costs
@@ -1252,8 +1249,8 @@ class QuoteUI {
 
   <!-- ORDERED SECTIONS (driven by ContentManager.sectionOrder) -->
   ${(() => {
-    const _extraIncItems = (battInc || '') + (meterInc || '');
-    const _battCard = d.batt > 0 ? '<div class="warranty-card"><div style="display:flex;align-items:flex-start;gap:12px"><div class="warranty-icon">🔋</div><div><div class="warranty-title">מצברי אגירה</div><div class="warranty-desc">' + d.batt + ' × 5 קו"ט (' + (d.batt*5) + ' קו"ט סה"כ)<br>אחריות יצרן: <strong>10 שנים</strong></div></div></div></div>' : '';
+    const _extraIncItems = meterInc || '';
+    const _battCard = '';
 
     // Pre-build all fixed section HTML
     const _fixedHTML = {};
