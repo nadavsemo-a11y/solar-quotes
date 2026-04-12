@@ -1,10 +1,10 @@
-// Auto-generated module manifest - 2026-03-24T19:16:18Z
+// Auto-generated module manifest - 2026-04-12T08:11:36Z
 // Lists all HTML dashboards/modules in this repo
 const REPO_HTML_FILES = [
   { file: 'extras-manager.html', size: 13620, title: 'ניהול תוספות — SEMO AGS' },
   { file: 'hubspot-contacts.html', size: 279237, title: 'SEMO OS — אנשי קשר HubSpot' },
   { file: 'income-report.html', size: 5422, title: 'הכנסות — בנק מזרחי טפחות' },
-  { file: 'index.html', size: 164325, title: 'SEMO AGS — מחשבון הצעת מחיר סולארית' },
+  { file: 'index.html', size: 164433, title: 'SEMO AGS — מחשבון הצעת מחיר סולארית' },
   { file: 'links-dashboard.html', size: 34307, title: 'SEMO AGS — ניהול קיצורים' },
   { file: 'payment-editor.html', size: 12015, title: 'עריכת תנאי תשלום — SEMO AGS' },
   { file: 'quote-analysis.html', size: 25415, title: 'SEMO AGS — מחשבון הצעת מחיר סולארית' },
@@ -14,7 +14,7 @@ const REPO_HTML_FILES = [
   { file: 'solar-quote-full.html', size: 341908, title: 'SEMO AGS — מחולל הצעות מחיר' },
   { file: 'spec-page.html', size: 21732, title: 'מפרט טכני — SEMO AGS' },
   { file: 'test-email.html', size: 2643, title: 'SEMO — בדיקת שליחת מייל' },
-  { file: 'vendor-portal.html', size: 24618, title: 'SEMO AGS — פורטל ספק' },
+  { file: 'vendor-portal.html', size: 27337, title: 'SEMO AGS — פורטל ספק' },
   { file: 'work-order.html', size: 23754, title: 'SEMO AGS — הזמנת עבודה' },
 ];
 
