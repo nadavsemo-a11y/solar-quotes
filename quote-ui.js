@@ -780,7 +780,7 @@ class QuoteUI {
     const sigDate  = document.getElementById('sigDate')?.value || '';
 
     const vals   = this._getFormValues();
-    const client = { name: vals.name, phone: vals.phone, address: vals.address, city: vals.city };
+    const client = { name: vals.name, phone: vals.phone, address: vals.address, city: vals.city, email: sigEmail };
 
     const result = await this.signature.collect({
       name, idNum, agreed, email: sigEmail, sigDate,
