@@ -220,6 +220,8 @@ export class SignatureCapture {
     // new PDF pipeline to produce a byte-faithful signed PDF without
     // re-running the page through a headless browser.
     if (this._includeDocumentHtml) {
+      freezeFormState(this._env.document);
+      rasterizeOtherCanvases(this._env.document, this._canvas);
       const html = this._env.document?.documentElement?.outerHTML || null;
       if (html) signature.documentHtml = html;
     }
@@ -236,4 +238,53 @@ function resolveIdValidator(spec) {
   if (typeof spec === 'function') return spec;
   if (spec === 'none')            return () => true;
   return validateIsraeliId;       // default 'israeli'
+}
+
+/**
+ * Before serializing outerHTML, write DOM properties (.checked, .value,
+ * .selected) back to attributes so the serialized HTML reflects what the
+ * signer actually saw. Without this, user-typed inputs and checked
+ * checkboxes render blank in the PDF.
+ */
+function freezeFormState(doc) {
+  if (!doc || !doc.querySelectorAll) return;
+  try {
+    doc.querySelectorAll('input, textarea, select').forEach(el => {
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        if (el.checked) el.setAttribute('checked', '');
+        else el.removeAttribute('checked');
+      } else if (el.tagName === 'SELECT') {
+        el.querySelectorAll('option').forEach(opt => {
+          if (opt.selected) opt.setAttribute('selected', '');
+          else opt.removeAttribute('selected');
+        });
+      } else if (el.tagName === 'TEXTAREA') {
+        el.textContent = el.value;
+      } else {
+        el.setAttribute('value', el.value);
+      }
+    });
+  } catch { /* best-effort — never block signing on a freeze failure */ }
+}
+
+/**
+ * Rasterize every <canvas> in the document (except the signature canvas
+ * itself) into a static <img>. Without this, non-signature canvases —
+ * e.g. inflation charts, payback graphs — render blank in the PDF.
+ */
+function rasterizeOtherCanvases(doc, signatureCanvas) {
+  if (!doc || !doc.querySelectorAll) return;
+  try {
+    doc.querySelectorAll('canvas').forEach(canvas => {
+      if (canvas === signatureCanvas) return;   // leave the signature canvas alone
+      try {
+        const img = doc.createElement('img');
+        img.src = canvas.toDataURL('image/png');
+        img.style.cssText = canvas.style.cssText || '';
+        if (canvas.width)  img.width  = canvas.width;
+        if (canvas.height) img.height = canvas.height;
+        canvas.replaceWith(img);
+      } catch { /* tainted/cross-origin canvas — skip */ }
+    });
+  } catch { /* best-effort */ }
 }
