@@ -389,9 +389,11 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
 
 </div>
 
-<script src="signature-service.js"></script>
-<script src="post-sign-service.js"></script>
-<script>
+<!-- signature-service.js / post-sign-service.js loads removed —
+     signature capture now comes from the /signature ESM module below. -->
+<script type="module">
+import { SignatureCapture as SignatureService } from '../signature/index.js';
+
 (function() {
   const WORKER_URL = 'https://s-a.gs';
   const DOC_TYPE = 'work-order';
@@ -430,7 +432,12 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
   }
 
   // ── Signature Service ──
-  const sig = new SignatureService('sigCanvas');
+  // includeDocumentHtml opt-in (15A.1): collect() will attach the page's
+  // final outerHTML to the returned signature, which the Worker persists
+  // under html:${docId} (15A.2) for the new PDF pipeline.
+  const sig = new SignatureService('sigCanvas', {
+    capture: { includeDocumentHtml: true },
+  });
   sig.init();
 
   window.clearSignature = function() {
@@ -462,8 +469,23 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
     }
 
     try {
-      const result = await sig.collect({ name, idNum, agreed, quoteSnapshot: data });
       const docId = data.docId || '';
+      // Synthetic internal email — work-order has no client email field;
+      // the module's validator requires one. Non-human, never sent, just
+      // satisfies shape validation. Do NOT use as a real address.
+      const syntheticEmail = `work-order-${docId || Date.now()}@semo.internal`;
+      const sigDateValue   = document.getElementById('sigDate').value;
+
+      const result = await sig.collect({
+        name, idNum, agreed,
+        email:   syntheticEmail,
+        sigDate: sigDateValue,
+        quoteSnapshot: data,
+      });
+      if (!result.ok) {
+        throw new Error('שגיאה באימות: ' + (result.errors || []).join(', '));
+      }
+      const signature = result.signature;
 
       // Show progress
       const progressBar = document.getElementById('progressBar');
@@ -478,7 +500,7 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
       const saveRes = await fetch(`${WORKER_URL}/sign/${docId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docType: DOC_TYPE, signature: result }),
+        body: JSON.stringify({ docType: DOC_TYPE, signature }),
       });
       progressFill.style.width = '70%';
 
@@ -494,9 +516,9 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
         banner.style.display = 'block';
         banner.querySelector('#signedInfo').innerHTML =
           `חותם: ${name}<br>תאריך: ${document.getElementById('sigDate').value}<br>מס' אסמכתא: ${saveData.docId || docId}`;
-        if (result.sigImg) {
+        if (signature.sigImg) {
           const img = document.createElement('img');
-          img.src = result.sigImg;
+          img.src = signature.sigImg;
           img.style.cssText = 'max-width:200px;margin-top:12px;border:1px solid #e2e8f0;border-radius:8px;';
           banner.appendChild(img);
         }
