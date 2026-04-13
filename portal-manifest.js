@@ -1,4 +1,4 @@
-// Auto-generated module manifest - 2026-04-12T08:11:36Z
+// Auto-generated module manifest - 2026-04-13T11:54:52Z
 // Lists all HTML dashboards/modules in this repo
 const REPO_HTML_FILES = [
   { file: 'extras-manager.html', size: 13620, title: 'ניהול תוספות — SEMO AGS' },
@@ -15,7 +15,7 @@ const REPO_HTML_FILES = [
   { file: 'spec-page.html', size: 21732, title: 'מפרט טכני — SEMO AGS' },
   { file: 'test-email.html', size: 2643, title: 'SEMO — בדיקת שליחת מייל' },
   { file: 'vendor-portal.html', size: 27337, title: 'SEMO AGS — פורטל ספק' },
-  { file: 'work-order.html', size: 23754, title: 'SEMO AGS — הזמנת עבודה' },
+  { file: 'work-order.html', size: 24774, title: 'SEMO AGS — הזמנת עבודה' },
 ];
 
 // To use: load this script in portal.html and compare REPO_HTML_FILES
