@@ -732,7 +732,7 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
       <div class="logo-text">
         <strong>SEMO AGS</strong>
         <span>סמו א.ג.ס בע"מ</span>
-        <span style="font-size:10px;opacity:0.45;font-weight:400;letter-spacing:0.5px">v1.1.0</span>
+        <span style="font-size:10px;opacity:0.45;font-weight:400;letter-spacing:0.5px"></span>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -976,9 +976,9 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
           <div class="sig-err-msg" id="err-sigID">ת.ז לא תקינה</div>
         </div>
         <div class="sig-field">
-          <label>כתובת אימייל <span style="color:#e74c3c;font-weight:800">*</span></label>
-          <input type="email" id="sigEmail" placeholder="example@email.com" dir="ltr" style="text-align:left" required>
-          <div class="sig-err-msg" id="err-sigEmail">חובה להזין כתובת אימייל — העתק החתום יישלח לכתובת זו</div>
+          <label>כתובת אימייל</label>
+          <input type="email" id="sigEmail" placeholder="example@email.com" dir="ltr" style="text-align:left">
+          <div class="sig-err-msg" id="err-sigEmail">נא להזין כתובת אימייל תקינה</div>
         </div>
         <div class="sig-field">
           <label>תאריך חתימה</label>
@@ -1135,10 +1135,26 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
 <script src="quote-engine.js"></script>
 <script src="url-shortener.js"></script>
 <script src="storage-service.js"></script>
-<script src="signature-service.js"></script>
+<!-- signature-service.js classic load replaced by ESM module below
+     (installs window.SignatureService with includeDocumentHtml opt-in). -->
 <script src="template-engine.js"></script>
 <script src="email-service.js"></script>
 <script src="post-sign-service.js"></script>
+<script type="module">
+  import { SignatureCapture } from './signature/index.js';
+  // Bridge the ESM class to the classic-script global that quote-ui.js expects.
+  // Default-enable includeDocumentHtml so the signed quote HTML reaches the
+  // Worker (persisted under html:${docId}) for the new PDF pipeline.
+  class SignatureService extends SignatureCapture {
+    constructor(canvasId, opts = {}) {
+      super(canvasId, {
+        ...opts,
+        capture: { includeDocumentHtml: true, ...(opts.capture || {}) },
+      });
+    }
+  }
+  window.SignatureService = SignatureService;
+</script>
 <script src="quote-ui.js"></script>
 
 <!-- ==================== GLOBAL INLINE WRAPPERS ==================== -->
@@ -1465,6 +1481,9 @@ function ceResetDefaults() {
   alert('אופס לברירת מחדל.');
 }
 </script>
+
+<!-- Unified Version Display -->
+<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.00.00.00</div>
 
 </body>
 </html>
