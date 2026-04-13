@@ -392,7 +392,7 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
 <!-- signature-service.js / post-sign-service.js loads removed —
      signature capture now comes from the /signature ESM module below. -->
 <script type="module">
-import { SignatureCapture as SignatureService } from '../signature/index.js';
+import { SignatureCapture as SignatureService } from './signature/index.js';
 
 (function() {
   const WORKER_URL = 'https://s-a.gs';
