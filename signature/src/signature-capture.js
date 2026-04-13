@@ -222,7 +222,8 @@ export class SignatureCapture {
     if (this._includeDocumentHtml) {
       freezeFormState(this._env.document);
       rasterizeOtherCanvases(this._env.document, this._canvas);
-      const html = this._env.document?.documentElement?.outerHTML || null;
+      let html = this._env.document?.documentElement?.outerHTML || null;
+      if (html) html = staticizeHtml(html);
       if (html) signature.documentHtml = html;
     }
 
@@ -265,6 +266,25 @@ function freezeFormState(doc) {
       }
     });
   } catch { /* best-effort — never block signing on a freeze failure */ }
+}
+
+/**
+ * Strip scripts and inline event handlers from the serialized HTML so
+ * the captured snapshot is genuinely static. Without this, running the
+ * HTML through a headless browser (page.setContent) re-executes the
+ * page's JS — which re-initializes components and overwrites the frozen
+ * form/price state, producing wrong output in the PDF.
+ */
+function staticizeHtml(html) {
+  if (typeof html !== 'string') return html;
+  // Remove <script>...</script> blocks (both inline and src). [\s\S] for
+  // multi-line; non-greedy to handle multiple script tags.
+  let out = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  // Remove inline event-handler attributes (onclick=, onchange=, onload=, …).
+  out = out.replace(/\s+on[a-z]+\s*=\s*"[^"]*"/gi, '');
+  out = out.replace(/\s+on[a-z]+\s*=\s*'[^']*'/gi, '');
+  out = out.replace(/\s+on[a-z]+\s*=\s*[^\s>]+/gi, '');
+  return out;
 }
 
 /**
