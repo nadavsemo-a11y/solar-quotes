@@ -436,9 +436,11 @@
 
 </div>
 
-<script src="signature-service.js"></script>
+<!-- signature-service.js load removed — SignatureCapture imported via module below. -->
 <script src="post-sign-service.js"></script>
-<script>
+<script type="module">
+import { SignatureCapture as SignatureService } from './signature/index.js';
+
 (function() {
   const WORKER_URL = 'https://s-a.gs';
   const YARON_WORKER_URL = 'https://monday-yaron.monday-shimrit.workers.dev';
@@ -518,7 +520,12 @@
   document.getElementById('sigDate').value = new Date().toLocaleDateString('he-IL');
 
   // ── Init signature canvas ──
-  const sigService = new SignatureService('sigCanvas');
+  // includeDocumentHtml opt-in (15A.1): collect() attaches the page's final
+  // outerHTML to the signature, which the Worker persists under html:${docId}
+  // for the new PDF pipeline (15A.2 / 15A.4).
+  const sigService = new SignatureService('sigCanvas', {
+    capture: { includeDocumentHtml: true },
+  });
   sigService.init();
 
   // Hide placeholder on first draw
