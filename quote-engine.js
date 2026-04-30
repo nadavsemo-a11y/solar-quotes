@@ -204,11 +204,10 @@ const QuoteEngine = (() => {
     return battFirstPrice + Math.max(0, batt - 1) * battExtraPrice;
   }
 
-  function calcPrice({ dcKW, roof, batt, needsMeter,
-                        ppkw, battFirstPrice, battExtraPrice, concretePerKw,
+  function calcPrice({ dcKW, batt, needsMeter,
+                        ppkw, battFirstPrice, battExtraPrice,
                         meterPanelPrice }) {
     let price = dcKW * ppkw;
-    if (roof === 'בטון')  price += dcKW * concretePerKw;
     // Batteries are now an upgrade — NOT included in base price
     if (needsMeter)       price += meterPanelPrice;
     return price;
@@ -291,7 +290,6 @@ const QuoteEngine = (() => {
       hybridFullPrice = 37100,
       premiumPanel = 100,
       usdRate = 3.65,
-      concretePerKw = 50,
       meterPanelPrice = 2500,
       extras = [],
     } = params;
@@ -303,8 +301,8 @@ const QuoteEngine = (() => {
     const premiumPanelNIS  = Math.round(premiumPanel * usdRate * dcKW);
     const invDisplay       = inv === 'אחר' && customInvModel ? customInvModel : inv;
 
-    const price       = calcPrice({ dcKW, roof, batt, needsMeter,
-                                     ppkw, battFirstPrice, battExtraPrice, concretePerKw,
+    const price       = calcPrice({ dcKW, batt, needsMeter,
+                                     ppkw, battFirstPrice, battExtraPrice,
                                      meterPanelPrice });
     const priceVAT    = Math.round(price * VAT);
     const annualKwh   = dcKW * (hours || DEFAULT_HOURS);
@@ -337,7 +335,7 @@ const QuoteEngine = (() => {
       // מחירים להפניה
       battFirstPrice, battExtraPrice,
       hybridInvPrice, hybridFullPrice,
-      concretePerKw, meterPanelPrice,
+      meterPanelPrice,
     };
   }
 
