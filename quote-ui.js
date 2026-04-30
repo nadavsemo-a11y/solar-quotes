@@ -8,7 +8,7 @@
  * תלויות (חייבות להיטען לפני):
  *   - quote-engine.js    → QuoteEngine
  *   - storage-service.js → StorageService
- *   - signature-service.js → SignatureService
+ *   - signature-service.js → SignatureService (compat wrapper for /signature module)
  *   - template-engine.js → TemplateEngine
  *
  * שימוש:
@@ -302,7 +302,6 @@ class QuoteUI {
       hybridFullPrice: parseFloat(get('hybridFullPrice'))  || 0,
       premiumPanel,
       usdRate,
-      concretePerKw:   parseFloat(get('concretePerKw'))    || 0,
       meterPanelPrice: parseFloat(get('meterPanelPrice'))  || 0,
       evModel:         get('evModel'),
 
@@ -780,7 +779,7 @@ class QuoteUI {
     const sigDate  = document.getElementById('sigDate')?.value || '';
 
     const vals   = this._getFormValues();
-    const client = { name: vals.name, phone: vals.phone, address: vals.address, city: vals.city, email: sigEmail };
+    const client = { name: vals.name, phone: vals.phone, address: vals.address, city: vals.city };
 
     const result = await this.signature.collect({
       name, idNum, agreed, email: sigEmail, sigDate,
@@ -998,7 +997,7 @@ class QuoteUI {
       battFP: get('battFirstPrice'), battEP: get('battExtraPrice'),
       hybrP: get('hybridInvPrice'), hybrFP: get('hybridFullPrice'),
       premP: get('premiumPanelPrice'), usdRate: get('usdRate'),
-      concP: get('concretePerKw'), meterP: get('meterPanelPrice'),
+      meterP: get('meterPanelPrice'),
       evM: get('evModel'),
       // extras — dynamic: scans all items from config so new extras are auto-included
       extras: this._buildExtrasState(),
@@ -1023,7 +1022,7 @@ class QuoteUI {
     set('battFirstPrice', s.battFP); set('battExtraPrice', s.battEP);
     set('hybridInvPrice', s.hybrP); set('hybridFullPrice', s.hybrFP);
     set('premiumPanelPrice', s.premP); set('usdRate', s.usdRate);
-    set('concretePerKw', s.concP); set('meterPanelPrice', s.meterP);
+    set('meterPanelPrice', s.meterP);
     set('evModel', s.evM);
     set('clientEmail', s.email);
     // Store email for client-side use (e.g. post-sign)
@@ -1160,7 +1159,6 @@ class QuoteUI {
 
     const meterInc    = d.needsMeter ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">לוח מונה ייצור</div></div>` : '';
     const noteBox     = vals.note ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--sky-mid);display:flex;gap:10px;"><span style="font-size:18px;flex-shrink:0">💬</span><span>${vals.note}</span></div>` : '';
-    const concreteLine = d.roof === 'בטון' ? `<li>תוספת גג בטון — <strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong> כלולה במחיר</li>` : '';
     // Split extras into upgrades vs potential costs
     const allExtras = (d.extras || []);
     // Show ALL upgrade-category items in quote (customer toggles on/off)
@@ -1223,9 +1221,10 @@ class QuoteUI {
 
   <!-- SYSTEM TYPE -->
   <div class="sec">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;text-align:center;">
+    <div style="display:grid;grid-template-columns:repeat(${d.roofArea > 0 ? 4 : 3},1fr);gap:18px;text-align:center;">
       <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">סוג מערכת</div><div style="font-size:17px;font-weight:800;color:var(--sky)">מערכת סולארית ביתית</div></div>
       <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">סוג גג</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${d.roof}</div></div>
+      ${d.roofArea > 0 ? `<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">שטח הגג</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${fmt(d.roofArea)} מ"ר</div></div>` : ''}
       <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">הספק מערכת</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${d.dcKW} קילו-וואט</div></div>
     </div>
   </div>
@@ -1404,7 +1403,7 @@ class QuoteUI {
     <div class="sec-title"><span class="bar"></span>פירוט מחיר ההצעה</div>
     <ul class="spec-list" style="list-style:none;padding:0">
       <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מערכת סולארית ${d.dcKW} קו"ט (${d.panelCount} פאנלים × ${d.panelW}W)</span><strong>₪${fmt(d.dcKW * d.ppkw)}</strong></li>
-      ${concreteLine ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>תוספת גג בטון</span><strong>₪${fmt(d.dcKW * d.concretePerKw)}</strong></li>` : ''}
+      <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--gray)"><span>מחיר KWP</span><span>₪${fmt(d.ppkw)} לקו"ט</span></li>
       ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
       ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:none;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
       <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(d.price)}</span></li>
@@ -1474,11 +1473,17 @@ class QuoteUI {
   </div>` : ''}`;
   }
 
-  /** טוען את ה-template HTML חיצוני (קורא fetch) */
-  async loadTemplate(url = 'solar-quote-template.html') {
+  /** טוען את ה-template HTML חיצוני (קורא fetch).
+   *  בוחר v1 או v2 לפי window.__TEMPLATE_VERSION__ שמוזרק ע"י ה-Worker.
+   *  ברירת מחדל: v1 — מובטח שלא תהיה התנהגות חדשה ללקוחות קיימים. */
+  async loadTemplate(url) {
+    const version = (typeof window !== 'undefined' && window.__TEMPLATE_VERSION__) || 'v1';
+    const defaultUrl = version === 'v2' ? 'solar-quote-template-v2.html' : 'solar-quote-template.html';
+    const targetUrl  = url || defaultUrl;
     try {
-      const res  = await fetch(url);
-      this._templateHtml = await res.text();
+      const res  = await fetch(targetUrl);
+      this._templateHtml    = await res.text();
+      this._templateVersion = version;
     } catch (e) {
       console.warn('QuoteUI: לא ניתן לטעון template', e);
     }
@@ -1543,7 +1548,12 @@ class QuoteUI {
     }
 
     const contentSections = this._buildPrintContentSections(d);
-    const html = TemplateEngine.render(this._templateHtml, d, {
+    // Pick the engine matching the loaded template version. v2 falls back to v1
+    // if TemplateEngineV2 wasn't loaded (e.g., script was 404 / not yet deployed).
+    const engine = (this._templateVersion === 'v2' && typeof TemplateEngineV2 !== 'undefined')
+      ? TemplateEngineV2
+      : TemplateEngine;
+    const html = engine.render(this._templateHtml, d, {
       name:    vals.name,
       phone:   vals.phone,
       address: vals.address,
@@ -1697,7 +1707,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
 
   window._quoteUI = new QuoteUI();
-  await _quoteUI.loadTemplate('solar-quote-template.html');
+  // No explicit URL — loadTemplate picks v1/v2 based on window.__TEMPLATE_VERSION__.
+  await _quoteUI.loadTemplate();
   _quoteUI.init();
 
   // Fetch current USD/ILS rate
