@@ -1,0 +1,44 @@
+[
+  {
+    "version": "1.00.01.00",
+    "date": "2026-04-30",
+    "type": "minor",
+    "title": "Quote: drop concrete-roof surcharge; add KWP price + roof area",
+    "changes": [
+      "Removed 'תוספת לגג בטון' from pricing logic — no longer added to quotes or charged",
+      "Removed concretePerKw input field from index.html settings",
+      "Added 'מחיר KWP' (price per kWp) line in customer-facing price breakdown",
+      "Added 'שטח הגג' (roof area) to customer-facing system info row and spec tables (v1 + v2)"
+    ],
+    "affected_modules": [
+      "quote-engine.js",
+      "quote-ui.js",
+      "template-engine.js",
+      "template-engine-v2.js",
+      "index.html"
+    ],
+    "author": "Claude"
+  },
+  {
+    "version": "1.00.00.00",
+    "date": "2026-03-26",
+    "type": "major release",
+    "title": "Initial version baseline — unified versioning policy",
+    "changes": [
+      "Initial version baseline established under unified versioning policy",
+      "Removed all legacy inconsistent version numbers (v1.1.0, v1.0.0, v2.0.0)",
+      "Added unified version display in bottom-right corner across all pages",
+      "Created version.json as single source of truth",
+      "Created changelog.json for version history tracking",
+      "Migrated historical changelog from CHANGELOG.md to changelog.json"
+    ],
+    "affected_modules": [
+      "portal.html",
+      "index.html",
+      "worker.js",
+      "trigger-roadmap.html"
+    ],
+    "author": "Claude",
+    "notes": "Prior history (pre-unified-versioning): v1.0.0 (2026-03-22) initial documented version with HubSpot tasks; v1.1.0 (2026-03-23) HubSpot sync without email fix. All reset to 1.00.00.00 under new policy."
+  }
+]
