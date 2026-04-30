@@ -1,32 +1,40 @@
-// ═══════════════════════════════════════════════════════════════
-//  SEMO AGS — Post-Signature Service
-//  Handles what happens after a document is signed:
-//  save to server, notify company, confirm to client, lock UI.
-//  Document-type agnostic — works for quotes, agreements, etc.
-// ═══════════════════════════════════════════════════════════════
+/**
+ * post-sign-service.js — COMPATIBILITY WRAPPER
+ * ══════════════════════════════════════════════════════════════════════════
+ *  Classic-script compat layer for legacy HTML callers:
+ *      <script src="post-sign-service.js"></script>
+ *      PostSignService.process({ ... })
+ *
+ *  Canonical implementation now lives in:
+ *      /signature/src/post-sign.js
+ *      /signature/adapters/transport-http.js
+ *      /signature/adapters/notifier-http.js
+ *
+ *  Differences from the canonical module (intentional, compat-only):
+ *    - WORKER_URL and COMPANY_EMAIL are hardcoded here to preserve the
+ *      historical behaviour for pages that pre-date the module split.
+ *      The ESM module takes both via injected config and hardcodes neither.
+ *    - All methods remain `static` to match the original call shape
+ *      `PostSignService.process(...)`. The new module is instance-based.
+ *
+ *  To migrate a page off this wrapper:
+ *    1. Switch the host to <script type="module">
+ *    2. `import { createSignatureModule } from '/signature/index.js'`
+ *    3. `const sig = createSignatureModule({ transport: { baseUrl }, notifier: { companyEmail } })`
+ *    4. Replace `PostSignService.process(...)` with `sig.handleCallback(...)`
+ *    5. Delete this file once no classic-script callers remain.
+ * ══════════════════════════════════════════════════════════════════════════
+ */
 
 class PostSignService {
 
-  static WORKER_URL = 'https://s-a.gs';
+  static WORKER_URL    = 'https://s-a.gs';
   static COMPANY_EMAIL = 'nadav.s@s-a.gs';
 
-  /**
-   * process — single entry point after signature collected.
-   *
-   * @param {object} params
-   * @param {string}   params.docType    — 'quote' | 'agreement' | ...
-   * @param {string}   params.docId      — KV document ID (e.g. 'abc123')
-   * @param {object}   params.signature  — from SignatureService.collect()
-   * @param {object}   params.emailData  — { clientName, clientEmail, docUrl, ...extra }
-   * @param {function} [params.onLock]   — callback to lock the UI
-   * @param {function} [params.onProgress] — (step, ok, error?) callback
-   * @returns {Promise<{ saved: boolean, notified: boolean, confirmed: boolean, errors: string[] }>}
-   */
   static async process({ docType, docId, signature, emailData = {}, onLock, onProgress }) {
     const errors = [];
     const progress = onProgress || (() => {});
 
-    // Step 1: Save signature to server (critical)
     progress('save', null);
     const saveResult = await PostSignService._saveSignature(docType, docId, signature);
     progress('save', saveResult.ok, saveResult.error);
@@ -35,23 +43,18 @@ class PostSignService {
       return { saved: false, notified: false, confirmed: false, errors };
     }
 
-    // Step 2: Lock the document
     if (onLock) {
-      try { onLock(); } catch (e) { /* UI lock is best-effort */ }
+      try { onLock(); } catch { /* UI lock is best-effort */ }
     }
 
-    // Step 3: Notifications are now handled SERVER-SIDE by the Worker's trigger engine.
-    // The POST /sign response includes action_results with notification status.
-    const notified = saveResult.action_results?.notify_company?.ok || false;
+    const notified  = saveResult.action_results?.notify_company?.ok           || false;
     const confirmed = saveResult.action_results?.send_client_confirmation?.ok || false;
-
     if (!notified) errors.push('notify: server-side notification may have failed');
 
     progress('done', true);
     return { saved: true, notified, confirmed, errors };
   }
 
-  /** Save signature to Worker KV */
   static async _saveSignature(docType, docId, signature) {
     try {
       const resp = await fetch(`${PostSignService.WORKER_URL}/sign/${docId}`, {
@@ -69,7 +72,6 @@ class PostSignService {
     }
   }
 
-  /** Check if a document is already signed */
   static async checkSignature(docId) {
     try {
       const resp = await fetch(`${PostSignService.WORKER_URL}/sign/${docId}`);
@@ -79,7 +81,6 @@ class PostSignService {
     }
   }
 
-  /** Notify company that a document was signed */
   static async _notifyCompany(docType, docId, signature, emailData) {
     try {
       const resp = await fetch(`${PostSignService.WORKER_URL}/q/email`, {
@@ -88,15 +89,14 @@ class PostSignService {
         body: JSON.stringify({
           action: 'signNotify',
           companyEmail: PostSignService.COMPANY_EMAIL,
-          docType,
-          docId,
+          docType, docId,
           signerName: signature.name,
-          signerId: signature.idNum,
-          refID: signature.refID,
-          dateStr: signature.dateStr,
-          ipAddr: signature.ipAddr,
+          signerId:   signature.idNum,
+          refID:      signature.refID,
+          dateStr:    signature.dateStr,
+          ipAddr:     signature.ipAddr,
           clientName: emailData.clientName || '',
-          docUrl: emailData.docUrl || '',
+          docUrl:     emailData.docUrl     || '',
         }),
       });
       return await resp.json();
@@ -105,20 +105,19 @@ class PostSignService {
     }
   }
 
-  /** Send confirmation email to client */
   static async _confirmClient(docType, signature, emailData) {
     try {
       const resp = await fetch(`${PostSignService.WORKER_URL}/q/email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'signConfirm',
+          action:      'signConfirm',
           clientEmail: emailData.clientEmail,
-          clientName: emailData.clientName || '',
+          clientName:  emailData.clientName || '',
           docType,
-          refID: signature.refID,
+          refID:   signature.refID,
           dateStr: signature.dateStr,
-          docUrl: emailData.docUrl || '',
+          docUrl:  emailData.docUrl || '',
         }),
       });
       return await resp.json();
