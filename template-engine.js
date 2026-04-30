@@ -24,10 +24,13 @@ const TemplateEngine = (() => {
       ['מספר פנלים',        `${d.panelCount} יח' × ${d.panelW}W`],
       ['שטח פנלים משוער',   `${fmtD(d.panelArea)} מ"ר`],
       ['סוג גג',            d.roof],
+    ];
+    if (d.roofArea > 0) rows.push(['שטח הגג', `${fmt(d.roofArea)} מ"ר`]);
+    rows.push(
       ['אינוורטר',          d.inv],
       ['ייצור שנתי משוער',  `${fmt(d.annualKwh)} קו"ט`],
       ['מפסק ראשי',         `${d.breaker.size}A (${d.breaker.current}A חישובי)`],
-    ];
+    );
     // Battery & EV charger specs driven by extras upgrade system — not hardcoded
     if (d.needsMeter) rows.push(['לוח מונה ייצור', 'נדרש (AC > 15kW)']);
     return rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('\n    ');
@@ -36,8 +39,7 @@ const TemplateEngine = (() => {
   // ── בניית שורות פירוט מחיר ────────────────────────────────────────────
   function buildPriceRows(d) {
     const rows = [];
-    rows.push([`מערכת סולארית ${d.dcKW} קו"ט`, `₪${fmt(d.dcKW * d.ppkw)}`]);
-    if (d.roof === 'בטון') rows.push(['תוספת גג בטון', `₪${fmt(d.dcKW * d.concretePerKw)}`]);
+    rows.push([`מערכת סולארית ${d.dcKW} קו"ט (₪${fmt(d.ppkw)} לקו"ט)`, `₪${fmt(d.dcKW * d.ppkw)}`]);
     // Battery price driven by extras upgrade system — not hardcoded
     if (d.needsMeter)       rows.push(['לוח מונה ייצור', `₪${fmt(d.meterPanelPrice)}`]);
     return rows.map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join('\n    ');
@@ -84,9 +86,9 @@ const TemplateEngine = (() => {
       <td class="num"><strong>₪${fmt(upgradesTotal)}</strong></td>
     </tr>
   </table>
-  <div style="background:#eef3f9;border:1px solid #b8d4f0;border-radius:8px;padding:12px 14px;margin-top:10px;text-align:center">
-    <div style="font-size:8pt;color:#555">סה"כ עלות הפרויקט (מערכת + תוספות, לא כולל מע"מ)</div>
-    <div style="font-size:14pt;font-weight:800;color:#1a3a5c;margin-top:4px">₪${fmt(projectTotal)}</div>
+  <div class="project-total-box">
+    <div class="project-total-label">סה"כ עלות הפרויקט (מערכת + תוספות, לא כולל מע"מ)</div>
+    <div class="project-total-value">₪${fmt(projectTotal)}</div>
   </div>
 </div>`;
     }
