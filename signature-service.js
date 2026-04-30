@@ -1,30 +1,30 @@
 /**
- * signature-service.js — SEMO AGS Digital Signature Service
+ * signature-service.js — COMPATIBILITY WRAPPER
+ * ══════════════════════════════════════════════════════════════════════════
+ *  This file exists to keep existing classic-script consumers working:
+ *      <script src="signature-service.js"></script>
+ *      const sig = new SignatureService('sigCanvas');
  *
- * אחריות: כל מה שקשור לחתימה דיגיטלית.
- *   - canvas ציור וניקוי
- *   - אימות ת.ז. ישראלית (Luhn)
- *   - אימות שדות טופס
- *   - איסוף מטא-דאטה (IP, UA, timezone, זמן)
- *   - החזרת אובייקט חתימה מוכן לשמירה
+ *  Canonical implementation has moved to the standalone module:
+ *      /signature/src/signature-capture.js
  *
- * אין כאן fetch לשמירה — זה תפקיד ה-storage-service.
- * אין כאן הפניה לנתוני ההצעה — מוזרקים מבחוץ.
+ *  Why this file still has a body instead of being a one-liner:
+ *    The new module is ESM. Classic scripts cannot synchronously import ESM,
+ *    and no bundler is configured here. So this wrapper re-declares the
+ *    legacy `SignatureService` class with the identical public API as
+ *    before, preserving synchronous construction semantics.
  *
- * שימוש:
- *   const sig = new SignatureService('sigCanvas');
- *   sig.init();
- *   const result = await sig.collect({ name, idNum, agreed, quoteSnapshot });
+ *  Migration path: when a host page migrates to <script type="module">, it
+ *  should `import { SignatureCapture } from '/signature/index.js'` instead,
+ *  and this file can eventually be deleted.
+ *
+ *  DO NOT fork new features into this file. Add them to signature/src/
+ *  and mirror here only if classic-script callers need them.
+ * ══════════════════════════════════════════════════════════════════════════
  */
 
 class SignatureService {
 
-  /**
-   * @param {string} canvasId  — ה-id של אלמנט ה-canvas
-   * @param {object} [options]
-   *   strokeColor  {string}  ברירת מחדל '#0A1628'
-   *   lineWidth    {number}  ברירת מחדל 2.5
-   */
   constructor(canvasId, options = {}) {
     this._canvasId   = canvasId;
     this._canvas     = null;
@@ -34,7 +34,6 @@ class SignatureService {
     this._lastPoint  = null;
     this._points     = [];
 
-    // Stroke data for forensic richness
     this._strokes       = [];
     this._currentStroke = null;
 
@@ -42,13 +41,6 @@ class SignatureService {
     this._lineWidth   = options.lineWidth   || 2.5;
   }
 
-  // ── אתחול ──────────────────────────────────────────────────────────────
-
-  /**
-   * init()
-   * מחבר את ה-canvas ומגדיר event listeners.
-   * יש לקרוא לאחר ש-DOM מוכן.
-   */
   init() {
     this._canvas = document.getElementById(this._canvasId);
     if (!this._canvas) {
@@ -58,22 +50,17 @@ class SignatureService {
     this._ctx = this._canvas.getContext('2d');
     this._resize();
 
-    // Mouse events
     this._canvas.addEventListener('mousedown',  e => this._onStart(e));
     this._canvas.addEventListener('mousemove',  e => this._onMove(e));
     this._canvas.addEventListener('mouseup',    () => this._onEnd());
     this._canvas.addEventListener('mouseleave', () => this._onEnd());
 
-    // Touch events
     this._canvas.addEventListener('touchstart', e => { e.preventDefault(); this._onStart(e); }, { passive: false });
     this._canvas.addEventListener('touchmove',  e => { e.preventDefault(); this._onMove(e);  }, { passive: false });
     this._canvas.addEventListener('touchend',   () => this._onEnd());
 
-    // Resize
     window.addEventListener('resize', () => this._resize());
   }
-
-  // ── Canvas internals ────────────────────────────────────────────────────
 
   _resize() {
     if (!this._canvas) return;
@@ -81,8 +68,6 @@ class SignatureService {
     const dpr  = window.devicePixelRatio || 1;
     const newW = rect.width  * dpr;
     const newH = rect.height * dpr;
-
-    // Early return if dimensions haven't changed — avoids clearing canvas
     if (this._canvas.width === newW && this._canvas.height === newH) return;
 
     this._canvas.width  = newW;
@@ -93,11 +78,9 @@ class SignatureService {
     this._ctx.lineCap     = 'round';
     this._ctx.lineJoin    = 'round';
 
-    // Canvas was cleared by dimension change — reset signature state
     if (this._hasSig) {
       this._hasSig  = false;
       this._strokes = [];
-      // Visual indicator: add class so UI can show re-sign prompt
       const wrapper = this._canvas.parentElement;
       if (wrapper) wrapper.classList.add('sig-needs-resign');
     }
@@ -114,9 +97,7 @@ class SignatureService {
     const p = this._getPos(e);
     this._points = [p];
     this._lastPoint = p;
-    // Start a new stroke with timestamp
     this._currentStroke = [{ x: p.x, y: p.y, t: Date.now() }];
-    // Remove re-sign indicator when user starts signing again
     const wrapper = this._canvas.parentElement;
     if (wrapper) wrapper.classList.remove('sig-needs-resign');
   }
@@ -126,7 +107,6 @@ class SignatureService {
     const p = this._getPos(e);
     this._points.push(p);
 
-    // Use quadratic curves for smooth interpolation
     if (this._points.length >= 3) {
       const ctx = this._ctx;
       const len = this._points.length;
@@ -140,7 +120,6 @@ class SignatureService {
       ctx.quadraticCurveTo(p1.x, p1.y, mid2.x, mid2.y);
       ctx.stroke();
     } else if (this._points.length === 2) {
-      // First segment — simple line
       const ctx = this._ctx;
       ctx.beginPath();
       ctx.moveTo(this._points[0].x, this._points[0].y);
@@ -150,7 +129,6 @@ class SignatureService {
 
     this._lastPoint = p;
     this._hasSig = true;
-    // Track stroke point with timestamp
     if (this._currentStroke) {
       this._currentStroke.push({ x: p.x, y: p.y, t: Date.now() });
     }
@@ -160,16 +138,12 @@ class SignatureService {
     this._drawing = false;
     this._points = [];
     this._lastPoint = null;
-    // Finalize stroke — only keep if it has >1 point (actual movement)
     if (this._currentStroke && this._currentStroke.length > 1) {
       this._strokes.push(this._currentStroke);
     }
     this._currentStroke = null;
   }
 
-  // ── ממשק ציבורי ──────────────────────────────────────────────────────────
-
-  /** מנקה את ה-canvas */
   clear() {
     if (this._ctx && this._canvas) {
       this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
@@ -178,72 +152,40 @@ class SignatureService {
     this._strokes = [];
   }
 
-  /** האם נחתם */
-  get hasSig() {
-    return this._hasSig;
-  }
+  get hasSig()     { return this._hasSig; }
+  get strokeData() { return this._strokes; }
 
-  /** נתוני stroke גולמיים לאימות פורנזי */
-  get strokeData() {
-    return this._strokes;
-  }
-
-  /** מחזיר תמונת החתימה כ-base64 PNG */
   toDataURL() {
     if (!this._canvas) return null;
     return this._canvas.toDataURL('image/png');
   }
 
-  // ── אימות ─────────────────────────────────────────────────────────────
-
-  /**
-   * validateIsraeliID(id)
-   * אלגוריתם Luhn לאימות ת.ז. ישראלית
-   * @param {string} id
-   * @returns {boolean}
-   */
   static validateIsraeliID(id) {
     if (!id) return false;
     const clean = String(id).trim();
-    // חייב להכיל ספרות בלבד, 5-9 תווים
     if (!/^\d{5,9}$/.test(clean)) return false;
-    // כולה אפסים — לא תקין
     if (/^0+$/.test(clean)) return false;
     const padded = clean.padStart(9, '0');
     let sum = 0;
     for (let i = 0; i < 9; i++) {
-      let d = parseInt(padded[i]) * (i % 2 === 0 ? 1 : 2);
+      let d = parseInt(padded[i], 10) * (i % 2 === 0 ? 1 : 2);
       if (d > 9) d -= 9;
       sum += d;
     }
     return sum % 10 === 0;
   }
 
-  /**
-   * validate(fields)
-   * מאמת את כל שדות טופס החתימה.
-   * @param {{ name, idNum, agreed }} fields
-   * @returns {{ valid: boolean, errors: string[] }}
-   */
   validate({ name, idNum, agreed, email, sigDate }) {
     const errors = [];
-    if (!name || name.trim().length < 2)          errors.push('name');
-    if (!SignatureService.validateIsraeliID(idNum)) errors.push('idNum');
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('email');
-    if (!sigDate)                                  errors.push('sigDate');
-    if (!this._hasSig)                             errors.push('canvas');
-    if (!agreed)                                   errors.push('agree');
+    if (!name || name.trim().length < 2)                           errors.push('name');
+    if (!SignatureService.validateIsraeliID(idNum))                 errors.push('idNum');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))        errors.push('email');
+    if (!sigDate)                                                   errors.push('sigDate');
+    if (!this._hasSig)                                              errors.push('canvas');
+    if (!agreed)                                                    errors.push('agree');
     return { valid: errors.length === 0, errors };
   }
 
-  // ── SHA-256 content hash ────────────────────────────────────────────────
-
-  /**
-   * hashSnapshot(obj)
-   * מחשב SHA-256 של snapshot ההצעה לצורך אימות שלמות.
-   * @param {object} obj
-   * @returns {Promise<string>} hex digest
-   */
   static async hashSnapshot(obj) {
     const json = JSON.stringify(obj, Object.keys(obj).sort());
     const buf = new TextEncoder().encode(json);
@@ -252,12 +194,6 @@ class SignatureService {
       .map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  // ── איסוף מטא-דאטה ──────────────────────────────────────────────────────
-
-  /**
-   * _collectMeta()
-   * מידע טכני שנאסף בצד הלקוח לצרכי אימות חוקי.
-   */
   _collectMeta() {
     return {
       userAgent:  navigator.userAgent,
@@ -269,10 +205,6 @@ class SignatureService {
     };
   }
 
-  /**
-   * _getPublicIP()
-   * מנסה לאחזר IP ציבורי. מחזיר 'לא זמין' אם נכשל.
-   */
   async _getPublicIP() {
     try {
       const res  = await fetch('https://api.ipify.org?format=json');
@@ -283,21 +215,6 @@ class SignatureService {
     }
   }
 
-  // ── collect — ה-API הראשי ────────────────────────────────────────────────
-
-  /**
-   * collect(fields)
-   * מאמת, אוסף את כל הנתונים, ומחזיר אובייקט חתימה מוכן לשמירה.
-   *
-   * @param {object} fields
-   *   name           {string}  שם מלא
-   *   idNum          {string}  ת.ז.
-   *   agreed         {boolean} תיבת אישור
-   *   quoteSnapshot  {object}  נתוני ההצעה (מ-QuoteEngine.calculate)
-   *   clientData     {object}  פרטי לקוח { name, phone, address, city }
-   *
-   * @returns {Promise<{ ok: boolean, errors?: string[], signature?: object }>}
-   */
   async collect({ name, idNum, agreed, email, sigDate, quoteSnapshot = {}, clientData = {} }) {
     const { valid, errors } = this.validate({ name, idNum, agreed, email, sigDate });
     if (!valid) return { ok: false, errors };
@@ -311,32 +228,18 @@ class SignatureService {
       hour: '2-digit', minute: '2-digit',
     });
 
-    // SHA-256 of the quote snapshot for integrity verification
     const snapshotHash = await SignatureService.hashSnapshot(quoteSnapshot);
 
     const signature = {
-      // זיהוי
-      refID,
-      dateStr,
-      timestamp: meta.timestamp,
-
-      // חותם
-      name:   name.trim(),
-      idNum:  String(idNum).replace(/\D/g, '').padStart(9, '0'),
+      refID, dateStr, timestamp: meta.timestamp,
+      name:  name.trim(),
+      idNum: String(idNum).replace(/\D/g, '').padStart(9, '0'),
       sigImg,
-
-      // נתוני stroke פורנזיים
       strokeData:  this.strokeData,
       strokeCount: this._strokes.length,
-
-      // לקוח
       clientData,
-
-      // מטא-דאטה טכני
       ipAddr,
       ...meta,
-
-      // snapshot של ההצעה + hash שלמות
       quoteSnapshot,
       snapshotHash,
     };
@@ -345,7 +248,6 @@ class SignatureService {
   }
 }
 
-// ── ייצוא ───────────────────────────────────────────────────────────────
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { SignatureService };
 }
