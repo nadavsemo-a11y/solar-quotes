@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.00.03.00",
+    "date": "2026-05-02",
+    "type": "bugfix",
+    "title": "Fix: hybrid inverter upgrade now respects per-quote price override",
+    "changes": [
+      "Removed hybrid-inv special-case in _renderExtraItem — the upgrade now renders an editable price input next to its checkbox, like every other upgrade (ev/monitoring/etc.)",
+      "Removed dead hybridInvPrice and hybridFullPrice plumbing: form fields in index.html, _getFormValues read, _buildState save (hybrP/hybrFP), _setFormFromState restore, and engine params/return values",
+      "Bug was: hybridInvPrice field captured user input into state but never reached the price calculation — _getExtras silently fell back to item.defaultPrice (8900) because #price-hybrid-inv was never rendered",
+      "Old quotes in KV with hybrP/hybrFP fields remain readable — those fields are now ignored on load, no migration needed"
+    ],
+    "affected_modules": [
+      "quote-ui.js",
+      "quote-engine.js",
+      "index.html"
+    ],
+    "author": "Claude"
+  },
+  {
     "version": "1.00.02.00",
     "date": "2026-05-02",
     "type": "minor",
