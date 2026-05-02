@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.00.04.00",
+    "date": "2026-05-02",
+    "type": "ui",
+    "title": "Portal: lift HubSpot + Duplicate buttons into a clean prefill toolbar",
+    "changes": [
+      "Moved 'שליפה מ-HubSpot' and 'שכפל הצעה קיימת' out of the client-details card-header into a dedicated white toolbar above the form, with a '⚡ טעינה מהירה:' label and a divider between the buttons",
+      "Restored the client card-header to its clean default (icon + title only) — no more cramped wrapping on narrow screens",
+      "Moved both modal panels (HubSpot search, paste-link box) out of the card-body to live right under the toolbar, so they pop down adjacent to the trigger button instead of appearing inside the form",
+      "Added subtle hover lift on both buttons"
+    ],
+    "affected_modules": ["index.html"],
+    "author": "Claude"
+  },
+  {
     "version": "1.00.03.00",
     "date": "2026-05-02",
     "type": "bugfix",
