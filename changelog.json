@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.01.01.00",
+    "date": "2026-05-02",
+    "type": "polish",
+    "title": "AGS redesign polish: kill emoji, fix base64 logo, contain shadow overflow",
+    "changes": [
+      "Replaced 34KB inline base64 topbar logo (legacy) with a clean <img src=ags-logo.png> reference — saved ~34KB per page load",
+      "Stripped remaining emoji from the portal: ☀ on generate button → ←, ✍️ from sign button, 🖨 from print/PDF, 💬 from WhatsApp share, 📊 from plan-pill, 📝 from session-badge, ✍️ icon in sig-canvas-hint → 'SIGN' eyebrow text, ☀ from .q-hero::before content",
+      "Promoted print button to btn-outline so it's secondary to the primary 'לחתימה דיגיטלית' mint pill",
+      "Added html/body { overflow-x: hidden } as a safety net against 4-6px offset shadows protruding past viewport on narrow screens",
+      "Added @media (max-width:700px) overrides that shrink offset shadows from 4-6px → 3px on mobile and tighten qpage padding so cards no longer kiss the page edge",
+      "Restyled WhatsApp + Download-PDF share buttons to AGS borders + mint variant"
+    ],
+    "affected_modules": ["index.html"],
+    "author": "Claude"
+  },
+  {
     "version": "1.01.00.00",
     "date": "2026-05-02",
     "type": "major redesign",
