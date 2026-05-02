@@ -1,5 +1,30 @@
 [
   {
+    "version": "1.01.00.00",
+    "date": "2026-05-02",
+    "type": "major redesign",
+    "title": "AGS design system: portal + quote refreshed to brand palette (black/white/mint)",
+    "changes": [
+      "Migrated portal and customer-facing quote from the old SEMO color system (navy/orange/yellow + gradients + 16px radii) to the AGS brand language (black/white/mint #9CF5C4 + flat fills + 4px radii + 4×4 offset shadows)",
+      "Replaced gradient sun logo + wordmark with the official AGS logo image (ags-logo.png) in the portal header and the inline-built quote hero",
+      "Switched font stack from Assistant to Heebo (300–900) — matches the AGS wordmark and Yaron's dashboard",
+      "Re-skinned all major components: form-card, card-header, inputs, radio-btn, gen-btn, plan-card, prefill-toolbar, modals, q-hero, stat-card, fin-card, payment-table, sec-title, sig-wrapper, btn-sig-submit, urban-banner, env-card, etc.",
+      "Replaced emoji-icon stat tiles (⚡🔋🔆) with text labels (DC/AC/A/kWh) that match the AGS engineering aesthetic",
+      "Removed inline gradients from quote-ui.js (meter notice, plan banner, ROI/payback cards, CTA-sign block) — all now flat black + mint accent",
+      "Added 'btn-content-editor' class for the ניהול תוכן button in the header",
+      "Backup of pre-redesign code saved to _backup_pre_ags_redesign_2026-05-02/ for fast rollback",
+      "Used CSS variable remap: legacy --sun/--sky/--green now alias to AGS tokens, so any inline style=\"color:var(--sun)\" still in JS picks up the new palette automatically"
+    ],
+    "affected_modules": [
+      "index.html",
+      "quote-ui.js",
+      "ags-logo.png",
+      "ags-mark.png",
+      "deploy_helper.py"
+    ],
+    "author": "Claude"
+  },
+  {
     "version": "1.00.04.00",
     "date": "2026-05-02",
     "type": "ui",
