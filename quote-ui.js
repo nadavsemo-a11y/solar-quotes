@@ -529,6 +529,11 @@ class QuoteUI {
 
     if (clientMode) this._prepareSigSection(d, vals);
 
+    // Upgrades render in ON state (only checked items are emitted), but payment-stages
+    // pre-rendered HTML uses base price. Run one toggle pass to sync everything
+    // (pay-dep/p2/p3/p4, project totals) with the included upgrades.
+    this._onUpgradeToggle();
+
     // ROI bar animation
     const roiW = Math.min(d.plan.roi * 100 * 2, 94).toFixed(1);
     setTimeout(() => {
@@ -1153,12 +1158,17 @@ class QuoteUI {
 
     const meterInc    = d.needsMeter ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">לוח מונה ייצור</div></div>` : '';
     const noteBox     = vals.note ? `<div style="background:var(--ags-mint-soft);border:1.5px solid var(--ags-mint);border-radius:var(--radius,4px);padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--ags-black);display:flex;gap:10px"><span style="font-size:18px;flex-shrink:0">✦</span><span>${vals.note}</span></div>` : '';
-    // Split extras into upgrades vs potential costs
+    // Split extras into upgrades vs potential costs.
+    // Salesperson's portal selection now drives BOTH columns: only items they
+    // ticked are surfaced to the customer. The customer can still toggle each
+    // upgrade off in the quote, but they cannot resurface upgrades the
+    // salesperson chose to hide.
     const allExtras = (d.extras || []);
-    // Show ALL upgrade-category items in quote (customer toggles on/off)
-    const allUpgrades = allExtras.filter(e => e.category === 'upgrade' || (!e.category && e.checked));
+    const allUpgrades = allExtras.filter(e => e.checked && (e.category === 'upgrade' || !e.category));
     const selectedPotential = allExtras.filter(e => e.checked && e.category === 'potential');
-    const upgradesTotal = allUpgrades.filter(e => e.checked).reduce((s, e) => s + e.price, 0);
+    // Since allUpgrades is already filtered to checked-only, the inner filter is a no-op
+    // but kept defensive in case the data shape changes upstream.
+    const upgradesTotal = allUpgrades.reduce((s, e) => s + e.price, 0);
     const totalWithUpgrades = d.price + upgradesTotal;
     // Capture digital signature preference — in client mode use stored pref, in portal mode read checkbox
     const showDigitalSig = clientMode
@@ -1359,12 +1369,12 @@ class QuoteUI {
     <div style="font-size:13px;color:var(--gray);margin-bottom:12px">${ContentManager.getInlineText('upgrades-intro', 'upgrades-subtitle') || 'ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:'}</div>
     <div id="upgrades-list">
       ${allUpgrades.map(e => `
-      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-batt-first="${d.battFirstPrice || 8900}" data-batt-extra="${d.battExtraPrice || 6500}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:0.5">
+      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-batt-first="${d.battFirstPrice || 8900}" data-batt-extra="${d.battExtraPrice || 6500}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:1">
         <div style="display:flex;align-items:center;gap:10px;flex:1">
           <label class="toggle-switch" style="position:relative;width:44px;height:24px;flex-shrink:0">
-            <input type="checkbox" data-upgrade-toggle="${e.id}" onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
-            <span style="position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:24px;transition:0.3s"></span>
-            <span style="position:absolute;top:3px;right:20px;width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
+            <input type="checkbox" data-upgrade-toggle="${e.id}" onchange="window._quoteUI._onUpgradeToggle()" checked style="opacity:0;width:0;height:0">
+            <span style="position:absolute;cursor:pointer;inset:0;background:var(--ags-mint-deep);border-radius:24px;transition:0.3s"></span>
+            <span style="position:absolute;top:3px;right:3px;width:18px;height:18px;background:white;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
           </label>
           <span style="font-size:14px;font-weight:600;color:var(--sky)">${e.label}</span>
           ${e.calcType === 'batteries' ? `
@@ -1383,7 +1393,7 @@ class QuoteUI {
     </div>
     <div style="display:flex;justify-content:space-between;padding:12px 14px;font-weight:800;font-size:15px;color:var(--sky)">
       <span>סה"כ שדרוגים</span>
-      <span id="upgrades-total">₪0</span>
+      <span id="upgrades-total">₪${fmt(upgradesTotal)}</span>
     </div>
   </div>` : '';
 
@@ -1394,9 +1404,9 @@ class QuoteUI {
       <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מערכת סולארית ${d.dcKW} קו"ט (${d.panelCount} פאנלים × ${d.panelW}W)</span><strong>₪${fmt(d.dcKW * d.ppkw)}</strong></li>
       <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--gray)"><span>מחיר KWP</span><span>₪${fmt(d.ppkw)} לקו"ט</span></li>
       ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
-      ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:none;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
-      <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(d.price)}</span></li>
-      <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span id="project-total-vat-display">₪${fmt(Math.round(d.price * VAT))}</span></li>
+      ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
+      <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(totalWithUpgrades)}</span></li>
+      <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span id="project-total-vat-display">₪${fmt(Math.round(totalWithUpgrades * VAT))}</span></li>
     </ul>
   </div>`;
 
@@ -1620,14 +1630,14 @@ class QuoteUI {
         if (priceDisplay) priceDisplay.textContent = '₪' + fmt(price);
       }
 
-      // Toggle visual state
+      // Toggle visual state — AGS palette
       if (cb.checked) {
         upgradesTotal += price;
-        if (slider[0]) slider[0].style.background = '#22c55e';
+        if (slider[0]) slider[0].style.background = 'var(--ags-mint-deep)';
         if (slider[1]) slider[1].style.right = '3px';
         row.style.opacity = '1';
       } else {
-        if (slider[0]) slider[0].style.background = '#cbd5e1';
+        if (slider[0]) slider[0].style.background = 'var(--ags-ink-300)';
         if (slider[1]) slider[1].style.right = '20px';
         row.style.opacity = '0.5';
       }
