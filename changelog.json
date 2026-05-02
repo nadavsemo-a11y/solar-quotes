@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.01.03.00",
+    "date": "2026-05-02",
+    "type": "behavior",
+    "title": "Quote upgrades default to OFF — customer opts in",
+    "changes": [
+      "Per-quote upgrade toggles now render OFF by default (gray track, knob right, opacity 0.5). Customer must consciously enable each one — no opt-out flow",
+      "Reverted: upgrades-total back to ₪0, project-total to base price, VAT to base*1.18, price-line items to display:none",
+      "Removed the post-render _onUpgradeToggle() call since base-price initial state is already self-consistent",
+      "Filter from 1.01.02.00 stays: upgrades unchecked in portal still don't appear at all"
+    ],
+    "affected_modules": ["quote-ui.js"],
+    "author": "Claude"
+  },
+  {
     "version": "1.01.02.00",
     "date": "2026-05-02",
     "type": "behavior",
