@@ -659,7 +659,7 @@ class QuoteUI {
       const nameParts = (vals.name || '').trim().split(/\s+/);
       const firstname = nameParts[0] || '';
       const lastname = nameParts.slice(1).join(' ') || '';
-      await fetch('https://s-a.gs/qs/hubspot-mock',  // STAGING — mock, no real HubSpot write {
+      await fetch('https://s-a.gs/qs/hubspot-mock', {  // STAGING — mock, no real HubSpot write
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
