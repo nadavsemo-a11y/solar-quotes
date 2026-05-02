@@ -3,31 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SEMO AGS — מחשבון הצעת מחיר סולארית</title>
+  <title>A.G.S — מחשבון הצעת מחיר סולארית</title>
+  <link rel="icon" type="image/png" href="ags-mark.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --sun: #F4A200;
-  --sun-light: #FFD166;
-  --sky: #0A1628;
-  --sky-mid: #112240;
-  --sky-light: #1D3461;
-  --green: #2ECC71;
-  --green-dark: #1a9e52;
-  --text: #1a1a2e;
-  --gray: #6B7280;
-  --gray-light: #9CA3AF;
-  --light: #F7F9FC;
-  --white: #ffffff;
-  --border: #E2E8F0;
-  --radius: 16px;
-  --shadow: 0 2px 20px rgba(0,0,0,0.07);
-  --shadow-lg: 0 8px 48px rgba(0,0,0,0.14);
+  /* ===== A.G.S CORE PALETTE ===== */
+  --ags-black:     #0A0A0A;
+  --ags-white:     #FFFFFF;
+  --ags-mint:      #9CF5C4;
+  --ags-mint-deep: #5FE0A0;
+  --ags-mint-soft: #D8FBE7;
+  --ags-ink-50:    #F8F8F8;
+  --ags-ink-100:   #F2F2F2;
+  --ags-ink-200:   #E4E4E4;
+  --ags-ink-300:   #C4C4C4;
+  --ags-ink-400:   #9A9A9A;
+  --ags-ink-500:   #6B6B6B;
+  --ags-ink-600:   #4A4A4A;
+  --ags-ink-700:   #2B2B2B;
+  --ags-ink-800:   #1A1A1A;
+  --ags-ink-900:   #0A0A0A;
+
+  /* ===== LEGACY ALIASES — remap to AGS so existing inline var(--xxx) JS strings keep working ===== */
+  --sun:        var(--ags-mint-deep);
+  --sun-light:  var(--ags-mint);
+  --sky:        var(--ags-black);
+  --sky-mid:    var(--ags-ink-800);
+  --sky-light:  var(--ags-ink-700);
+  --green:      #2EB872;
+  --green-dark: var(--ags-mint-deep);
+  --text:       var(--ags-black);
+  --gray:       var(--ags-ink-500);
+  --gray-light: var(--ags-ink-400);
+  --light:      var(--ags-ink-50);
+  --white:      var(--ags-white);
+  --border:     var(--ags-ink-200);
+
+  /* Hard geometry — AGS uses small radii + offset shadows */
+  --radius:    4px;
+  --r-sm:      2px;
+  --r-md:      4px;
+  --r-lg:      8px;
+  --shadow:    0 1px 3px rgba(10,10,10,0.06);
+  --shadow-lg: 4px 4px 0 var(--ags-black);
+  --shadow-hard: 4px 4px 0 var(--ags-black);
+  --shadow-hard-mint: 4px 4px 0 var(--ags-mint);
+  --ease-out:  cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); color: var(--text); }
+body { font-family: 'Heebo', 'Assistant', system-ui, sans-serif; background: var(--ags-white); color: var(--ags-black); -webkit-font-smoothing: antialiased; }
 
 /* ===================== PORTAL ===================== */
 #portal { min-height:100vh; display:flex; flex-direction:column; }
@@ -720,6 +747,575 @@ body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); 
   #share-bar > div:last-of-type { flex-direction:column; }
   #share-bar button { width:100%; justify-content:center; }
 }
+
+/* =====================================================================
+   AGS OVERRIDES — flat, hard-edged, mint-accented
+   Override layer that re-skins the legacy components to the AGS look
+   without renaming any class (so JS keeps working).
+   ===================================================================== */
+
+/* ----- Portal header — black + AGS logo ----- */
+.portal-header {
+  background: var(--ags-black);
+  padding: 14px 32px;
+  border-bottom: 2px solid var(--ags-mint);
+  box-shadow: none;
+}
+.portal-header .logo { gap: 12px; }
+.ags-logo-img {
+  height: 38px; width: auto; display: block;
+  filter: brightness(0) invert(1);   /* invert black→white on dark surface */
+}
+.logo-tagline {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+.portal-header .logo-sun { display: none; }
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.portal-badge {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.btn-content-editor {
+  background: var(--ags-mint);
+  color: var(--ags-black);
+  border: 2px solid var(--ags-black);
+  border-radius: var(--radius);
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ags-black);
+  transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out), background 120ms;
+}
+.btn-content-editor:hover {
+  background: var(--ags-mint-deep);
+  transform: translate(-2px,-2px);
+  box-shadow: 5px 5px 0 var(--ags-black);
+}
+
+/* ----- Portal body ----- */
+#portal { background: var(--ags-ink-50); }
+.portal-body { max-width: 960px; padding: 36px 24px 56px; }
+.portal-title { text-align: right; margin-bottom: 28px; padding-right: 4px; }
+.portal-title h1 {
+  font-family: 'Heebo';
+  font-weight: 900;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  color: var(--ags-black);
+  line-height: 1.05;
+}
+.portal-title h1 span { color: var(--ags-mint-deep); }
+.portal-title p { font-size: 15px; color: var(--ags-ink-500); margin-top: 8px; }
+
+/* ----- Prefill toolbar (the one we built) ----- */
+.prefill-toolbar {
+  border-radius: var(--radius) !important;
+  border: 1.5px solid var(--ags-ink-200) !important;
+  box-shadow: none !important;
+}
+.prefill-toolbar > button {
+  background: white !important;
+  color: var(--ags-black) !important;
+  border: 1.5px solid var(--ags-black) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 3px 3px 0 var(--ags-black) !important;
+}
+.prefill-toolbar > button:hover {
+  background: var(--ags-mint) !important;
+  transform: translate(-2px,-2px) !important;
+  box-shadow: 5px 5px 0 var(--ags-black) !important;
+}
+.prefill-toolbar > button svg { fill: var(--ags-black); }
+.prefill-toolbar > span { color: var(--ags-ink-600) !important; }
+
+/* ----- Form cards ----- */
+.form-card {
+  border-radius: var(--radius);
+  border: 1.5px solid var(--ags-ink-200);
+  box-shadow: none;
+}
+.card-header {
+  background: var(--ags-black);
+  color: white;
+  padding: 16px 24px;
+}
+.card-header .icon {
+  background: var(--ags-mint);
+  color: var(--ags-black);
+  border-radius: var(--radius);
+  width: 32px; height: 32px;
+  font-size: 14px;
+}
+.card-header h2 {
+  font-family: 'Heebo';
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+/* ----- Inputs ----- */
+.field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ags-black);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+.field input, .field select, .field textarea {
+  border: 1.5px solid var(--ags-ink-300);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--ags-black);
+  font-family: 'Heebo', inherit;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--ags-black);
+  box-shadow: 0 0 0 2px var(--ags-mint);
+  background: white;
+}
+
+/* ----- Radio btn (roof / inverter) ----- */
+.radio-btn span {
+  border: 1.5px solid var(--ags-ink-300);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--ags-ink-500);
+}
+.radio-btn input:checked + span {
+  background: var(--ags-black);
+  border-color: var(--ags-black);
+  color: white;
+}
+
+/* ----- Live preview (system summary) ----- */
+.live-preview {
+  background: var(--ags-black);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+.lp-val {
+  color: var(--ags-mint);
+  font-family: 'Heebo';
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+.lp-lbl { color: rgba(255,255,255,0.6); }
+
+/* ----- Generate button — primary AGS ----- */
+.gen-btn {
+  background: var(--ags-mint);
+  color: var(--ags-black);
+  border: 2px solid var(--ags-black);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--ags-black);
+  font-family: 'Heebo';
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+.gen-btn:hover {
+  background: var(--ags-mint-deep);
+  transform: translate(-2px,-2px);
+  box-shadow: 6px 6px 0 var(--ags-black);
+}
+
+/* ----- Date glow → mint glow ----- */
+@keyframes dateGlowAGS {
+  0%,100% { box-shadow: 0 0 0 2px var(--ags-mint), 4px 4px 0 var(--ags-black); border-color: var(--ags-black); }
+  50%     { box-shadow: 0 0 0 4px var(--ags-mint-deep), 4px 4px 0 var(--ags-black); }
+}
+.field input.date-glow {
+  animation: dateGlowAGS 1.4s ease-in-out infinite;
+  background: var(--ags-mint-soft) !important;
+}
+
+/* ----- Plan cards (in portal) ----- */
+.plan-card {
+  border: 1.5px solid var(--ags-ink-200);
+  border-radius: var(--radius);
+  background: white;
+}
+.plan-card:has(input:checked) {
+  border-color: var(--ags-black);
+  box-shadow: 4px 4px 0 var(--ags-mint);
+  background: white;
+}
+.plan-card:has(input:checked) .pc-check {
+  background: var(--ags-mint);
+  border-color: var(--ags-black);
+  color: var(--ags-black);
+}
+.pc-name { font-family: 'Heebo'; font-weight: 800; color: var(--ags-black); }
+.inflation-row {
+  background: var(--ags-mint-soft);
+  border: 1.5px solid var(--ags-mint);
+  border-radius: var(--radius);
+  color: var(--ags-black);
+}
+
+/* ----- Extras ----- */
+.extra-item {
+  border: 1.5px solid var(--ags-ink-200);
+  border-radius: var(--radius);
+}
+.extra-item.selected {
+  border-color: var(--ags-black);
+  background: var(--ags-mint-soft);
+}
+.extra-checkbox { accent-color: var(--ags-black); }
+.extra-price-input {
+  border: 1.5px solid var(--ags-ink-300);
+  border-radius: var(--radius);
+  color: var(--ags-black);
+}
+.extra-price-input:focus {
+  outline: none;
+  border-color: var(--ags-black);
+  box-shadow: 0 0 0 2px var(--ags-mint);
+}
+
+/* ----- Urban banner — mint, no gradient ----- */
+.urban-banner {
+  background: var(--ags-mint);
+  color: var(--ags-black);
+  border-radius: var(--radius);
+  border: 2px solid var(--ags-black);
+  box-shadow: 4px 4px 0 var(--ags-black);
+}
+
+/* ===== QUOTE OUTPUT ===== */
+
+#quote-output { background: var(--ags-ink-50); }
+.quote-topbar {
+  background: var(--ags-black);
+  border-bottom: 2px solid var(--ags-mint);
+  box-shadow: none;
+}
+.topbar-logo .sun { display: none; }
+.topbar-logo::before {
+  content: '';
+  display: inline-block;
+  width: 30px; height: 30px;
+  background: url('ags-mark.png') center/contain no-repeat;
+  filter: brightness(0) invert(1);
+}
+.btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.3); }
+.btn-outline:hover { background: rgba(255,255,255,0.08); }
+.btn-primary {
+  background: var(--ags-mint);
+  color: var(--ags-black);
+  border: 1px solid var(--ags-black);
+  box-shadow: none;
+  border-radius: var(--radius);
+  font-weight: 700;
+}
+.btn-primary:hover { background: var(--ags-mint-deep); }
+
+/* ----- Hero ----- */
+.q-hero {
+  background: var(--ags-black);
+  border: 2px solid var(--ags-black);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 var(--ags-mint);
+  padding: 36px 32px;
+  margin-bottom: 22px;
+}
+.q-hero::before { content: ''; }
+.hero-title { font-family: 'Heebo'; font-weight: 900; letter-spacing: -0.02em; }
+.hero-title span { color: var(--ags-mint); }
+.hero-badge {
+  background: var(--ags-mint);
+  border: none;
+  color: var(--ags-black);
+  border-radius: var(--radius);
+  font-weight: 700;
+}
+.hero-badge strong { color: var(--ags-black); }
+.client-strip {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius);
+}
+.cs-field span { font-family: 'Heebo'; font-weight: 700; }
+
+/* ----- Stats ----- */
+.stats-row { gap: 12px; margin-bottom: 22px; }
+.stat-card {
+  border: 1.5px solid var(--ags-ink-200);
+  border-radius: var(--radius);
+  background: white;
+  box-shadow: none;
+  transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out), border-color 120ms;
+}
+.stat-card:hover {
+  transform: translate(-2px,-2px);
+  box-shadow: 4px 4px 0 var(--ags-black);
+  border-color: var(--ags-black);
+}
+.stat-icon {
+  background: var(--ags-mint-soft) !important;
+  border-radius: var(--radius);
+}
+.ic-y, .ic-b, .ic-g, .ic-o { background: var(--ags-mint-soft) !important; }
+.stat-val {
+  font-family: 'Heebo';
+  font-weight: 900;
+  color: var(--ags-black);
+  letter-spacing: -0.02em;
+}
+
+/* ----- Section cards ----- */
+.sec {
+  background: white;
+  border: 1.5px solid var(--ags-ink-200);
+  border-radius: var(--radius);
+  box-shadow: none;
+  padding: 26px 28px;
+  margin-bottom: 16px;
+}
+.sec-title {
+  font-family: 'Heebo';
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--ags-black);
+  letter-spacing: -0.01em;
+  border-bottom: 2px solid var(--ags-black);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+.sec-title .bar {
+  width: 4px; height: 22px;
+  background: var(--ags-mint);
+  border-radius: 0;
+}
+.sec-title .bar.green, .sec-title .bar.blue { background: var(--ags-mint); }
+
+/* ----- Financials ----- */
+.fin-card {
+  background: var(--ags-ink-50);
+  border: 1.5px solid var(--ags-ink-200);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+}
+.fin-card.dark {
+  background: var(--ags-black) !important;
+  border: 2px solid var(--ags-black) !important;
+  box-shadow: 4px 4px 0 var(--ags-mint);
+  color: white;
+}
+.fin-card.dark .fin-val { color: var(--ags-mint) !important; }
+.fin-val {
+  font-family: 'Heebo';
+  font-weight: 900;
+  color: var(--ags-black);
+  letter-spacing: -0.02em;
+}
+
+/* ----- ROI ----- */
+.roi-track {
+  background: var(--ags-ink-200);
+  border-radius: var(--radius);
+  height: 8px;
+}
+.roi-fill {
+  background: var(--ags-mint-deep) !important;
+  border-radius: var(--radius);
+}
+
+/* ----- Payment table ----- */
+.payment-table th {
+  background: var(--ags-black);
+  color: white;
+  font-family: 'Heebo';
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.payment-table tr:last-child td {
+  background: var(--ags-mint-soft);
+  font-family: 'Heebo';
+  font-weight: 800;
+}
+
+/* ----- Includes / Spec list ----- */
+.inc-item, .spec-list li {
+  background: white;
+  border: 1.5px solid var(--ags-ink-200);
+  border-radius: var(--radius);
+}
+.inc-check {
+  background: var(--ags-mint);
+  color: var(--ags-black);
+  border-radius: var(--radius);
+}
+.spec-list li { border-right: 4px solid var(--ags-mint); }
+
+/* ----- Upgrades ----- */
+.upgrade-card {
+  background: white;
+  border: 1.5px solid var(--ags-ink-200);
+  border-radius: var(--radius);
+}
+.upgrade-name { font-family: 'Heebo'; font-weight: 700; color: var(--ags-black); }
+.upgrade-price { font-family: 'Heebo'; font-weight: 800; color: var(--ags-mint-deep); }
+
+/* ----- Steps ----- */
+.steps::before { background: var(--ags-black); width: 1.5px; }
+.step-num {
+  background: var(--ags-black);
+  border-radius: var(--radius);
+  font-family: 'Heebo';
+  font-weight: 800;
+  box-shadow: 0 0 0 4px white;
+}
+.step-title { font-family: 'Heebo'; color: var(--ags-black); }
+
+/* ----- Environment cards ----- */
+.env-card {
+  background: var(--ags-mint-soft);
+  border: 1.5px solid var(--ags-mint);
+  border-radius: var(--radius);
+}
+.env-val { color: var(--ags-black); font-family: 'Heebo'; font-weight: 900; }
+.env-lbl { color: var(--ags-black); font-weight: 600; }
+
+/* ----- Warranty cards ----- */
+.warranty-card {
+  background: var(--ags-ink-50);
+  border: 1.5px solid var(--ags-ink-200);
+  border-radius: var(--radius);
+}
+.warranty-title { color: var(--ags-black); font-family: 'Heebo'; }
+.warranty-desc { color: var(--ags-ink-600); }
+
+/* ----- Notes ----- */
+.notes-list li {
+  background: var(--ags-ink-50);
+  border-right: 3px solid var(--ags-mint);
+  border-radius: var(--radius);
+}
+
+/* ----- Signature ----- */
+.sig-wrapper {
+  background: var(--ags-black);
+  border: 2px solid var(--ags-black);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--ags-mint);
+}
+.sig-header-icon {
+  background: var(--ags-mint);
+  color: var(--ags-black);
+  border-radius: var(--radius);
+}
+.sig-field input {
+  border: 1.5px solid var(--ags-ink-300);
+  border-radius: var(--radius);
+}
+.sig-field input:focus {
+  border-color: var(--ags-black);
+  box-shadow: 0 0 0 2px var(--ags-mint);
+}
+.sig-canvas-wrap {
+  border: 2px dashed var(--ags-ink-300);
+  border-radius: var(--radius);
+  background: white;
+}
+.sig-canvas-wrap.has-sig { border-color: var(--ags-black); }
+.sig-declaration {
+  background: var(--ags-mint-soft);
+  border: 1.5px solid var(--ags-mint);
+  border-radius: var(--radius);
+  color: var(--ags-black);
+}
+.btn-sig-submit {
+  background: var(--ags-mint);
+  color: var(--ags-black);
+  border: 2px solid var(--ags-black);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--ags-black);
+}
+.btn-sig-submit:hover {
+  background: var(--ags-mint-deep);
+  transform: translate(-2px,-2px);
+  box-shadow: 6px 6px 0 var(--ags-black);
+}
+.btn-sig-submit:disabled {
+  background: var(--ags-ink-200);
+  border-color: var(--ags-ink-300);
+  box-shadow: none;
+  color: var(--ags-ink-500);
+}
+.btn-dl-pdf {
+  background: var(--ags-black);
+  color: white;
+  border: 2px solid var(--ags-black);
+  border-radius: var(--radius);
+}
+.btn-dl-pdf:hover { background: var(--ags-ink-800); }
+
+.sig-success-icon {
+  background: var(--ags-mint) !important;
+  color: var(--ags-black) !important;
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--ags-black);
+}
+#sig-success h2 { color: var(--ags-black); font-family: 'Heebo'; }
+
+/* ----- Footer ----- */
+.q-footer .brand { color: var(--ags-black); }
+.q-footer .brand span { color: var(--ags-mint-deep); }
+
+/* ----- Tooltip ----- */
+.tip-popup { border: 1.5px solid var(--ags-ink-200); border-radius: var(--radius); }
+.tip-title { color: var(--ags-black); }
+
+/* ----- City dropdown ----- */
+#cityDropdown {
+  border: 1.5px solid var(--ags-black) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 4px 4px 0 var(--ags-black) !important;
+}
+.city-opt.premium span { background: var(--ags-mint); color: var(--ags-black); border-radius: var(--radius); font-weight: 700; }
+#urbanPremiumBadge { background: var(--ags-mint) !important; color: var(--ags-black) !important; border-radius: var(--radius) !important; }
+
+/* ----- Modals (HubSpot search + duplicate paste box) ----- */
+#hubspotSearchBox {
+  background: white !important;
+  border: 1.5px solid var(--ags-black) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 4px 4px 0 var(--ags-mint) !important;
+}
+#duplicateBox {
+  background: white !important;
+  border: 1.5px solid var(--ags-black) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 4px 4px 0 var(--ags-mint) !important;
+}
+#duplicateBox input, #hubspotSearchBox input {
+  border-color: var(--ags-ink-300) !important;
+  border-radius: var(--radius) !important;
+}
+#duplicateBox button, #hubspotSearchBox button {
+  border-radius: var(--radius) !important;
+  font-family: 'Heebo';
+}
+#duplicateLoadBtn {
+  background: var(--ags-mint) !important;
+  color: var(--ags-black) !important;
+  border: 1.5px solid var(--ags-black) !important;
+  box-shadow: 2px 2px 0 var(--ags-black) !important;
+}
 </style>
 <script>
 // Hide portal immediately if loading a client quote (prevents flash)
@@ -733,16 +1329,14 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
 <div id="portal">
   <header class="portal-header">
     <div class="logo">
-      <div class="logo-sun">☀</div>
+      <img src="ags-logo.png" alt="A.G.S" class="ags-logo-img">
       <div class="logo-text">
-        <strong>SEMO AGS</strong>
-        <span>סמו א.ג.ס בע"מ</span>
-        <span style="font-size:10px;opacity:0.45;font-weight:400;letter-spacing:0.5px"></span>
+        <span class="logo-tagline">סמו א.ג.ס בע"מ — מערכות סולאריות</span>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <div class="portal-badge">🔧 פורטל יצירת הצעות מחיר</div>
-      <button onclick="openContentEditor()" style="background:#F4A200;color:#0A1628;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.2s">📝 ניהול תוכן</button>
+    <div class="header-actions">
+      <span class="portal-badge">פורטל הצעות מחיר</span>
+      <button onclick="openContentEditor()" class="btn-content-editor">ניהול תוכן</button>
     </div>
   </header>
   <div class="portal-body">
@@ -1584,7 +2178,7 @@ function ceResetDefaults() {
 </script>
 
 <!-- Unified Version Display -->
-<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.00.04.00</div>
+<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.01.00.00</div>
 
 </body>
 </html>
