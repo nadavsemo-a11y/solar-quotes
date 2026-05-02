@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.01.02.00",
+    "date": "2026-05-02",
+    "type": "behavior",
+    "title": "Quote: portal upgrade checkbox now actually filters the customer-facing list",
+    "changes": [
+      "Changed allUpgrades filter in _buildQuoteHTML from 'show all upgrade-category items' to 'show only items the salesperson ticked' — symmetric with how הוצאות פוטנציאליות already worked. Unchecking a hybrid inverter / SolarEdge / etc. in the portal now removes it from the customer's quote entirely",
+      "Customer-facing toggles render in the ON state for the items that did make it through (since the salesperson explicitly chose them); the customer can still toggle each one off if they don't want it, but they cannot resurface upgrades the salesperson hid",
+      "If the salesperson unchecks ALL upgrades, the entire 'שדרוגים' section is now skipped (allUpgrades.length > 0 guard was already in place — this just makes it actually triggerable)",
+      "Updated initial render values to reflect upgrades-included totals: upgrades-total = sum, project-total = base + upgrades, VAT = (base+upgrades)*1.18, price-line items render display:flex instead of display:none",
+      "Added a one-shot _onUpgradeToggle() call right after page.innerHTML = html so payment-stages (pay-dep/p2/p3/p4) recompute against the upgrades-included total — no flash-of-stale-numbers on first paint",
+      "Polished _onUpgradeToggle visuals: hardcoded #22c55e ON green and #cbd5e1 OFF gray replaced with var(--ags-mint-deep) and var(--ags-ink-300) for AGS palette consistency"
+    ],
+    "affected_modules": ["quote-ui.js"],
+    "author": "Claude"
+  },
+  {
     "version": "1.01.01.00",
     "date": "2026-05-02",
     "type": "polish",
