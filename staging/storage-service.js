@@ -71,7 +71,7 @@ class StorageService {
    */
   async save(state) {
     const encoded = this.encode(state);
-    const resp = await fetch(`${this._workerUrl}/qs/save`,  // STAGING save {
+    const resp = await fetch(`${this._workerUrl}/qs/save`, {  // STAGING save
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ data: encoded }),
