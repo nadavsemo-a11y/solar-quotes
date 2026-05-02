@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.00.02.00",
+    "date": "2026-05-02",
+    "type": "minor",
+    "title": "Portal: duplicate existing quote + glowing date reminder",
+    "changes": [
+      "Added 'שכפל הצעה קיימת' button beside the HubSpot pull button — paste a previous quote URL to pre-fill the form for editing/regeneration",
+      "Supports both short URLs (s-a.gs/q/<id>) and fallback URLs with #q=<encoded> hash",
+      "After loading a duplicated quote, the date field pulses with an orange glow until the user focuses or changes it — to prevent accidentally reusing the old date",
+      "Added Worker route GET /q/data/:id returning the encoded state as JSON with CORS, used by the duplicate flow"
+    ],
+    "affected_modules": [
+      "worker.js",
+      "index.html"
+    ],
+    "author": "Claude"
+  },
+  {
     "version": "1.00.01.00",
     "date": "2026-04-30",
     "type": "minor",
