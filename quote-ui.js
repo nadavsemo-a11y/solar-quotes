@@ -1152,7 +1152,7 @@ class QuoteUI {
     const fullAddress = `${d.city}${vals.address ? ', ' + vals.address : ''}`;
 
     const meterInc    = d.needsMeter ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">לוח מונה ייצור</div></div>` : '';
-    const noteBox     = vals.note ? `<div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--sky-mid);display:flex;gap:10px;"><span style="font-size:18px;flex-shrink:0">💬</span><span>${vals.note}</span></div>` : '';
+    const noteBox     = vals.note ? `<div style="background:var(--ags-mint-soft);border:1.5px solid var(--ags-mint);border-radius:var(--radius,4px);padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--ags-black);display:flex;gap:10px"><span style="font-size:18px;flex-shrink:0">✦</span><span>${vals.note}</span></div>` : '';
     // Split extras into upgrades vs potential costs
     const allExtras = (d.extras || []);
     // Show ALL upgrade-category items in quote (customer toggles on/off)
@@ -1167,12 +1167,12 @@ class QuoteUI {
 
     const fastPlanHTML = d.planKey === 'fast' ? `
       <div id="qf-fastplan" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
-        <div style="background:rgba(244,162,0,0.15);border-radius:9px;padding:10px 14px">
-          <div style="font-weight:800;color:var(--sun-light);margin-bottom:4px">שנות 1–5</div>
+        <div style="background:rgba(156,245,196,0.15);border-radius:4px;padding:10px 14px">
+          <div style="font-weight:800;color:var(--ags-mint);margin-bottom:4px">שנות 1–5</div>
           <div>${p.planDesc.split('|')[0].trim()}</div>
-          <div style="font-weight:800;color:var(--sun-light);margin-top:4px" id="qf-fast-yr1">₪${fmt(p.yearlyBreakdown[0].inc)} / שנה</div>
+          <div style="font-weight:800;color:var(--ags-mint);margin-top:4px" id="qf-fast-yr1">₪${fmt(p.yearlyBreakdown[0].inc)} / שנה</div>
         </div>
-        <div style="background:rgba(255,255,255,0.08);border-radius:9px;padding:10px 14px">
+        <div style="background:rgba(255,255,255,0.08);border-radius:4px;padding:10px 14px">
           <div style="font-weight:800;opacity:0.8;margin-bottom:4px">שנות 6–26</div>
           <div>${p.planDesc.split('|')[1]?.trim() || ''}</div>
           <div style="font-weight:800;opacity:0.8;margin-top:4px" id="qf-fast-yr6">₪${fmt(p.yearlyBreakdown[5].inc)} / שנה</div>
@@ -1181,17 +1181,17 @@ class QuoteUI {
 
     const indexPlanHTML = d.planKey === 'index' ? `
       <div id="qf-indexplan" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:12px">
-        <div style="background:rgba(255,255,255,0.08);border-radius:9px;padding:10px 14px">
+        <div style="background:rgba(255,255,255,0.08);border-radius:4px;padding:10px 14px">
           <div style="opacity:0.7;margin-bottom:3px">שנה 1</div>
-          <div style="font-weight:800;color:var(--sun-light)" id="qf-ix-yr1">₪${fmt(p.yearlyBreakdown[0].inc)}</div>
+          <div style="font-weight:800;color:var(--ags-mint)" id="qf-ix-yr1">₪${fmt(p.yearlyBreakdown[0].inc)}</div>
         </div>
-        <div style="background:rgba(255,255,255,0.08);border-radius:9px;padding:10px 14px">
+        <div style="background:rgba(255,255,255,0.08);border-radius:4px;padding:10px 14px">
           <div style="opacity:0.7;margin-bottom:3px">שנה 10</div>
-          <div style="font-weight:800;color:var(--sun-light)" id="qf-ix-yr10">₪${fmt(p.yearlyBreakdown[9].inc)}</div>
+          <div style="font-weight:800;color:var(--ags-mint)" id="qf-ix-yr10">₪${fmt(p.yearlyBreakdown[9].inc)}</div>
         </div>
-        <div style="background:rgba(255,255,255,0.08);border-radius:9px;padding:10px 14px">
+        <div style="background:rgba(255,255,255,0.08);border-radius:4px;padding:10px 14px">
           <div style="opacity:0.7;margin-bottom:3px">שנה 25</div>
-          <div style="font-weight:800;color:var(--sun-light)" id="qf-ix-yr25">₪${fmt(p.yearlyBreakdown[24].inc)}</div>
+          <div style="font-weight:800;color:var(--ags-mint)" id="qf-ix-yr25">₪${fmt(p.yearlyBreakdown[24].inc)}</div>
         </div>
       </div>` : '';
 
@@ -1199,8 +1199,8 @@ class QuoteUI {
   <!-- HERO -->
   <div class="q-hero">
     <div class="hero-head">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div><strong style="font-size:20px;font-weight:900;color:white;letter-spacing:1px">SEMO AGS</strong><div style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:300">סמו א.ג.ס בע"מ</div></div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <img src="ags-logo.png" alt="A.G.S" style="height:44px;width:auto;filter:brightness(0) invert(1);flex-shrink:0">
       </div>
       <div class="hero-title">הצעת מחיר<br><span>מערכת סולארית</span></div>
       <div class="hero-sub">סמו א.ג.ס בע"מ | ח.פ. 515942282</div>
@@ -1225,19 +1225,18 @@ class QuoteUI {
 
   ${d.hasUrbanPremium ? `
   <div class="urban-banner">
-    <div class="ub-icon">🏙️</div>
     <div>
-      <div class="ub-title">★ ישוב ${d.city} זכאי לפרמייה אורבנית!</div>
+      <div class="ub-title">ישוב ${d.city} זכאי לפרמייה אורבנית</div>
       <div class="ub-rate">תוספת 6 אג׳ לכל קו"ט מיוצר ✦ בתוקף ל-15 השנים הראשונות</div>
     </div>
   </div>` : ''}
 
   <!-- STATS -->
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-icon ic-y">⚡</div><span class="stat-val">${d.dcKW}</span><div class="stat-unit">קו"ט DC</div><div class="stat-label">הספק המערכת</div></div>
-    <div class="stat-card"><div class="stat-icon" style="background:rgba(99,102,241,0.1)">🔋</div><span class="stat-val">${d.acKW}</span><div class="stat-unit">קו"ט AC</div><div class="stat-label">הספק ממיר (קובע תעריף)</div></div>
-    <div class="stat-card"><div class="stat-icon" style="background:rgba(239,68,68,0.1)">⚡</div><span class="stat-val" style="font-size:18px">3×${d.breaker.size}A</span><div class="stat-unit" style="font-size:10px;color:var(--gray)">${d.breaker.current}A נומינלי</div><div class="stat-label">גודל חיבור מינימלי</div></div>
-    <div class="stat-card"><div class="stat-icon ic-g">🔆</div><span class="stat-val">${fmt(d.annualKwh)}</span><div class="stat-unit">קו"ט לשנה</div><div class="stat-label">ייצור אנרגיה</div></div>
+    <div class="stat-card"><div class="stat-icon ic-y">DC</div><span class="stat-val">${d.dcKW}</span><div class="stat-unit">קו"ט DC</div><div class="stat-label">הספק המערכת</div></div>
+    <div class="stat-card"><div class="stat-icon">AC</div><span class="stat-val">${d.acKW}</span><div class="stat-unit">קו"ט AC</div><div class="stat-label">הספק ממיר (קובע תעריף)</div></div>
+    <div class="stat-card"><div class="stat-icon">A</div><span class="stat-val" style="font-size:18px">3×${d.breaker.size}A</span><div class="stat-unit" style="font-size:10px;color:var(--ags-ink-500)">${d.breaker.current}A נומינלי</div><div class="stat-label">גודל חיבור מינימלי</div></div>
+    <div class="stat-card"><div class="stat-icon ic-g">kWh</div><span class="stat-val">${fmt(d.annualKwh)}</span><div class="stat-unit">קו"ט לשנה</div><div class="stat-label">ייצור אנרגיה</div></div>
   </div>
 
   <!-- ORDERED SECTIONS (driven by ContentManager.sectionOrder) -->
@@ -1262,44 +1261,40 @@ class QuoteUI {
           const canFast  = elig.includes('fast');
           const canIndex = elig.includes('index');
           const act = d.effectivePlanKey;
-          const btnStyle = (key, ok, color, bgColor) => `cursor:${ok?'pointer':'not-allowed'};border-radius:12px;padding:14px;border:2px solid ${act===key?color:'var(--border)'};background:${act===key?bgColor:'var(--light)'};opacity:${ok?'1':'0.4'};transition:all 0.2s`;
+          const btnStyle = (key, ok) => `cursor:${ok?'pointer':'not-allowed'};border-radius:var(--radius,4px);padding:14px;border:1.5px solid ${act===key?'var(--ags-black)':'var(--ags-ink-200)'};background:${act===key?'var(--ags-mint-soft)':'white'};box-shadow:${act===key?'4px 4px 0 var(--ags-black)':'none'};opacity:${ok?'1':'0.4'};transition:all 120ms cubic-bezier(0.2,0.7,0.2,1)`;
           return `
-        <div class="qplan-btn" id="qbtn-green" onclick="${canGreen?`switchPlan('green',this)`:''}" style="${btnStyle('green',canGreen,'#22c55e','rgba(34,197,94,0.07)')}">
-          <div style="font-size:16px;margin-bottom:4px">🌿</div>
-          <div style="font-weight:800;color:var(--sky);font-size:13px">מסלול ירוק</div>
-          <div style="font-size:10px;color:#15803d;margin-top:2px;font-weight:700">${Math.round(calcWeightedRate(d.acKW)*10000)/100} אג׳</div>
-          <div style="font-size:10px;color:var(--gray);margin-top:1px">${canGreen?'ללא מונה ייצור ✓':'לא זמין >15kW'}</div>
+        <div class="qplan-btn" id="qbtn-green" onclick="${canGreen?`switchPlan('green',this)`:''}" style="${btnStyle('green',canGreen)}">
+          <div style="font-weight:800;color:var(--ags-black);font-size:13px">מסלול ירוק</div>
+          <div style="font-size:10px;color:var(--ags-mint-deep);margin-top:4px;font-weight:700">${Math.round(calcWeightedRate(d.acKW)*10000)/100} אג׳</div>
+          <div style="font-size:10px;color:var(--ags-ink-500);margin-top:1px">${canGreen?'ללא מונה ייצור':'לא זמין >15kW'}</div>
         </div>
-        <div class="qplan-btn" id="qbtn-regular" onclick="switchPlan('regular',this)" style="${btnStyle('regular',true,'var(--sun)','rgba(244,162,0,0.05)')}">
-          <div style="font-size:16px;margin-bottom:4px">📊</div>
-          <div style="font-weight:800;color:var(--sky);font-size:13px">מסלול רגיל</div>
-          <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">${Math.round(calcWeightedRate(d.acKW)*10000)/100} אג׳</div>
-          <div style="font-size:10px;color:var(--gray);margin-top:1px">+ לוח מונה ייצור</div>
+        <div class="qplan-btn" id="qbtn-regular" onclick="switchPlan('regular',this)" style="${btnStyle('regular',true)}">
+          <div style="font-weight:800;color:var(--ags-black);font-size:13px">מסלול רגיל</div>
+          <div style="font-size:10px;color:var(--ags-ink-700);margin-top:4px;font-weight:700">${Math.round(calcWeightedRate(d.acKW)*10000)/100} אג׳</div>
+          <div style="font-size:10px;color:var(--ags-ink-500);margin-top:1px">+ לוח מונה ייצור</div>
         </div>
-        <div class="qplan-btn" id="qbtn-fast" onclick="${canFast?`switchPlan('fast',this)`:''}" style="${btnStyle('fast',canFast,'var(--sun)','rgba(244,162,0,0.05)')}">
-          <div style="font-size:16px;margin-bottom:4px">⚡</div>
-          <div style="font-weight:800;color:var(--sky);font-size:13px">החזר מהיר</div>
-          <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">60 → 38 אג׳</div>
-          <div style="font-size:10px;color:var(--gray);margin-top:1px">${canFast?'שנות 1–5 vs 6–26':'לא זמין >30kW'}</div>
+        <div class="qplan-btn" id="qbtn-fast" onclick="${canFast?`switchPlan('fast',this)`:''}" style="${btnStyle('fast',canFast)}">
+          <div style="font-weight:800;color:var(--ags-black);font-size:13px">החזר מהיר</div>
+          <div style="font-size:10px;color:var(--ags-ink-700);margin-top:4px;font-weight:700">60 → 38 אג׳</div>
+          <div style="font-size:10px;color:var(--ags-ink-500);margin-top:1px">${canFast?'שנות 1–5 vs 6–26':'לא זמין >30kW'}</div>
         </div>
-        <div class="qplan-btn" id="qbtn-index" onclick="${canIndex?`switchPlan('index',this)`:''}" style="${btnStyle('index',canIndex,'var(--sun)','rgba(244,162,0,0.05)')}">
-          <div style="font-size:16px;margin-bottom:4px">📈</div>
-          <div style="font-weight:800;color:var(--sky);font-size:13px">צמוד מדד</div>
-          <div style="font-size:10px;color:#b45309;margin-top:2px;font-weight:700">39.1 אג׳ + מדד</div>
-          <div style="font-size:10px;color:var(--gray);margin-top:1px">${canIndex?'צמוד למדד המחירים לצרכן':'לא זמין >15kW'}</div>
+        <div class="qplan-btn" id="qbtn-index" onclick="${canIndex?`switchPlan('index',this)`:''}" style="${btnStyle('index',canIndex)}">
+          <div style="font-weight:800;color:var(--ags-black);font-size:13px">צמוד מדד</div>
+          <div style="font-size:10px;color:var(--ags-ink-700);margin-top:4px;font-weight:700">39.1 אג׳ + מדד</div>
+          <div style="font-size:10px;color:var(--ags-ink-500);margin-top:1px">${canIndex?'צמוד למדד המחירים לצרכן':'לא זמין >15kW'}</div>
         </div>`;
         })()}
       </div>
-      <div id="quoteInflationRowDiv" style="display:none;align-items:center;gap:8px;margin-top:12px;background:rgba(244,162,0,0.08);border:1px solid rgba(244,162,0,0.25);border-radius:9px;padding:10px 14px;font-size:13px;font-weight:600;color:#112240">
-        <span>📉 אחוז אינפלציה שנתי:</span>
-        <input id="quoteInflationInput" type="number" value="2.5" min="0" max="15" step="0.5" style="width:68px;padding:5px 8px;border:2px solid #E2E8F0;border-radius:7px;font-size:14px;font-weight:800;text-align:center;font-family:inherit;background:white;color:#0A1628;direction:ltr" oninput="refreshQuoteFinancials()">
+      <div id="quoteInflationRowDiv" style="display:none;align-items:center;gap:8px;margin-top:12px;background:var(--ags-mint-soft);border:1.5px solid var(--ags-mint);border-radius:var(--radius,4px);padding:10px 14px;font-size:13px;font-weight:600;color:var(--ags-black)">
+        <span>אחוז אינפלציה שנתי:</span>
+        <input id="quoteInflationInput" type="number" value="2.5" min="0" max="15" step="0.5" style="width:68px;padding:5px 8px;border:1.5px solid var(--ags-ink-300);border-radius:var(--radius,4px);font-size:14px;font-weight:800;text-align:center;font-family:inherit;background:white;color:var(--ags-black);direction:ltr" oninput="refreshQuoteFinancials()">
         <span>%</span>
       </div>
     </div>
 
     <!-- METER NOTICE -->
-    <div id="qf-meter-notice" style="display:${d.needsMeter?'flex':'none'};align-items:center;gap:12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border-radius:12px;padding:14px 20px;margin-bottom:14px">
-      <span style="font-size:22px;flex-shrink:0">⚡</span>
+    <div id="qf-meter-notice" style="display:${d.needsMeter?'flex':'none'};align-items:center;gap:12px;background:var(--ags-black);color:white;border:2px solid var(--ags-black);border-radius:var(--radius,4px);box-shadow:4px 4px 0 var(--ags-mint);padding:14px 20px;margin-bottom:14px">
+      <span style="font-size:22px;flex-shrink:0;color:var(--ags-mint)">⚡</span>
       <div>
         <div style="font-weight:800;font-size:14px">לוח מונה ייצור נדרש</div>
         <div style="font-size:12px;opacity:0.85">מסלול זה מחייב לוח מונה ייצור — <span id="qf-meter-price">₪${fmt(d.meterPanelPrice)}</span> כלול במחיר המערכת</div>
@@ -1307,7 +1302,7 @@ class QuoteUI {
     </div>
 
     <!-- PLAN BANNER -->
-    <div style="background:linear-gradient(135deg,#0A1628,#1D3461);border-radius:14px;padding:18px 22px;margin-bottom:18px;color:white">
+    <div style="background:var(--ags-black);border:2px solid var(--ags-black);box-shadow:4px 4px 0 var(--ags-mint);border-radius:var(--radius,4px);padding:18px 22px;margin-bottom:22px;color:white">
       <div style="font-size:16px;font-weight:800;margin-bottom:6px" id="qp-name">${p.planName}</div>
       <div style="font-size:13px;opacity:0.8;margin-bottom:10px" id="qp-rate">${p.rateNote}</div>
       ${fastPlanHTML}
@@ -1338,13 +1333,13 @@ class QuoteUI {
       </div>
     </div>
     <div class="fin-grid" style="margin-top:14px">
-      <div class="fin-card" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0">
-        <span class="fin-val" style="color:var(--green-dark)" id="qf-roi">${(p.roi*100).toFixed(1)}%</span>
-        <div class="fin-lbl" style="color:#166534">תשואה שנה 1</div>
+      <div class="fin-card" style="background:var(--ags-mint-soft);border:1.5px solid var(--ags-mint)">
+        <span class="fin-val" id="qf-roi">${(p.roi*100).toFixed(1)}%</span>
+        <div class="fin-lbl" style="color:var(--ags-black)">תשואה שנה 1</div>
       </div>
-      <div class="fin-card" style="background:linear-gradient(135deg,#fffbeb,#fef9c3);border:1px solid #fde68a">
-        <span class="fin-val" style="color:#92400e" id="qf-payback">${fmtD(p.payback)}</span>
-        <div class="fin-lbl" style="color:#92400e">שנות החזר השקעה</div>
+      <div class="fin-card" style="background:var(--ags-ink-50);border:1.5px solid var(--ags-ink-200)">
+        <span class="fin-val" id="qf-payback">${fmtD(p.payback)}</span>
+        <div class="fin-lbl" style="color:var(--ags-black)">שנות החזר השקעה</div>
       </div>
     </div>
 
@@ -1459,11 +1454,11 @@ class QuoteUI {
 
   <!-- CTA TO SIGN (only if digital signature enabled) -->
   ${showDigitalSig ? `
-  <div id="cta-sign-block" style="background:linear-gradient(135deg,#0A1628,#1a3a5c);padding:40px 24px;text-align:center;border-radius:${clientMode ? '20px' : '0'}">
-    <div style="font-size:12px;color:rgba(255,255,255,0.45);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">הצעה בתוקף ל-14 יום</div>
-    <div style="font-size:24px;font-weight:900;color:white;margin-bottom:8px;line-height:1.35">${vals.name} יקר/ה,<br>${clientMode ? 'מוכן/ה לצאת לדרך?' : 'מוכן/ה לאשר את ההצעה?'}</div>
-    ${clientMode ? '<div style="font-size:15px;color:rgba(255,255,255,0.6);margin-bottom:16px">בואו נחתום ונתקדם — ההצעה מחכה לאישורך</div>' : ''}
-    <button onclick="scrollToSign()" style="padding:14px 32px;background:var(--sun);color:white;font-size:16px;font-weight:800;border:none;border-radius:12px;cursor:pointer;box-shadow:0 4px 20px rgba(244,162,0,0.4);transition:all 0.2s">✍️ חתום על ההצעה</button>
+  <div id="cta-sign-block" style="background:var(--ags-black);border:2px solid var(--ags-black);box-shadow:6px 6px 0 var(--ags-mint);padding:40px 24px;text-align:center;border-radius:var(--radius,4px);margin-bottom:18px">
+    <div style="font-size:11px;color:var(--ags-mint);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:14px;font-weight:700">הצעה בתוקף ל-14 יום</div>
+    <div style="font-size:26px;font-weight:900;color:white;margin-bottom:10px;line-height:1.2;letter-spacing:-0.02em">${vals.name} יקר/ה,<br>${clientMode ? 'מוכן/ה לצאת לדרך?' : 'מוכן/ה לאשר את ההצעה?'}</div>
+    ${clientMode ? '<div style="font-size:15px;color:rgba(255,255,255,0.65);margin-bottom:22px">בואו נחתום ונתקדם — ההצעה מחכה לאישורך</div>' : '<div style="margin-bottom:22px"></div>'}
+    <button onclick="scrollToSign()" style="padding:14px 32px;background:var(--ags-mint);color:var(--ags-black);font-size:16px;font-weight:800;border:2px solid var(--ags-black);border-radius:var(--radius,4px);cursor:pointer;box-shadow:4px 4px 0 #fff;font-family:inherit;letter-spacing:0;transition:transform 120ms cubic-bezier(0.2,0.7,0.2,1),box-shadow 120ms cubic-bezier(0.2,0.7,0.2,1)" onmouseover="this.style.transform='translate(-2px,-2px)';this.style.boxShadow='6px 6px 0 #fff'" onmouseout="this.style.transform='none';this.style.boxShadow='4px 4px 0 #fff'">חתום על ההצעה ←</button>
   </div>` : ''}`;
   }
 
