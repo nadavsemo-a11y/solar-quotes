@@ -194,8 +194,6 @@ class QuoteUI {
       rightHtml = `<span style="font-size:11px;color:var(--gray)">$100 לקילו-וואט DC × שער דולר</span>`;
     } else if (item.calcType === 'solaredge') {
       rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${item.defaultPrice || 0}" step="100" oninput="updatePreview()">`;
-    } else if (id === 'hybrid-inv') {
-      rightHtml = `<span style="font-size:11px;color:var(--gray)">לפי מחיר שהוגדר למעלה</span>`;
     } else if (id === 'ev') {
       rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${item.defaultPrice || 4500}" step="100" oninput="updatePreview()">
         <input id="evModel" type="text" placeholder="דגם (אופציונלי)" style="width:140px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;margin-right:8px">`;
@@ -298,8 +296,6 @@ class QuoteUI {
       // מחירי יחידה
       battFirstPrice:  parseFloat(get('battFirstPrice'))   || 8900,
       battExtraPrice:  parseFloat(get('battExtraPrice'))   || 6500,
-      hybridInvPrice:  parseFloat(get('hybridInvPrice'))   || 0,
-      hybridFullPrice: parseFloat(get('hybridFullPrice'))  || 0,
       premiumPanel,
       usdRate,
       meterPanelPrice: parseFloat(get('meterPanelPrice'))  || 0,
@@ -995,7 +991,6 @@ class QuoteUI {
       roof: vals.roof, inv: vals.inv, plan: vals.plan,
       customInvModel: get('customInvModel'),
       battFP: get('battFirstPrice'), battEP: get('battExtraPrice'),
-      hybrP: get('hybridInvPrice'), hybrFP: get('hybridFullPrice'),
       premP: get('premiumPanelPrice'), usdRate: get('usdRate'),
       meterP: get('meterPanelPrice'),
       evM: get('evModel'),
@@ -1020,7 +1015,6 @@ class QuoteUI {
     set('inflationPct', s.infl);
     set('customInvModel', s.customInvModel);
     set('battFirstPrice', s.battFP); set('battExtraPrice', s.battEP);
-    set('hybridInvPrice', s.hybrP); set('hybridFullPrice', s.hybrFP);
     set('premiumPanelPrice', s.premP); set('usdRate', s.usdRate);
     set('meterPanelPrice', s.meterP);
     set('evModel', s.evM);
