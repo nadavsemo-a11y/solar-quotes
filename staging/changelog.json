@@ -1,0 +1,164 @@
+[
+  {
+    "version": "1.01.03.00",
+    "date": "2026-05-02",
+    "type": "behavior",
+    "title": "Quote upgrades default to OFF — customer opts in",
+    "changes": [
+      "Per-quote upgrade toggles now render OFF by default (gray track, knob right, opacity 0.5). Customer must consciously enable each one — no opt-out flow",
+      "Reverted: upgrades-total back to ₪0, project-total to base price, VAT to base*1.18, price-line items to display:none",
+      "Removed the post-render _onUpgradeToggle() call since base-price initial state is already self-consistent",
+      "Filter from 1.01.02.00 stays: upgrades unchecked in portal still don't appear at all"
+    ],
+    "affected_modules": ["quote-ui.js"],
+    "author": "Claude"
+  },
+  {
+    "version": "1.01.02.00",
+    "date": "2026-05-02",
+    "type": "behavior",
+    "title": "Quote: portal upgrade checkbox now actually filters the customer-facing list",
+    "changes": [
+      "Changed allUpgrades filter in _buildQuoteHTML from 'show all upgrade-category items' to 'show only items the salesperson ticked' — symmetric with how הוצאות פוטנציאליות already worked. Unchecking a hybrid inverter / SolarEdge / etc. in the portal now removes it from the customer's quote entirely",
+      "Customer-facing toggles render in the ON state for the items that did make it through (since the salesperson explicitly chose them); the customer can still toggle each one off if they don't want it, but they cannot resurface upgrades the salesperson hid",
+      "If the salesperson unchecks ALL upgrades, the entire 'שדרוגים' section is now skipped (allUpgrades.length > 0 guard was already in place — this just makes it actually triggerable)",
+      "Updated initial render values to reflect upgrades-included totals: upgrades-total = sum, project-total = base + upgrades, VAT = (base+upgrades)*1.18, price-line items render display:flex instead of display:none",
+      "Added a one-shot _onUpgradeToggle() call right after page.innerHTML = html so payment-stages (pay-dep/p2/p3/p4) recompute against the upgrades-included total — no flash-of-stale-numbers on first paint",
+      "Polished _onUpgradeToggle visuals: hardcoded #22c55e ON green and #cbd5e1 OFF gray replaced with var(--ags-mint-deep) and var(--ags-ink-300) for AGS palette consistency"
+    ],
+    "affected_modules": ["quote-ui.js"],
+    "author": "Claude"
+  },
+  {
+    "version": "1.01.01.00",
+    "date": "2026-05-02",
+    "type": "polish",
+    "title": "AGS redesign polish: kill emoji, fix base64 logo, contain shadow overflow",
+    "changes": [
+      "Replaced 34KB inline base64 topbar logo (legacy) with a clean <img src=ags-logo.png> reference — saved ~34KB per page load",
+      "Stripped remaining emoji from the portal: ☀ on generate button → ←, ✍️ from sign button, 🖨 from print/PDF, 💬 from WhatsApp share, 📊 from plan-pill, 📝 from session-badge, ✍️ icon in sig-canvas-hint → 'SIGN' eyebrow text, ☀ from .q-hero::before content",
+      "Promoted print button to btn-outline so it's secondary to the primary 'לחתימה דיגיטלית' mint pill",
+      "Added html/body { overflow-x: hidden } as a safety net against 4-6px offset shadows protruding past viewport on narrow screens",
+      "Added @media (max-width:700px) overrides that shrink offset shadows from 4-6px → 3px on mobile and tighten qpage padding so cards no longer kiss the page edge",
+      "Restyled WhatsApp + Download-PDF share buttons to AGS borders + mint variant"
+    ],
+    "affected_modules": ["index.html"],
+    "author": "Claude"
+  },
+  {
+    "version": "1.01.00.00",
+    "date": "2026-05-02",
+    "type": "major redesign",
+    "title": "AGS design system: portal + quote refreshed to brand palette (black/white/mint)",
+    "changes": [
+      "Migrated portal and customer-facing quote from the old SEMO color system (navy/orange/yellow + gradients + 16px radii) to the AGS brand language (black/white/mint #9CF5C4 + flat fills + 4px radii + 4×4 offset shadows)",
+      "Replaced gradient sun logo + wordmark with the official AGS logo image (ags-logo.png) in the portal header and the inline-built quote hero",
+      "Switched font stack from Assistant to Heebo (300–900) — matches the AGS wordmark and Yaron's dashboard",
+      "Re-skinned all major components: form-card, card-header, inputs, radio-btn, gen-btn, plan-card, prefill-toolbar, modals, q-hero, stat-card, fin-card, payment-table, sec-title, sig-wrapper, btn-sig-submit, urban-banner, env-card, etc.",
+      "Replaced emoji-icon stat tiles (⚡🔋🔆) with text labels (DC/AC/A/kWh) that match the AGS engineering aesthetic",
+      "Removed inline gradients from quote-ui.js (meter notice, plan banner, ROI/payback cards, CTA-sign block) — all now flat black + mint accent",
+      "Added 'btn-content-editor' class for the ניהול תוכן button in the header",
+      "Backup of pre-redesign code saved to _backup_pre_ags_redesign_2026-05-02/ for fast rollback",
+      "Used CSS variable remap: legacy --sun/--sky/--green now alias to AGS tokens, so any inline style=\"color:var(--sun)\" still in JS picks up the new palette automatically"
+    ],
+    "affected_modules": [
+      "index.html",
+      "quote-ui.js",
+      "ags-logo.png",
+      "ags-mark.png",
+      "deploy_helper.py"
+    ],
+    "author": "Claude"
+  },
+  {
+    "version": "1.00.04.00",
+    "date": "2026-05-02",
+    "type": "ui",
+    "title": "Portal: lift HubSpot + Duplicate buttons into a clean prefill toolbar",
+    "changes": [
+      "Moved 'שליפה מ-HubSpot' and 'שכפל הצעה קיימת' out of the client-details card-header into a dedicated white toolbar above the form, with a '⚡ טעינה מהירה:' label and a divider between the buttons",
+      "Restored the client card-header to its clean default (icon + title only) — no more cramped wrapping on narrow screens",
+      "Moved both modal panels (HubSpot search, paste-link box) out of the card-body to live right under the toolbar, so they pop down adjacent to the trigger button instead of appearing inside the form",
+      "Added subtle hover lift on both buttons"
+    ],
+    "affected_modules": ["index.html"],
+    "author": "Claude"
+  },
+  {
+    "version": "1.00.03.00",
+    "date": "2026-05-02",
+    "type": "bugfix",
+    "title": "Fix: hybrid inverter upgrade now respects per-quote price override",
+    "changes": [
+      "Removed hybrid-inv special-case in _renderExtraItem — the upgrade now renders an editable price input next to its checkbox, like every other upgrade (ev/monitoring/etc.)",
+      "Removed dead hybridInvPrice and hybridFullPrice plumbing: form fields in index.html, _getFormValues read, _buildState save (hybrP/hybrFP), _setFormFromState restore, and engine params/return values",
+      "Bug was: hybridInvPrice field captured user input into state but never reached the price calculation — _getExtras silently fell back to item.defaultPrice (8900) because #price-hybrid-inv was never rendered",
+      "Old quotes in KV with hybrP/hybrFP fields remain readable — those fields are now ignored on load, no migration needed"
+    ],
+    "affected_modules": [
+      "quote-ui.js",
+      "quote-engine.js",
+      "index.html"
+    ],
+    "author": "Claude"
+  },
+  {
+    "version": "1.00.02.00",
+    "date": "2026-05-02",
+    "type": "minor",
+    "title": "Portal: duplicate existing quote + glowing date reminder",
+    "changes": [
+      "Added 'שכפל הצעה קיימת' button beside the HubSpot pull button — paste a previous quote URL to pre-fill the form for editing/regeneration",
+      "Supports both short URLs (s-a.gs/q/<id>) and fallback URLs with #q=<encoded> hash",
+      "After loading a duplicated quote, the date field pulses with an orange glow until the user focuses or changes it — to prevent accidentally reusing the old date",
+      "Added Worker route GET /q/data/:id returning the encoded state as JSON with CORS, used by the duplicate flow"
+    ],
+    "affected_modules": [
+      "worker.js",
+      "index.html"
+    ],
+    "author": "Claude"
+  },
+  {
+    "version": "1.00.01.00",
+    "date": "2026-04-30",
+    "type": "minor",
+    "title": "Quote: drop concrete-roof surcharge; add KWP price + roof area",
+    "changes": [
+      "Removed 'תוספת לגג בטון' from pricing logic — no longer added to quotes or charged",
+      "Removed concretePerKw input field from index.html settings",
+      "Added 'מחיר KWP' (price per kWp) line in customer-facing price breakdown",
+      "Added 'שטח הגג' (roof area) to customer-facing system info row and spec tables (v1 + v2)"
+    ],
+    "affected_modules": [
+      "quote-engine.js",
+      "quote-ui.js",
+      "template-engine.js",
+      "template-engine-v2.js",
+      "index.html"
+    ],
+    "author": "Claude"
+  },
+  {
+    "version": "1.00.00.00",
+    "date": "2026-03-26",
+    "type": "major release",
+    "title": "Initial version baseline — unified versioning policy",
+    "changes": [
+      "Initial version baseline established under unified versioning policy",
+      "Removed all legacy inconsistent version numbers (v1.1.0, v1.0.0, v2.0.0)",
+      "Added unified version display in bottom-right corner across all pages",
+      "Created version.json as single source of truth",
+      "Created changelog.json for version history tracking",
+      "Migrated historical changelog from CHANGELOG.md to changelog.json"
+    ],
+    "affected_modules": [
+      "portal.html",
+      "index.html",
+      "worker.js",
+      "trigger-roadmap.html"
+    ],
+    "author": "Claude",
+    "notes": "Prior history (pre-unified-versioning): v1.0.0 (2026-03-22) initial documented version with HubSpot tasks; v1.1.0 (2026-03-23) HubSpot sync without email fix. All reset to 1.00.00.00 under new policy."
+  }
+]
