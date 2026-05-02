@@ -286,8 +286,6 @@ const QuoteEngine = (() => {
       planKey, inflationPct = 2.5,
       battFirstPrice = 8900,
       battExtraPrice = 6500,
-      hybridInvPrice = 8900,
-      hybridFullPrice = 37100,
       premiumPanel = 100,
       usdRate = 3.65,
       meterPanelPrice = 2500,
@@ -334,7 +332,6 @@ const QuoteEngine = (() => {
       plan,
       // מחירים להפניה
       battFirstPrice, battExtraPrice,
-      hybridInvPrice, hybridFullPrice,
       meterPanelPrice,
     };
   }
