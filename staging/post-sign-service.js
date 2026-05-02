@@ -57,7 +57,7 @@ class PostSignService {
 
   static async _saveSignature(docType, docId, signature) {
     try {
-      const resp = await fetch(`${PostSignService.WORKER_URL}/sign-staging/${docId}`  // STAGING route, {
+      const resp = await fetch(`${PostSignService.WORKER_URL}/sign-staging/${docId}`, {  // STAGING route
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ docType, signature }),
@@ -74,7 +74,7 @@ class PostSignService {
 
   static async checkSignature(docId) {
     try {
-      const resp = await fetch(`${PostSignService.WORKER_URL}/sign-staging/${docId}`  // STAGING route);
+      const resp = await fetch(`${PostSignService.WORKER_URL}/sign-staging/${docId}`);  // STAGING route
       return await resp.json();
     } catch {
       return { signed: false };
@@ -83,7 +83,7 @@ class PostSignService {
 
   static async _notifyCompany(docType, docId, signature, emailData) {
     try {
-      const resp = await fetch(`${PostSignService.WORKER_URL}/qs/email-mock`  // STAGING — mock, no real email, {
+      const resp = await fetch(`${PostSignService.WORKER_URL}/qs/email-mock`, {  // STAGING — mock, no real email
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,7 +107,7 @@ class PostSignService {
 
   static async _confirmClient(docType, signature, emailData) {
     try {
-      const resp = await fetch(`${PostSignService.WORKER_URL}/qs/email-mock`  // STAGING — mock, no real email, {
+      const resp = await fetch(`${PostSignService.WORKER_URL}/qs/email-mock`, {  // STAGING — mock, no real email
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
