@@ -1347,6 +1347,11 @@ body { font-family: 'Heebo', 'Assistant', system-ui, sans-serif; background: var
 <script>
 // Hide portal immediately if loading a client quote (prevents flash)
 window.__SEMO_ENV__='staging';
+// STAGING debug marker — confirms which mode the page entered
+if (window.__SEMO_ENV__==='staging') {
+  console.log('[STAGING]', { id: location.pathname, source: window.__STAGING_SOURCE__ || 'unknown', hasQuoteData: !!window.__QUOTE_DATA__, mode: window.__QUOTE_DATA__ ? 'quote' : 'portal' });
+  document.documentElement.setAttribute('data-staging-mode', window.__QUOTE_DATA__ ? 'quote' : 'portal');
+}
 if (window.__QUOTE_DATA__ || location.hash.length > 2) {
   document.write('<style>#portal{display:none!important}</style>');
 }
