@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.02.00.00",
+    "date": "2026-05-03",
+    "type": "behavior",
+    "title": "Post-sign action: replaced create_monday_project with add_to_customers_board",
+    "changes": [
+      "Removed action 'create_monday_project' from the quote post-sign chain (used to create a new item on the projects board 5089265830 with system specs)",
+      "Added action 'add_to_customers_board' that creates an item on the customers board 5089265844 ('לקוחות', group group_mkzjzyp9) populating: name, phone (phone_mkyw1rbw), email (email_mkywsxst), address (text_mkzjzscr), and a Google Maps navigation link (link_mkywg7js)",
+      "The HubSpot Contact integration column (integration_mm1fjmne) is intentionally not set — Monday-HubSpot integration manages it automatically",
+      "Quote action chain is now: flatten_document → add_to_customers_board → notify_company → send_client_confirmation",
+      "Other docTypes (spec, agreement, work-order) are unchanged",
+      "Subject line of the post-sign email now includes the customer name (from 1.01.03 staging note — Apps Script side awaits clasp push)"
+    ],
+    "affected_modules": ["worker.js", "version.json", "changelog.json"],
+    "author": "Claude"
+  },
+  {
     "version": "1.01.03.00",
     "date": "2026-05-02",
     "type": "behavior",
