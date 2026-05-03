@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.02.02.00",
+    "date": "2026-05-03",
+    "type": "behavior",
+    "title": "add_to_customers_board: HubSpot is the source of truth for contact data",
+    "changes": [
+      "actionAddToCustomersBoard now FETCHES the customer record from HubSpot (by hsId, then by email fallback) and uses that data to populate the Monday customers board item — instead of using the form values from the quote",
+      "Resolution order: (1) HubSpot lookup by saved hsId → (2) HubSpot search by signer email → (3) form fields from the quote snapshot (legacy/no-CRM customers)",
+      "Result includes data_source field ('hubspot-by-id' | 'hubspot-by-email' | 'form-only') so /admin/signature-events shows which path was used per signature",
+      "Address composition: address + city + zip from HubSpot (more complete than the form's address+city only)",
+      "Item name now uses HubSpot firstname+lastname when available, ensuring consistency with how the contact is stored in the CRM"
+    ],
+    "affected_modules": ["worker.js"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.01.00",
     "date": "2026-05-03",
     "type": "behavior",
