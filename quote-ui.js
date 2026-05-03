@@ -998,6 +998,9 @@ class QuoteUI {
       extras: this._buildExtrasState(),
       // digital signature preference
       digSig: document.getElementById('chk-digital-sig')?.checked ?? true,
+      // HubSpot contact ID (set when salesperson uses the prefill toolbar);
+      // travels with the quote so the post-sign Monday "customers" board action can link to it.
+      hsId: window._hsContactId || '',
     };
   }
 
@@ -1021,6 +1024,8 @@ class QuoteUI {
     set('clientEmail', s.email);
     // Store email for client-side use (e.g. post-sign)
     this._clientEmail = s.email || '';
+    // Restore HubSpot contact ID so duplicate-quote preserves the existing CRM link
+    if (s.hsId) window._hsContactId = s.hsId;
     if (s.city) this._selectCity(s.city);
     const radio = (name, val) => {
       if (!val) return;
