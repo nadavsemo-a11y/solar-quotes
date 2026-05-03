@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.02.01.00",
+    "date": "2026-05-03",
+    "type": "behavior",
+    "title": "add_to_customers_board: link HubSpot Contact via integration column",
+    "changes": [
+      "Quote state now persists hsId (window._hsContactId, set when salesperson uses HubSpot prefill in the portal); _setFormFromState restores it so the duplicate-quote feature preserves the CRM link",
+      "Worker extractSolarData() exposes hubspot_id from snapshot.hsId",
+      "actionAddToCustomersBoard now performs a 2nd Monday mutation after create_item: change_column_value on integration_mm1fjmne (the HubSpot Contact column) with the contact ID. If Monday rejects the integration-column write format the item creation still succeeds; the result includes hubspot_linked + hubspot_link_error fields so the failure is visible in /admin/signature-events",
+      "Old quotes (signed before 1.02.01.00) without hsId still work — the action just creates the customer item with name/phone/email/address; no HubSpot link"
+    ],
+    "affected_modules": ["worker.js", "quote-ui.js"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.00.00",
     "date": "2026-05-03",
     "type": "behavior",
