@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.02.03.00",
+    "date": "2026-05-04",
+    "type": "behavior",
+    "title": "add_to_customers_board: HubSpot name-search fallback for emailless customers",
+    "changes": [
+      "fetchHubspotContact() now has a 3-tier resolution order: hsId → email → name. The name path splits the signer's full name into firstname (first token) + lastname (rest), AND-filters HubSpot by both, and picks the most-recently-modified match if duplicates exist",
+      "Single-token names (e.g. just a first name) search by firstname only — relevant for HubSpot records that historically only stored a partial name",
+      "Result includes data_source = 'hubspot-by-id' | 'hubspot-by-email' | 'hubspot-by-name' | 'form-only', plus name_match_ambiguous = true when the name search returned >1 contact (so duplicates surface in /admin/signature-events)",
+      "Rationale: not all leads have email addresses, but every quote either pulls the customer from HubSpot via the prefill toolbar or auto-syncs the name into HubSpot at quote-creation time — making name a near-universally available identifier in this CRM"
+    ],
+    "affected_modules": ["worker.js"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.02.00",
     "date": "2026-05-03",
     "type": "behavior",
