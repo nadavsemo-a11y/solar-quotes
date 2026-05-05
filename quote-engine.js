@@ -79,6 +79,98 @@ const QuoteEngine = (() => {
     return Math.round(marginal * 10000) / 10000;
   }
 
+  // ── מערכת התעריף הידני (green / regular בלבד) ─────────────────────────
+  // יחידות:
+  //   ag/kWh  = אגורות לקו"ט (תצוגה למשתמש)
+  //   nis/kWh = ₪ לקו"ט (חישוב פנימי)
+  // הכלל: 1 ש"ח = 100 אגורות → ₪/kWh = ag/kWh ÷ 100
+
+  function agToNisPerKwh(ag) { return Math.round(ag * 100) / 10000; }
+  function nisToAgPerKwh(nis) { return Math.round(nis * 10000) / 100; }
+
+  /**
+   * getAutoGreenRegularTariffAgPerKwh(acKW)
+   * התעריף האוטומטי באגורות/קו"ט לפי ה-AC. רץ דרך calcWeightedRate.
+   */
+  function getAutoGreenRegularTariffAgPerKwh(acKW) {
+    return nisToAgPerKwh(calcWeightedRate(acKW));
+  }
+
+  /**
+   * isValidManualTariffAg(value)
+   * בודק שהערך הוא מספר חיובי סופי בטווח סביר (0-200 אגורות).
+   */
+  function isValidManualTariffAg(value) {
+    return Number.isFinite(value) && value > 0 && value <= 200;
+  }
+
+  /**
+   * resolveTariffOverride(state, acKW)
+   * מחזיר אובייקט מנורמל שמשמש גם את ה-UI וגם את חישוב ההכנסה.
+   * @param {object|null} state — { mode, manualAgPerKwh, manualSetAtAcKW } או null
+   * @param {number} acKW
+   * @returns {{
+   *   mode: 'auto'|'manual',
+   *   manualAgPerKwh: number|null,
+   *   manualSetAtAcKW: number|null,
+   *   autoAgPerKwh: number,
+   *   appliedAgPerKwh: number,
+   *   appliedNisPerKwh: number,
+   *   manualOverrideApplied: boolean,
+   *   appliesToPlans: ['green','regular']
+   * }}
+   */
+  function resolveTariffOverride(state, acKW) {
+    const auto = getAutoGreenRegularTariffAgPerKwh(acKW);
+    const s = state || {};
+    const isManual = s.mode === 'manual' && isValidManualTariffAg(s.manualAgPerKwh);
+    const appliedAg = isManual ? s.manualAgPerKwh : auto;
+    return {
+      mode: isManual ? 'manual' : 'auto',
+      manualAgPerKwh: isManual ? s.manualAgPerKwh : null,
+      manualSetAtAcKW: isManual ? (s.manualSetAtAcKW ?? acKW) : null,
+      autoAgPerKwh: auto,
+      appliedAgPerKwh: appliedAg,
+      appliedNisPerKwh: agToNisPerKwh(appliedAg),
+      manualOverrideApplied: isManual,
+      appliesToPlans: ['green', 'regular'],
+    };
+  }
+
+  /**
+   * buildTariffOverrideSnapshot(state, acKW)
+   * בונה את ה-snapshot שנשמר עם ההצעה. מבטיח שכל השדות הנדרשים קיימים.
+   */
+  function buildTariffOverrideSnapshot(state, acKW) {
+    const r = resolveTariffOverride(state, acKW);
+    return {
+      mode: r.mode,
+      manualAgPerKwh: r.manualAgPerKwh,
+      autoAgPerKwhAtSave: r.autoAgPerKwh,
+      appliedAgPerKwh: r.appliedAgPerKwh,
+      appliesToPlans: r.appliesToPlans,
+      manualSetAtAcKW: r.manualSetAtAcKW,
+    };
+  }
+
+  /**
+   * normalizeTariffOverrideFromPayload(payload)
+   * תאימות אחורה: payloads ישנים ללא tariffOverride → auto.
+   * Payload חדש: מחזיר את הסנאפשוט כמו שהוא, עם ולידציה רכה.
+   */
+  function normalizeTariffOverrideFromPayload(payload) {
+    const t = payload && payload.tariffOverride;
+    if (!t || typeof t !== 'object') return null; // legacy → caller treats as auto
+    const mode = t.mode === 'manual' && isValidManualTariffAg(t.manualAgPerKwh) ? 'manual' : 'auto';
+    return {
+      mode,
+      manualAgPerKwh: mode === 'manual' ? t.manualAgPerKwh : null,
+      manualSetAtAcKW: mode === 'manual' ? (typeof t.manualSetAtAcKW === 'number' ? t.manualSetAtAcKW : null) : null,
+      autoAgPerKwhAtSave: typeof t.autoAgPerKwhAtSave === 'number' ? t.autoAgPerKwhAtSave : null,
+      appliedAgPerKwh: typeof t.appliedAgPerKwh === 'number' ? t.appliedAgPerKwh : null,
+    };
+  }
+
   // ── מגן ראשי ─────────────────────────────────────────────────────────────
 
   /**
@@ -105,18 +197,40 @@ const QuoteEngine = (() => {
    *   hasUrbanPremium {boolean} פרמייה אורבנית
    *   hours          {number} שעות ייצור שנתיות (ברירת מחדל 1750)
    *
+   * @param {number} [params.manualGreenRegularTariffNisPerKwh]
+   *        תעריף ידני ב-₪/קו"ט. חל אך ורק על מסלולים green/regular.
+   *        אם undefined/null — נעשה שימוש בתעריף אוטומטי מ-calcWeightedRate.
+   *
    * @returns {{
    *   yr1, totalInc, payback, roi,
    *   planName, planDesc, rateNote,
-   *   yearlyBreakdown, avgAnnual, baseRateAg
+   *   yearlyBreakdown, avgAnnual, baseRateAg,
+   *   rateSource, manualOverrideApplied, appliedRateNisPerKwh
    * }}
    */
-  function calcPlanIncome({ dcKW, acKW, price, planKey, inflationPct, hasUrbanPremium, hours }) {
+  function calcPlanIncome({ dcKW, acKW, price, planKey, inflationPct, hasUrbanPremium, hours,
+                            manualGreenRegularTariffNisPerKwh = null }) {
     const HOURS   = hours || DEFAULT_HOURS;
     const kwh     = dcKW * HOURS;
     const up      = hasUrbanPremium ? URBAN_PREMIUM : 0;
-    const baseR   = calcWeightedRate(acKW);
-    const rateAg  = Math.round(baseR * 100 * 100) / 100;
+    const autoR   = calcWeightedRate(acKW);
+
+    // Override applies only to green/regular. fast/index keep their own logic.
+    const overrideActive = (planKey === 'green' || planKey === 'regular')
+      && Number.isFinite(manualGreenRegularTariffNisPerKwh)
+      && manualGreenRegularTariffNisPerKwh > 0;
+    const baseR  = overrideActive ? manualGreenRegularTariffNisPerKwh : autoR;
+    const rateAg = Math.round(baseR * 100 * 100) / 100;
+
+    // Plan metadata for audit/UI clarity
+    let rateSource;
+    if (planKey === 'green' || planKey === 'regular') {
+      rateSource = overrideActive ? 'manual' : 'auto';
+    } else {
+      rateSource = 'plan-specific';
+    }
+    const manualOverrideApplied = overrideActive;
+    const appliedRateNisPerKwh = (planKey === 'green' || planKey === 'regular') ? baseR : null;
 
     let yearlyBreakdown = [], planName, planDesc, rateNote;
 
@@ -130,7 +244,7 @@ const QuoteEngine = (() => {
         : `${rateAg} אג׳ קבוע | הספק AC ${acKW} kW`;
       rateNote = hasUrbanPremium
         ? `תעריף ${rateAg} אג׳ + פרמייה אורבנית ${URBAN_PREMIUM * 100} אג׳ = ${Math.round((baseR + up) * 100 * 100) / 100} אג׳ (${URBAN_PREMIUM_YEARS} שנים)`
-        : `תעריף משוקלל ${rateAg} אג׳ לקו"ט | הספק AC ${acKW} kW`;
+        : `תעריף הזנה לרשת ${rateAg} אג׳ לקו"ט | הספק AC ${acKW} kW`;
       for (let y = 1; y <= YEARS; y++) {
         yearlyBreakdown.push({ year: y, inc: kwh * (y <= URBAN_PREMIUM_YEARS ? rate : rateAfter) });
       }
@@ -178,7 +292,7 @@ const QuoteEngine = (() => {
     const avgAnnual = totalInc / YEARS;
     const roi       = price > 0 ? yr1 / price : 0;
 
-    if (price <= 0) return { yr1, totalInc, payback: YEARS, roi: 0, planName, planDesc, rateNote, yearlyBreakdown, avgAnnual, baseRateAg: rateAg };
+    if (price <= 0) return { yr1, totalInc, payback: YEARS, roi: 0, planName, planDesc, rateNote, yearlyBreakdown, avgAnnual, baseRateAg: rateAg, rateSource, manualOverrideApplied, appliedRateNisPerKwh };
 
     let cumul = 0, payback = YEARS;
     for (const { year, inc } of yearlyBreakdown) {
@@ -189,7 +303,7 @@ const QuoteEngine = (() => {
       }
     }
 
-    return { yr1, totalInc, payback, roi, planName, planDesc, rateNote, yearlyBreakdown, avgAnnual, baseRateAg: rateAg };
+    return { yr1, totalInc, payback, roi, planName, planDesc, rateNote, yearlyBreakdown, avgAnnual, baseRateAg: rateAg, rateSource, manualOverrideApplied, appliedRateNisPerKwh };
   }
 
   // ── חישוב מחיר ───────────────────────────────────────────────────────────
@@ -290,7 +404,9 @@ const QuoteEngine = (() => {
       usdRate = 3.65,
       meterPanelPrice = 2500,
       extras = [],
+      tariffOverrideState = null,
     } = params;
+    const tariff = resolveTariffOverride(tariffOverrideState, acKW);
 
     const needsMeter       = acKW > 15;
     const effectivePlanKey = (planKey === 'green' && acKW > 15) ? 'regular' : planKey;
@@ -307,7 +423,8 @@ const QuoteEngine = (() => {
     const panelArea   = panelCount * 2.42;
     const breaker     = calcBreaker(acKW);
     const plan        = calcPlanIncome({ dcKW, acKW, price, planKey: effectivePlanKey,
-                                          inflationPct, hasUrbanPremium, hours });
+                                          inflationPct, hasUrbanPremium, hours,
+                                          manualGreenRegularTariffNisPerKwh: tariff.manualOverrideApplied ? tariff.appliedNisPerKwh : null });
     const payments    = calcPaymentStages(price);
     // Only upgrades affect price; potential costs are informational only
     const extrasTotal = (extras || []).filter(e => e.checked && e.category !== 'potential').reduce((s, e) => s + e.price, 0);
@@ -330,6 +447,8 @@ const QuoteEngine = (() => {
       ...payments,
       // תוצאות פיננסיות לפי מסלול
       plan,
+      // תעריף ירוק/רגיל (אוטומטי + ידני אם פעיל)
+      tariff,
       // מחירים להפניה
       battFirstPrice, battExtraPrice,
       meterPanelPrice,
@@ -396,6 +515,14 @@ const QuoteEngine = (() => {
     calcPaymentStages,
     calcBreaker,
     getEligiblePlans,
+    // תעריף ידני (green/regular)
+    getAutoGreenRegularTariffAgPerKwh,
+    isValidManualTariffAg,
+    resolveTariffOverride,
+    buildTariffOverrideSnapshot,
+    normalizeTariffOverrideFromPayload,
+    agToNisPerKwh,
+    nisToAgPerKwh,
     // נתוני עזר
     isUrbanPremiumCity,
     PREMIUM_CITIES,
