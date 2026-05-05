@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.02.04.00",
+    "date": "2026-05-05",
+    "type": "feature",
+    "title": "Per-quote manual tariff override for green/regular plans",
+    "changes": [
+      "New 'תעריף הזנה לרשת — מסלול ירוק/רגיל' field in the portal under the AC kW input. Auto-computed from calcWeightedRate(acKW) by default; salesperson can override per-quote and revert with the '↺ אוטומטי' button.",
+      "Override applies only to green/regular. Fast and index plans keep their own internal rate models — they ignore the manual single-rate value.",
+      "Added rateSource / manualOverrideApplied / appliedRateNisPerKwh metadata to calcPlanIncome results for audit clarity.",
+      "Saved payload now includes a tariffOverride snapshot {mode, manualAgPerKwh, autoAgPerKwhAtSave, appliedAgPerKwh, appliesToPlans, manualSetAtAcKW}. autoAgPerKwhAtSave freezes the auto value at save time so old quotes remain stable if the IEC tariff schedule changes later.",
+      "Legacy quotes (saved before this change, no tariffOverride field) are normalized to auto mode via normalizeTariffOverrideFromPayload — no crash, no migration needed.",
+      "Visual: status badge shows 'מחושב אוטומטית' (green) vs '✏️ ידני' (amber). When AC changes after a manual rate was set, a non-blocking warning shows the current auto value next to the revert button.",
+      "Cleanup: removed dead _updatePlanBadges (referred to removed DOM IDs pc-green/green-rate-badge/meter-price-preview*) and the unused calcWeightedRate alias inside _buildQuoteHTML.",
+      "Customer-facing rate note changed from 'תעריף משוקלל' to 'תעריף הזנה לרשת' — neutral wording that fits both auto and manual without exposing internal mode."
+    ],
+    "affected_modules": ["quote-engine.js", "quote-ui.js", "index.html"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.03.00",
     "date": "2026-05-04",
     "type": "behavior",
