@@ -28,6 +28,9 @@ class QuoteUI {
     this.quotePlanKey    = 'regular';
     this.quoteInflation  = 2.5;
     this.quoteData       = null; // תוצאת QuoteEngine.calculate אחרון
+
+    // תעריף ירוק/רגיל — auto by default
+    this._tariffState = { mode: 'auto', manualAgPerKwh: null, manualSetAtAcKW: null };
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -138,6 +141,9 @@ class QuoteUI {
   init() {
     this._renderExtrasUI();
     this._initCitySearch();
+    // Tariff override listeners must register BEFORE the generic input listener
+    // so that _tariffState is up-to-date when _updatePreview runs.
+    this._initTariffOverride();
     this._bindInputListeners();
     this._initInverterToggle();
     this._initBatteryValidation();
@@ -451,8 +457,9 @@ class QuoteUI {
       planKey:        vals.plan,
       inflationPct:   vals.inflation,
       hasUrbanPremium: QuoteEngine.isUrbanPremiumCity(vals.city),
+      tariffOverrideState: this._tariffState,
     });
-    this._updatePlanBadges(d.acKW, d.meterPanelPrice);
+    this._renderTariffField(d.acKW, d.tariff);
 
     const set = (id, val) => {
       const el = document.getElementById(id);
@@ -466,32 +473,70 @@ class QuoteUI {
     set('lp-plan-desc', d.plan.planDesc + (d.hasUrbanPremium ? ' | ★ פרמייה אורבנית' : ''));
   }
 
-  _updatePlanBadges(acKW, meterPrice) {
-    const r    = QuoteEngine.calcWeightedRate(acKW);
-    const rAg  = (Math.round(r * 100 * 100) / 100).toFixed(2);
-    const set  = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  // ── Tariff override (green/regular) ──────────────────────────────────
 
-    set('green-rate-badge',    rAg + " אג'");
-    set('regular-rate-badge',  rAg + " אג'");
-    set('green-rate-desc',     `תעריף משוקלל ${rAg} אג' | הספק AC ${acKW} kW`);
-    set('regular-rate-desc',   `תעריף משוקלל ${rAg} אג' | הספק AC ${acKW} kW`);
+  _initTariffOverride() {
+    const input = document.getElementById('tariffManualAg');
+    const btn   = document.getElementById('tariffAutoBtn');
+    if (!input || !btn) return;
 
-    const mp = this._fmt(meterPrice);
-    ['meter-price-preview','meter-price-preview2','meter-price-preview3'].forEach(id => set(id, mp));
+    // Set initial display value from current AC
+    const acKW = parseFloat(document.getElementById('sysAC')?.value) || 0;
+    input.value = QuoteEngine.getAutoGreenRegularTariffAgPerKwh(acKW).toFixed(2);
 
-    const greenCard  = document.getElementById('pc-green');
-    const greenWarn  = document.getElementById('green-over15-warning');
-    const greenRadio = greenCard?.querySelector('input[type=radio]');
-    if (acKW > 15) {
-      greenCard?.classList.add('locked');
-      if (greenWarn) greenWarn.style.display = 'block';
-      if (greenRadio?.checked) {
-        const reg = document.querySelector('input[name="planRadio"][value="regular"]');
-        if (reg) reg.checked = true;
+    input.addEventListener('input', (e) => {
+      // Ignore programmatic value changes (auto sync from AC)
+      if (!e.isTrusted) return;
+      const raw = input.value.trim();
+      if (raw === '') {
+        // Empty → revert to auto silently
+        this._tariffState = { mode: 'auto', manualAgPerKwh: null, manualSetAtAcKW: null };
+        return;
       }
+      const num = parseFloat(raw);
+      if (!QuoteEngine.isValidManualTariffAg(num)) {
+        // Invalid input — keep last valid state, do nothing here.
+        // Validation hint shown via _renderTariffField on next preview cycle.
+        return;
+      }
+      const currentAc = parseFloat(document.getElementById('sysAC')?.value) || 0;
+      this._tariffState = { mode: 'manual', manualAgPerKwh: num, manualSetAtAcKW: currentAc };
+    });
+
+    btn.addEventListener('click', () => {
+      this._tariffState = { mode: 'auto', manualAgPerKwh: null, manualSetAtAcKW: null };
+      this._updatePreview();
+    });
+  }
+
+  _renderTariffField(acKW, tariff) {
+    const input  = document.getElementById('tariffManualAg');
+    const badge  = document.getElementById('tariffStatusBadge');
+    const warn   = document.getElementById('tariffAcChangedWarning');
+    const auto   = document.getElementById('tariffAutoCurrent');
+    const hint   = document.getElementById('tariffHint');
+    if (!input || !badge) return;
+
+    // Sync displayed value (skip when user is mid-typing in the field)
+    const displayAg = tariff.appliedAgPerKwh.toFixed(2);
+    if (document.activeElement !== input && input.value !== displayAg) {
+      input.value = displayAg;
+    }
+
+    if (tariff.mode === 'manual') {
+      badge.textContent = '✏️ ידני';
+      badge.style.background = '#fef3c7';
+      badge.style.color = '#92400e';
+      if (hint) hint.textContent = 'ערך ידני — חל רק על מסלולים ירוק ורגיל. מסלולי "החזר מהיר" ו"צמוד מדד" לא מושפעים.';
+      const acDiffers = tariff.manualSetAtAcKW != null && Number(tariff.manualSetAtAcKW) !== Number(acKW);
+      if (warn) warn.style.display = acDiffers ? 'block' : 'none';
+      if (auto && acDiffers) auto.textContent = `תעריף אוטומטי נוכחי: ${tariff.autoAgPerKwh.toFixed(2)} אג׳/קו"ט`;
     } else {
-      greenCard?.classList.remove('locked');
-      if (greenWarn) greenWarn.style.display = 'none';
+      badge.textContent = 'מחושב אוטומטית';
+      badge.style.background = '#dcfce7';
+      badge.style.color = '#15803d';
+      if (hint) hint.textContent = 'חישוב לפי הספק AC. ניתן לערוך ידנית — חל רק על מסלולים ירוק ורגיל.';
+      if (warn) warn.style.display = 'none';
     }
   }
 
@@ -512,6 +557,7 @@ class QuoteUI {
       planKey:        vals.plan,
       inflationPct:   vals.inflation,
       hasUrbanPremium: QuoteEngine.isUrbanPremiumCity(vals.city),
+      tariffOverrideState: this._tariffState,
     });
     this.quoteData    = d;
     this.quotePlanKey = d.effectivePlanKey;
@@ -570,7 +616,8 @@ class QuoteUI {
     this.quoteInflation = inf;
 
     const effectivePK = (this.quotePlanKey === 'green' && d.acKW > 15) ? 'regular' : this.quotePlanKey;
-    const p = QuoteEngine.calcPlanIncome({ dcKW: d.dcKW, acKW: d.acKW, price: d.price, planKey: effectivePK, inflationPct: inf, hasUrbanPremium: d.hasUrbanPremium, hours: d.hours });
+    const manualNis = d.tariff && d.tariff.manualOverrideApplied ? d.tariff.appliedNisPerKwh : null;
+    const p = QuoteEngine.calcPlanIncome({ dcKW: d.dcKW, acKW: d.acKW, price: d.price, planKey: effectivePK, inflationPct: inf, hasUrbanPremium: d.hasUrbanPremium, hours: d.hours, manualGreenRegularTariffNisPerKwh: manualNis });
 
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     set('qp-name',          p.planName);
@@ -981,6 +1028,7 @@ class QuoteUI {
 
   _buildState(vals) {
     const get = id => document.getElementById(id)?.value ?? '';
+    const acKW = parseFloat(get('sysAC')) || 0;
     return {
       name: vals.name, phone: vals.phone, addr: vals.address,
       cid: vals.cid, date: vals.date, note: vals.note, city: vals.city,
@@ -1001,6 +1049,8 @@ class QuoteUI {
       // HubSpot contact ID (set when salesperson uses the prefill toolbar);
       // travels with the quote so the post-sign Monday "customers" board action can link to it.
       hsId: window._hsContactId || '',
+      // Tariff override snapshot (auto/manual). Frozen against future tariff schedule changes.
+      tariffOverride: QuoteEngine.buildTariffOverrideSnapshot(this._tariffState, acKW),
     };
   }
 
@@ -1043,6 +1093,17 @@ class QuoteUI {
     this._restoreExtrasState(this._migrateOldExtrasState(s));
     // Store digital signature preference for client mode
     this._digitalSigPref = s.digSig !== undefined ? s.digSig : true;
+    // Tariff override — legacy payloads (no tariffOverride) → auto
+    const normalized = QuoteEngine.normalizeTariffOverrideFromPayload(s);
+    if (normalized && normalized.mode === 'manual') {
+      this._tariffState = {
+        mode: 'manual',
+        manualAgPerKwh: normalized.manualAgPerKwh,
+        manualSetAtAcKW: normalized.manualSetAtAcKW,
+      };
+    } else {
+      this._tariffState = { mode: 'auto', manualAgPerKwh: null, manualSetAtAcKW: null };
+    }
   }
 
   _tryLoadFromUrl() {
@@ -1150,11 +1211,11 @@ class QuoteUI {
     const fmtD = n => Number(n).toFixed(1);
     const VAT  = 1.18;
     const YEARS = 25;
-    const calcWeightedRate = QuoteEngine.calcWeightedRate;
 
     const dateStr     = vals.date ? new Date(vals.date).toLocaleDateString('he-IL') : '';
     const profit      = Math.round(p.totalInc - d.price);
     const fullAddress = `${d.city}${vals.address ? ', ' + vals.address : ''}`;
+    const systemTypeLabel = d.acKW > 15 ? 'מערכת סולארית מסחרית' : 'מערכת סולארית ביתית';
 
     const meterInc    = d.needsMeter ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">לוח מונה ייצור</div></div>` : '';
     const noteBox     = vals.note ? `<div style="background:var(--ags-mint-soft);border:1.5px solid var(--ags-mint);border-radius:var(--radius,4px);padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--ags-black);display:flex;gap:10px"><span style="font-size:18px;flex-shrink:0">✦</span><span>${vals.note}</span></div>` : '';
@@ -1215,7 +1276,7 @@ class QuoteUI {
       <div class="hero-title">הצעת מחיר<br><span>מערכת סולארית</span></div>
       <div class="hero-sub">סמו א.ג.ס בע"מ | ח.פ. 515942282</div>
     </div>
-    <div class="hero-badge">תאריך: <strong>${dateStr}</strong> | ${p.planName}</div>
+    <div class="hero-badge">תאריך: <strong>${dateStr}</strong> | ${systemTypeLabel}</div>
   </div>
   <div class="client-strip">
     <div class="cs-field"><label>לכבוד</label><span>${vals.name}</span></div>
@@ -1226,7 +1287,7 @@ class QuoteUI {
   <!-- SYSTEM TYPE -->
   <div class="sec">
     <div style="display:grid;grid-template-columns:repeat(${d.roofArea > 0 ? 4 : 3},1fr);gap:18px;text-align:center;">
-      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">סוג מערכת</div><div style="font-size:17px;font-weight:800;color:var(--sky)">מערכת סולארית ביתית</div></div>
+      <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">סוג מערכת</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${systemTypeLabel}</div></div>
       <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">סוג גג</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${d.roof}</div></div>
       ${d.roofArea > 0 ? `<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">שטח הגג</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${fmt(d.roofArea)} מ"ר</div></div>` : ''}
       <div><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:5px">הספק מערכת</div><div style="font-size:17px;font-weight:800;color:var(--sky)">${d.dcKW} קילו-וואט</div></div>
@@ -1275,12 +1336,12 @@ class QuoteUI {
           return `
         <div class="qplan-btn" id="qbtn-green" onclick="${canGreen?`switchPlan('green',this)`:''}" style="${btnStyle('green',canGreen)}">
           <div style="font-weight:800;color:var(--ags-black);font-size:13px">מסלול ירוק</div>
-          <div style="font-size:10px;color:var(--ags-mint-deep);margin-top:4px;font-weight:700">${Math.round(calcWeightedRate(d.acKW)*10000)/100} אג׳</div>
+          <div style="font-size:10px;color:var(--ags-mint-deep);margin-top:4px;font-weight:700">${d.tariff.appliedAgPerKwh.toFixed(2)} אג׳</div>
           <div style="font-size:10px;color:var(--ags-ink-500);margin-top:1px">${canGreen?'ללא מונה ייצור':'לא זמין >15kW'}</div>
         </div>
         <div class="qplan-btn" id="qbtn-regular" onclick="switchPlan('regular',this)" style="${btnStyle('regular',true)}">
           <div style="font-weight:800;color:var(--ags-black);font-size:13px">מסלול רגיל</div>
-          <div style="font-size:10px;color:var(--ags-ink-700);margin-top:4px;font-weight:700">${Math.round(calcWeightedRate(d.acKW)*10000)/100} אג׳</div>
+          <div style="font-size:10px;color:var(--ags-ink-700);margin-top:4px;font-weight:700">${d.tariff.appliedAgPerKwh.toFixed(2)} אג׳</div>
           <div style="font-size:10px;color:var(--ags-ink-500);margin-top:1px">+ לוח מונה ייצור</div>
         </div>
         <div class="qplan-btn" id="qbtn-fast" onclick="${canFast?`switchPlan('fast',this)`:''}" style="${btnStyle('fast',canFast)}">
