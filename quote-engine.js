@@ -184,6 +184,34 @@ const QuoteEngine = (() => {
     return { size, current: Math.round(I * 10) / 10 };
   }
 
+  // ── חישוב החזר השקעה (שברי) ─────────────────────────────────────────────
+
+  /**
+   * calcPaybackYears(yearlyBreakdown, investmentBasis, maxYears)
+   * מחזיר את מספר השנים (שברי) עד שההכנסה המצטברת מכסה את investmentBasis.
+   * השדה `inc` של כל פריט ב-yearlyBreakdown מייצג את ההכנסה השנתית של אותה שנה.
+   * אם ההכנסה המצטברת לא מגיעה ל-investmentBasis תוך maxYears — מחזיר maxYears.
+   * אם investmentBasis <= 0 — מחזיר maxYears (אין נקודת אינטרפולציה הגיונית).
+   * @param {Array<{inc:number}>} yearlyBreakdown
+   * @param {number} investmentBasis  — סכום ההשקעה ב-₪ (excl-VAT או incl-VAT לפי הקורא)
+   * @param {number} maxYears
+   * @returns {number}
+   */
+  function calcPaybackYears(yearlyBreakdown, investmentBasis, maxYears) {
+    if (!(investmentBasis > 0)) return maxYears;
+    let cumul = 0;
+    const upto = Math.min(yearlyBreakdown.length, maxYears);
+    for (let i = 0; i < upto; i++) {
+      const inc = yearlyBreakdown[i].inc;
+      cumul += inc;
+      if (cumul >= investmentBasis) {
+        // אינטרפולציה לינארית בתוך השנה הנוכחית
+        return i + (investmentBasis - (cumul - inc)) / inc;
+      }
+    }
+    return maxYears;
+  }
+
   // ── חישוב הכנסות לפי מסלול ───────────────────────────────────────────────
 
   /**
@@ -292,17 +320,7 @@ const QuoteEngine = (() => {
     const avgAnnual = totalInc / YEARS;
     const roi       = price > 0 ? yr1 / price : 0;
 
-    if (price <= 0) return { yr1, totalInc, payback: YEARS, roi: 0, planName, planDesc, rateNote, yearlyBreakdown, avgAnnual, baseRateAg: rateAg, rateSource, manualOverrideApplied, appliedRateNisPerKwh };
-
-    let cumul = 0, payback = YEARS;
-    for (const { year, inc } of yearlyBreakdown) {
-      cumul += inc;
-      if (cumul >= price) {
-        payback = year - 1 + (price - (cumul - inc)) / inc;
-        break;
-      }
-    }
-
+    const payback = calcPaybackYears(yearlyBreakdown, price, YEARS);
     return { yr1, totalInc, payback, roi, planName, planDesc, rateNote, yearlyBreakdown, avgAnnual, baseRateAg: rateAg, rateSource, manualOverrideApplied, appliedRateNisPerKwh };
   }
 
@@ -511,6 +529,7 @@ const QuoteEngine = (() => {
     // פונקציות בסיס (לשימוש ישיר אם צריך)
     calcWeightedRate,
     calcPlanIncome,
+    calcPaybackYears,
     calcPrice,
     calcPaymentStages,
     calcBreaker,
