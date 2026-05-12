@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.02.06.00",
+    "date": "2026-05-12",
+    "type": "feature",
+    "title": "Customer-facing annual sun-hours sensitivity slider",
+    "changes": [
+      "New 'רגישות שעות שמש שנתיות' slider on the customer quote page, placed inside the financial section near the VAT toggle. Range 1400-2000 step 10. Default starts at the seller-entered d.hours (falls back to QuoteEngine.DEFAULT_HOURS=1750 if missing/invalid; clamped to slider bounds).",
+      "Track has a red→amber→green gradient so the direction is visually obvious: red = conservative low value, green = optimistic high value. Hebrew edge labels 'שמרני' / 'אופטימי' reinforce the meaning. The range input is forced direction:ltr to keep min on the left and max on the right consistently.",
+      "Slider state lives only in finSec.dataset.sunHours on #quote-financial-section. No payload changes, no localStorage. Reloading the saved quote resets the slider to the seller's canonical hours.",
+      "Integration: slider input handler only updates dataset.sunHours + the visible label, then calls _refreshQuoteFinancials(). The existing refresh funnel reads dataset.sunHours, passes hours into QuoteEngine.calcPlanIncome, and routes VAT-sensitive output through _applyVatSensitiveRender. No second render path.",
+      "Affects: qf-yr1, qf-total, qf-avg, qf-profit, qf-roi, qf-payback, qf-roi-bar-label, --roi-width on roi-fill, and the top stat 'ייצור אנרגיה' (added stable id qf-annual-kwh = dcKW × currentHours).",
+      "Does NOT affect: system price, payment stages, upgrades, potential costs, plan tariff/rate, VAT toggle state, or the saved payload.",
+      "Composition with VAT toggle: hours mutates p (income side); VAT mutates the investment basis. Both axes pass through _refreshQuoteFinancials → _applyVatSensitiveRender so they always compose coherently — switching plans or toggling VAT preserves the current slider position."
+    ],
+    "affected_modules": ["quote-ui.js", "index.html"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.05.00",
     "date": "2026-05-12",
     "type": "feature",
