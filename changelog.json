@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.02.05.00",
+    "date": "2026-05-12",
+    "type": "feature",
+    "title": "Customer-facing VAT toggle on financial cards",
+    "changes": [
+      "New 'הצג מחירים כולל מע\"מ' toggle on the customer quote page, placed just above the financial cards. Default OFF (excl-VAT, identical to previous behavior).",
+      "Toggle affects only: system price, price sub-note, lifetime profit, year-1 ROI, payback years, ROI bar fill width, and the ROI strip caption. Does NOT touch year-1 income, total income, average annual, payment stages, upgrades, or any other section.",
+      "Single source of truth: _applyVatSensitiveRender(d, p, includeVat) is the only path that writes VAT-sensitive DOM. Both the toggle handler and _refreshQuoteFinancials (plan switching) route through it — no duplicate update logic.",
+      "Toggle state persists across plan switches: container class show-vat-incl lives on #quote-financial-section, which is not rebuilt by _refreshQuoteFinancials.",
+      "ROI bar uses CSS variable --roi-width with a CSS transition. The 400ms post-render animation now reads current toggle state at execution time, eliminating the stale-closure race where toggling during the animation would snap back to the old value.",
+      "Engine refactor: extracted pure helper calcPaybackYears(yearlyBreakdown, investmentBasis, maxYears) and replaced the inline payback loop inside calcPlanIncome. Net: 6 lines removed, 1 line added (helper itself is reusable). Semantics preserved — fractional payback with linear interpolation, returns maxYears if never reached, returns maxYears for non-positive basis.",
+      "Side fix: ROI strip label '... שנים מתוך 25' previously disappeared after plan switch (only initial render had it). Now consistent across initial render and all plan switches.",
+      "No payload changes — toggle is display-only and per-session. Saved quotes remain canonical excl-VAT."
+    ],
+    "affected_modules": ["quote-engine.js", "quote-ui.js", "index.html"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.04.00",
     "date": "2026-05-05",
     "type": "feature",
