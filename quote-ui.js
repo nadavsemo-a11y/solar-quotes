@@ -576,6 +576,7 @@ class QuoteUI {
     if (clientMode) {
       this._prepareSigSection(d, vals);
       this._initVatToggle();
+      this._initSunHoursSlider(d);
     }
 
     // ROI bar animation: defer until after initial paint, then read current
@@ -595,6 +596,34 @@ class QuoteUI {
     if (!toggle || !finSec) return;
     toggle.addEventListener('change', () => {
       finSec.classList.toggle('show-vat-incl', toggle.checked);
+      this._refreshQuoteFinancials();
+    });
+  }
+
+  // Sun-hours sensitivity slider (customer mode only).
+  // State lives in finSec.dataset.sunHours; slider.value and the label mirror it.
+  // Only the input handler writes the dataset; _refreshQuoteFinancials reads it.
+  _initSunHoursSlider(d) {
+    const SLIDER_MIN = 1400, SLIDER_MAX = 2000;
+    const slider = document.getElementById('qf-sun-hours-slider');
+    const label  = document.getElementById('qf-sun-hours-value');
+    const finSec = document.getElementById('quote-financial-section');
+    if (!slider || !label || !finSec) return;
+
+    const fallback = QuoteEngine.DEFAULT_HOURS;
+    const sellerHours = Number(d && d.hours);
+    const startHours = Number.isFinite(sellerHours) && sellerHours > 0 ? sellerHours : fallback;
+    const clamp = (n) => Math.min(SLIDER_MAX, Math.max(SLIDER_MIN, n));
+    const initial = clamp(startHours);
+
+    slider.value = String(initial);
+    finSec.dataset.sunHours = String(initial);
+    label.textContent = this._fmt(initial) + ' שעות שמש';
+
+    slider.addEventListener('input', () => {
+      const v = clamp(Number(slider.value) || initial);
+      finSec.dataset.sunHours = String(v);
+      label.textContent = this._fmt(v) + ' שעות שמש';
       this._refreshQuoteFinancials();
     });
   }
@@ -663,21 +692,30 @@ class QuoteUI {
     const inf = parseFloat(document.getElementById('quoteInflationInput')?.value) || 2.5;
     this.quoteInflation = inf;
 
+    // Read sun-hours from DOM (slider state); fall back to seller-entered d.hours
+    // and finally to QuoteEngine.DEFAULT_HOURS. Clamp to slider bounds 1400-2000.
+    const finSec = document.getElementById('quote-financial-section');
+    const rawHours = Number(finSec && finSec.dataset.sunHours);
+    const fallbackHours = (Number.isFinite(Number(d.hours)) && Number(d.hours) > 0) ? Number(d.hours) : QuoteEngine.DEFAULT_HOURS;
+    let currentHours = Number.isFinite(rawHours) && rawHours > 0 ? rawHours : fallbackHours;
+    if (currentHours < 1400) currentHours = 1400;
+    if (currentHours > 2000) currentHours = 2000;
+
     const effectivePK = (this.quotePlanKey === 'green' && d.acKW > 15) ? 'regular' : this.quotePlanKey;
     const manualNis = d.tariff && d.tariff.manualOverrideApplied ? d.tariff.appliedNisPerKwh : null;
-    const p = QuoteEngine.calcPlanIncome({ dcKW: d.dcKW, acKW: d.acKW, price: d.price, planKey: effectivePK, inflationPct: inf, hasUrbanPremium: d.hasUrbanPremium, hours: d.hours, manualGreenRegularTariffNisPerKwh: manualNis });
+    const p = QuoteEngine.calcPlanIncome({ dcKW: d.dcKW, acKW: d.acKW, price: d.price, planKey: effectivePK, inflationPct: inf, hasUrbanPremium: d.hasUrbanPremium, hours: currentHours, manualGreenRegularTariffNisPerKwh: manualNis });
 
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    // VAT-insensitive fields only:
-    set('qp-name',  p.planName);
-    set('qp-rate',  p.rateNote);
-    set('qf-yr1',   '₪' + this._fmt(p.yr1));
-    set('qf-total', '₪' + this._fmt(p.totalInc));
-    set('qf-avg',   '₪' + this._fmt(p.avgAnnual));
+    // VAT-insensitive, hours-sensitive fields:
+    set('qp-name',        p.planName);
+    set('qp-rate',        p.rateNote);
+    set('qf-yr1',         '₪' + this._fmt(p.yr1));
+    set('qf-total',       '₪' + this._fmt(p.totalInc));
+    set('qf-avg',         '₪' + this._fmt(p.avgAnnual));
+    set('qf-annual-kwh',  this._fmt(d.dcKW * currentHours));
 
     // VAT-sensitive fields go through the single render path.
     // Toggle state lives on #quote-financial-section (survives plan switching).
-    const finSec = document.getElementById('quote-financial-section');
     const includeVat = !!(finSec && finSec.classList.contains('show-vat-incl'));
     this._applyVatSensitiveRender(d, p, includeVat);
 
@@ -1355,7 +1393,7 @@ class QuoteUI {
     <div class="stat-card"><div class="stat-icon ic-y">DC</div><span class="stat-val">${d.dcKW}</span><div class="stat-unit">קו"ט DC</div><div class="stat-label">הספק המערכת</div></div>
     <div class="stat-card"><div class="stat-icon">AC</div><span class="stat-val">${d.acKW}</span><div class="stat-unit">קו"ט AC</div><div class="stat-label">הספק ממיר (קובע תעריף)</div></div>
     <div class="stat-card"><div class="stat-icon">A</div><span class="stat-val" style="font-size:18px">3×${d.breaker.size}A</span><div class="stat-unit" style="font-size:10px;color:var(--ags-ink-500)">${d.breaker.current}A נומינלי</div><div class="stat-label">גודל חיבור מינימלי</div></div>
-    <div class="stat-card"><div class="stat-icon ic-g">kWh</div><span class="stat-val">${fmt(d.annualKwh)}</span><div class="stat-unit">קו"ט לשנה</div><div class="stat-label">ייצור אנרגיה</div></div>
+    <div class="stat-card"><div class="stat-icon ic-g">kWh</div><span class="stat-val" id="qf-annual-kwh">${fmt(d.annualKwh)}</span><div class="stat-unit">קו"ט לשנה</div><div class="stat-label">ייצור אנרגיה</div></div>
   </div>
 
   <!-- ORDERED SECTIONS (driven by ContentManager.sectionOrder) -->
@@ -1434,7 +1472,19 @@ class QuoteUI {
       <input type="checkbox" id="qf-vat-toggle">
       <span class="vat-switch" aria-hidden="true"></span>
       <span class="vat-toggle-text">הצג מחירים כולל מע"מ</span>
-    </label>` : ''}
+    </label>
+    <!-- SUN HOURS SENSITIVITY SLIDER (customer-facing only) -->
+    <div class="sun-hours-control" dir="rtl">
+      <div class="sun-hours-header">
+        <span class="sun-hours-title">רגישות שעות שמש שנתיות</span>
+        <span class="sun-hours-value" id="qf-sun-hours-value">— שעות שמש</span>
+      </div>
+      <div class="sun-hours-range-wrap">
+        <span class="sun-hours-edge">שמרני</span>
+        <input type="range" id="qf-sun-hours-slider" min="1400" max="2000" step="10" aria-label="שעות שמש שנתיות">
+        <span class="sun-hours-edge">אופטימי</span>
+      </div>
+    </div>` : ''}
 
     <!-- FIN CARDS -->
     <div class="fin-grid">
