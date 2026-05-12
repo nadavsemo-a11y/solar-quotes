@@ -576,7 +576,7 @@ class QuoteUI {
     if (clientMode) {
       this._prepareSigSection(d, vals);
       this._initVatToggle();
-      this._initSunHoursSlider(d);
+      this._initSunHoursSlider();
     }
 
     // ROI bar animation: defer until after initial paint, then read current
@@ -601,20 +601,19 @@ class QuoteUI {
   }
 
   // Sun-hours sensitivity slider (customer mode only).
+  // Always starts at the neutral reference 1,750 (QuoteEngine.DEFAULT_HOURS),
+  // regardless of the seller-entered d.hours — this is the "what-if" exploration tool.
   // State lives in finSec.dataset.sunHours; slider.value and the label mirror it.
   // Only the input handler writes the dataset; _refreshQuoteFinancials reads it.
-  _initSunHoursSlider(d) {
+  _initSunHoursSlider() {
     const SLIDER_MIN = 1400, SLIDER_MAX = 2000;
     const slider = document.getElementById('qf-sun-hours-slider');
     const label  = document.getElementById('qf-sun-hours-value');
     const finSec = document.getElementById('quote-financial-section');
     if (!slider || !label || !finSec) return;
 
-    const fallback = QuoteEngine.DEFAULT_HOURS;
-    const sellerHours = Number(d && d.hours);
-    const startHours = Number.isFinite(sellerHours) && sellerHours > 0 ? sellerHours : fallback;
     const clamp = (n) => Math.min(SLIDER_MAX, Math.max(SLIDER_MIN, n));
-    const initial = clamp(startHours);
+    const initial = clamp(QuoteEngine.DEFAULT_HOURS);
 
     slider.value = String(initial);
     finSec.dataset.sunHours = String(initial);
@@ -1480,9 +1479,9 @@ class QuoteUI {
         <span class="sun-hours-value" id="qf-sun-hours-value">— שעות שמש</span>
       </div>
       <div class="sun-hours-range-wrap">
-        <span class="sun-hours-edge">שמרני</span>
-        <input type="range" id="qf-sun-hours-slider" min="1400" max="2000" step="10" aria-label="שעות שמש שנתיות">
         <span class="sun-hours-edge">אופטימי</span>
+        <input type="range" id="qf-sun-hours-slider" min="1400" max="2000" step="10" aria-label="שעות שמש שנתיות">
+        <span class="sun-hours-edge">שמרני</span>
       </div>
     </div>` : ''}
 
