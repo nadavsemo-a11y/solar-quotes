@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.02.06.01",
+    "date": "2026-05-12",
+    "type": "fix",
+    "title": "Sun-hours slider: correct label placement and fixed 1,750 default",
+    "changes": [
+      "Swapped slider edge label order so 'שמרני' sits at the red (low) end and 'אופטימי' sits at the green (high) end. Previously the labels were reversed relative to the gradient.",
+      "Slider always initializes at 1,750 (QuoteEngine.DEFAULT_HOURS), regardless of the seller-entered d.hours. This is the neutral 'what-if' reference point; the customer adjusts up/down from there. _initSunHoursSlider no longer takes a `d` argument."
+    ],
+    "affected_modules": ["quote-ui.js"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.06.00",
     "date": "2026-05-12",
     "type": "feature",
