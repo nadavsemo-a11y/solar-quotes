@@ -573,14 +573,30 @@ class QuoteUI {
     document.getElementById('quote-output').style.display = 'block';
     window.scrollTo(0, 0);
 
-    if (clientMode) this._prepareSigSection(d, vals);
+    if (clientMode) {
+      this._prepareSigSection(d, vals);
+      this._initVatToggle();
+    }
 
-    // ROI bar animation
-    const roiW = Math.min(d.plan.roi * 100 * 2, 94).toFixed(1);
+    // ROI bar animation: defer until after initial paint, then read current
+    // toggle state (avoids stale-closure race if user flipped during the delay).
     setTimeout(() => {
-      const f = document.getElementById('roiFill');
-      if (f) f.style.width = roiW + '%';
+      if (!this.quoteData) return;
+      this._refreshQuoteFinancials();
     }, 400);
+  }
+
+  // Binds the VAT-toggle change event (customer mode only).
+  // Container class on #quote-financial-section is the single source of truth.
+  // Both this handler and _refreshQuoteFinancials route through _applyVatSensitiveRender.
+  _initVatToggle() {
+    const toggle = document.getElementById('qf-vat-toggle');
+    const finSec = document.getElementById('quote-financial-section');
+    if (!toggle || !finSec) return;
+    toggle.addEventListener('change', () => {
+      finSec.classList.toggle('show-vat-incl', toggle.checked);
+      this._refreshQuoteFinancials();
+    });
   }
 
   showPortal() {
@@ -609,6 +625,38 @@ class QuoteUI {
     if (this.quoteData) this._refreshQuoteFinancials();
   }
 
+  // Single source of truth for every VAT-sensitive DOM write.
+  // Called by both _refreshQuoteFinancials (plan switch) and the VAT toggle handler.
+  // Reads no DOM state itself — caller passes includeVat. Writes no other elements.
+  _applyVatSensitiveRender(d, p, includeVat) {
+    const VAT       = QuoteEngine.VAT || 1.18;
+    const priceExcl = Number(d.price || 0);
+    const priceIncl = Number(d.priceVAT || priceExcl * VAT);
+    const basis     = includeVat ? priceIncl : priceExcl;
+
+    const roi      = basis > 0 ? p.yr1 / basis : 0;
+    const roiPct   = roi * 100;
+    const payback  = QuoteEngine.calcPaybackYears(p.yearlyBreakdown || [], basis, QuoteEngine.YEARS);
+    const profit   = Math.round(p.totalInc - basis);
+    const roiWidth = Math.min(roiPct * 2, 94);
+
+    const fmt  = (n) => this._fmt(n);
+    const fmtD = (n) => this._fmtD(n);
+    const set  = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+    set('qf-price',          '₪' + fmt(includeVat ? priceIncl : priceExcl));
+    set('qf-price-note',     includeVat
+      ? `כולל מע"מ | לפני מע"מ: ₪${fmt(priceExcl)}`
+      : `לא כולל מע"מ | כולל מע"מ: ₪${fmt(priceIncl)}`);
+    set('qf-profit',         '₪' + fmt(profit));
+    set('qf-roi',            roiPct.toFixed(1) + '%');
+    set('qf-payback',        fmtD(payback));
+    set('qf-roi-bar-label',  `תשואה שנה 1: ${roiPct.toFixed(1)}% | החזר: ${fmtD(payback)} שנים מתוך 25`);
+
+    const roiFill = document.getElementById('roiFill');
+    if (roiFill) roiFill.style.setProperty('--roi-width', roiWidth.toFixed(1) + '%');
+  }
+
   _refreshQuoteFinancials() {
     const d   = this.quoteData;
     if (!d) return;
@@ -620,18 +668,18 @@ class QuoteUI {
     const p = QuoteEngine.calcPlanIncome({ dcKW: d.dcKW, acKW: d.acKW, price: d.price, planKey: effectivePK, inflationPct: inf, hasUrbanPremium: d.hasUrbanPremium, hours: d.hours, manualGreenRegularTariffNisPerKwh: manualNis });
 
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    set('qp-name',          p.planName);
-    set('qp-rate',          p.rateNote);
-    set('qf-yr1',           '₪' + this._fmt(p.yr1));
-    set('qf-total',         '₪' + this._fmt(p.totalInc));
-    set('qf-profit',        '₪' + this._fmt(Math.round(p.totalInc - d.price)));
-    set('qf-roi',           (p.roi * 100).toFixed(1) + '%');
-    set('qf-payback',       this._fmtD(p.payback));
-    set('qf-avg',           '₪' + this._fmt(p.avgAnnual));
-    set('qf-roi-bar-label', `תשואה שנה 1: ${(p.roi*100).toFixed(1)}% | החזר: ${this._fmtD(p.payback)} שנים`);
+    // VAT-insensitive fields only:
+    set('qp-name',  p.planName);
+    set('qp-rate',  p.rateNote);
+    set('qf-yr1',   '₪' + this._fmt(p.yr1));
+    set('qf-total', '₪' + this._fmt(p.totalInc));
+    set('qf-avg',   '₪' + this._fmt(p.avgAnnual));
 
-    const roiFill = document.getElementById('roiFill');
-    if (roiFill) roiFill.style.width = Math.min(p.roi * 100 * 2, 94).toFixed(1) + '%';
+    // VAT-sensitive fields go through the single render path.
+    // Toggle state lives on #quote-financial-section (survives plan switching).
+    const finSec = document.getElementById('quote-financial-section');
+    const includeVat = !!(finSec && finSec.classList.contains('show-vat-incl'));
+    this._applyVatSensitiveRender(d, p, includeVat);
 
     // Fast plan breakdown
     const fpBox = document.getElementById('qf-fastplan');
@@ -1319,7 +1367,7 @@ class QuoteUI {
     const _fixedHTML = {};
 
     _fixedHTML['financials'] = `
-  <div class="sec">
+  <div class="sec" id="quote-financial-section">
     <div class="sec-title"><span class="bar"></span>המערכת הסולארית במספרים</div>
 
     <!-- PLAN SELECTOR -->
@@ -1380,12 +1428,20 @@ class QuoteUI {
       ${indexPlanHTML}
     </div>
 
+    ${clientMode ? `
+    <!-- VAT TOGGLE (customer-facing only) -->
+    <label class="vat-toggle" dir="rtl">
+      <input type="checkbox" id="qf-vat-toggle">
+      <span class="vat-switch" aria-hidden="true"></span>
+      <span class="vat-toggle-text">הצג מחירים כולל מע"מ</span>
+    </label>` : ''}
+
     <!-- FIN CARDS -->
     <div class="fin-grid">
       <div class="fin-card dark">
-        <span class="fin-val">₪${fmt(d.price)}</span>
+        <span class="fin-val" id="qf-price">₪${fmt(d.price)}</span>
         <div class="fin-lbl">עלות רכישת המערכת</div>
-        <div class="fin-note">לא כולל מע"מ | כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))}</div>
+        <div class="fin-note" id="qf-price-note">לא כולל מע"מ | כולל מע"מ: ₪${fmt(Math.round(d.price*VAT))}</div>
       </div>
       <div class="fin-card">
         <span class="fin-val" style="color:var(--green-dark)" id="qf-yr1">₪${fmt(p.yr1)}</span>
@@ -1419,8 +1475,8 @@ class QuoteUI {
       <div class="roi-labels">
         <span id="qf-roi-bar-label">תשואה שנה 1: ${(p.roi*100).toFixed(1)}% | החזר: ${fmtD(p.payback)} שנים מתוך ${YEARS}</span>
       </div>
-      <div class="roi-track"><div class="roi-fill" style="width:0%" id="roiFill"></div></div>
-      <div class="roi-caption">ציר זמן להחזר מול חיי מערכת של ${YEARS} שנה | ${p.rateNote} | עלות לקו"ט: ₪${fmt(d.ppkw)}</div>
+      <div class="roi-track"><div class="roi-fill" id="roiFill" style="--roi-width:0%"></div></div>
+      <div class="roi-caption" id="roi-caption">ציר זמן להחזר מול חיי מערכת של ${YEARS} שנה | ${p.rateNote} | עלות לקו"ט: ₪${fmt(d.ppkw)}</div>
     </div>
   </div>`;
 
