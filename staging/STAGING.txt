@@ -1,7 +1,0 @@
-This is the SEMO quote staging frontend. Do not share with customers.
-
-Created: 2026-05-02
-Frontend path: https://nadavsemo-a11y.github.io/solar-quotes/staging/
-Staging Worker routes: s-a.gs/qs/* and s-a.gs/sign-staging/*
-
-If you reached this file by accident — you are looking at the staging copy of the SEMO quote system. Production is at the repo root.
