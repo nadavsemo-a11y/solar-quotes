@@ -118,7 +118,7 @@ const TemplateEngine = (() => {
     return `
 <div class="section">
   <h2>הערה</h2>
-  <div class="note-text">${note}</div>
+  <div class="note-text">${note.replace(/\n/g, '<br>')}</div>
 </div>`;
   }
 
