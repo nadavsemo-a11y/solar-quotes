@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.02.06.02",
+    "date": "2026-06-10",
+    "type": "fix",
+    "title": "Manual note: preserve line breaks in rendered quote",
+    "changes": [
+      "Newlines (\\n) from the 'הערה אישית' textarea are now converted to <br> before injection into the quote HTML, so multi-line notes render with visible line breaks instead of a single paragraph."
+    ],
+    "affected_modules": ["quote-ui.js", "template-engine.js"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.06.01",
     "date": "2026-05-12",
     "type": "fix",
