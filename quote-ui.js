@@ -1303,7 +1303,7 @@ class QuoteUI {
     const systemTypeLabel = d.acKW > 15 ? 'מערכת סולארית מסחרית' : 'מערכת סולארית ביתית';
 
     const meterInc    = d.needsMeter ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">לוח מונה ייצור</div></div>` : '';
-    const noteBox     = vals.note ? `<div style="background:var(--ags-mint-soft);border:1.5px solid var(--ags-mint);border-radius:var(--radius,4px);padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--ags-black);display:flex;gap:10px"><span style="font-size:18px;flex-shrink:0">✦</span><span>${vals.note}</span></div>` : '';
+    const noteBox     = vals.note ? `<div style="background:var(--ags-mint-soft);border:1.5px solid var(--ags-mint);border-radius:var(--radius,4px);padding:16px 20px;margin-bottom:18px;font-size:14px;color:var(--ags-black);display:flex;gap:10px"><span style="font-size:18px;flex-shrink:0">✦</span><span>${vals.note.replace(/\n/g, '<br>')}</span></div>` : '';
     // Split extras into upgrades vs potential costs.
     // Salesperson's portal selection now drives BOTH columns: only items they
     // ticked are surfaced to the customer. The customer can still toggle each
