@@ -3,354 +3,408 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>מפרט טכני — SEMO AGS</title>
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>מפרט טכני — SEMO A.G.S</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+  /* A.G.S Design System — black / white / mint, hard geometry, Heebo. */
   :root {
-    --sky: #0A1628;
-    --sky-mid: #112240;
-    --sun: #F4A200;
-    --sun-light: #FFD166;
-    --green: #2ECC71;
-    --text: #1a1a2e;
-    --gray: #6B7280;
-    --light: #F7F9FC;
-    --white: #fff;
-    --border: #E2E8F0;
-    --danger: #e74c3c;
+    --ags-black: #0A0A0A;
+    --ags-white: #FFFFFF;
+    --ags-mint: #9CF5C4;
+    --ags-mint-deep: #5FE0A0;
+    --ags-mint-soft: #D8FBE7;
+    --ink-900: #0A0A0A;
+    --ink-700: #2B2B2B;
+    --ink-500: #6B6B6B;
+    --ink-400: #9A9A9A;
+    --ink-300: #C4C4C4;
+    --ink-200: #E4E4E4;
+    --ink-100: #F2F2F2;
+    --ink-50:  #F8F8F8;
+    --error: #D43A2F;
+    --font-sans: "Heebo", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --r-sm: 2px;
+    --r-md: 4px;
+    --shadow-hard: 4px 4px 0 var(--ags-black);
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+    --dur: 120ms;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Assistant', sans-serif; background: var(--light); color: var(--text); min-height: 100vh; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--ink-50);
+    color: var(--ink-900);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
   .page {
     max-width: 800px;
     margin: 0 auto;
-    background: var(--white);
+    background: var(--ags-white);
     min-height: 100vh;
-    box-shadow: 0 0 40px rgba(0,0,0,0.08);
+    border-inline: 1.5px solid var(--ink-200);
   }
 
-  /* Header */
+  /* Header — pure black, white logo, mono mint eyebrow */
   .header {
-    background: linear-gradient(135deg, var(--sky), var(--sky-mid));
-    padding: 32px 40px;
+    background: var(--ags-black);
+    padding: 26px 40px;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
   .header-right { display: flex; align-items: center; gap: 16px; }
-  .header img.header-logo { height: 40px; }
-  .header-badge { color: rgba(255,255,255,0.5); font-size: 13px; }
+  .header img.header-logo { height: 34px; filter: brightness(0) invert(1); }
+  .header-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    color: var(--ags-mint);
+  }
 
-  /* Project Title */
+  /* Project Title — Heebo Black, mint dash eyebrow, hard black rule */
   .title-section {
-    padding: 40px 40px 24px;
-    border-bottom: 3px solid var(--sun);
+    padding: 40px 40px 28px;
+    border-bottom: 2px solid var(--ags-black);
   }
   .project-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--sun);
-    letter-spacing: 1.5px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-500);
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .project-label::before {
+    content: "";
+    width: 20px;
+    height: 3px;
+    background: var(--ags-mint);
+    display: inline-block;
   }
   .project-name {
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--sky);
-    line-height: 1.2;
-    margin-bottom: 6px;
+    font-size: clamp(30px, 5vw, 44px);
+    font-weight: 900;
+    color: var(--ags-black);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
   }
-  .project-address {
-    font-size: 16px;
-    color: var(--gray);
+  .project-address { font-size: 15px; color: var(--ink-500); }
+
+  /* Section headings — mono uppercase, hard underline */
+  .specs-section { padding: 32px 40px; }
+  .specs-title, .image-title, .sig-title {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ags-black);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1.5px solid var(--ink-200);
   }
 
-  /* Specs Grid */
-  .specs-section {
-    padding: 32px 40px;
+  /* Hero stats (DC / AC) — bordered stat block, mono units, tabular nums */
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 2px solid var(--ags-black);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    margin-bottom: 16px;
   }
-  .specs-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--sky);
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
+  .stat { padding: 22px 24px; border-inline-start: 1.5px solid var(--ink-200); }
+  .stat:first-child { border-inline-start: 0; }
+  .stat.accent { background: var(--ags-mint); }
+  .stat .lbl {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-500);
+    margin-bottom: 8px;
   }
+  .stat.accent .lbl { color: var(--ink-700); }
+  .stat .num {
+    font-weight: 900;
+    font-size: 40px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ags-black);
+  }
+  .stat .num .unit {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink-500);
+    margin-inline-start: 5px;
+    letter-spacing: 0.04em;
+  }
+  .stat.accent .num .unit { color: var(--ink-700); }
+
+  /* Spec cards — flat, hover lifts with the signature offset shadow */
   .specs-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 32px;
+    gap: 14px;
   }
   .spec-card {
-    background: var(--light);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px 20px;
+    background: var(--ags-white);
+    border: 1.5px solid var(--ink-200);
+    border-radius: var(--r-md);
+    padding: 16px 18px;
+    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
   }
+  .spec-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-hard);
+    border-color: var(--ags-black);
+  }
+  .spec-card.full { grid-column: 1 / -1; }
   .spec-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--gray);
-    margin-bottom: 4px;
-    letter-spacing: 0.5px;
-  }
-  .spec-value {
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--sky);
-  }
-  .spec-value small {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--gray);
-  }
-  .spec-card.full {
-    grid-column: 1 / -1;
-  }
-  .spec-card.highlight {
-    border-color: var(--sun);
-    background: linear-gradient(135deg, rgba(244,162,0,0.05), rgba(255,209,102,0.08));
-  }
-
-  /* Design Image */
-  .image-section {
-    padding: 0 40px 32px;
-  }
-  .image-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--sky);
-    margin-bottom: 16px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-  }
-  .design-image {
-    width: 100%;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-  }
-  .no-image {
-    background: var(--light);
-    border: 2px dashed var(--border);
-    border-radius: 12px;
-    padding: 40px;
-    text-align: center;
-    color: var(--gray);
-    font-size: 14px;
-  }
-
-  /* Signature Section */
-  .signature-section {
-    padding: 32px 40px 40px;
-    border-top: 2px solid var(--border);
-    margin-top: 16px;
-  }
-  .sig-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--sky);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-500);
     margin-bottom: 6px;
   }
-  .sig-sub {
-    font-size: 14px;
-    color: var(--gray);
-    margin-bottom: 24px;
+  .spec-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--ags-black);
+    letter-spacing: -0.01em;
   }
+  .spec-value small {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-500);
+  }
+
+  /* Design image */
+  .image-section { padding: 0 40px 32px; }
+  .design-image {
+    width: 100%;
+    display: block;
+    border: 1.5px solid var(--ink-200);
+    border-radius: var(--r-md);
+  }
+  .no-image {
+    background: var(--ink-50);
+    border: 1.5px dashed var(--ink-300);
+    border-radius: var(--r-md);
+    padding: 44px;
+    text-align: center;
+    color: var(--ink-400);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* Signature section */
+  .signature-section {
+    padding: 32px 40px 40px;
+    border-top: 1.5px solid var(--ink-200);
+    margin-top: 8px;
+  }
+
+  /* Terms block */
+  .terms-block {
+    background: var(--ink-50);
+    border: 1.5px solid var(--ink-200);
+    border-radius: var(--r-md);
+    padding: 22px;
+    margin-bottom: 24px;
+    font-size: 13.5px;
+    line-height: 1.85;
+    color: var(--ink-700);
+  }
+  .terms-block p { margin-bottom: 12px; }
+  .terms-block p:last-child { margin-bottom: 0; }
+
   .sig-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 18px;
     margin-bottom: 24px;
   }
   .sig-field label {
     display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--gray);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ags-black);
     margin-bottom: 6px;
   }
   .sig-field input {
     width: 100%;
-    border: 1.5px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-family: 'Assistant', sans-serif;
+    border: 1.5px solid var(--ink-300);
+    border-radius: var(--r-md);
+    padding: 11px 14px;
+    font-family: var(--font-sans);
     font-size: 15px;
+    color: var(--ags-black);
+    background: var(--ags-white);
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color var(--dur), box-shadow var(--dur);
   }
-  .sig-field input:focus { border-color: var(--sun); }
-  .sig-field input.error { border-color: var(--danger); }
+  .sig-field input:focus { border-color: var(--ags-black); box-shadow: 0 0 0 2px var(--ags-mint); }
+  .sig-field input.error { border-color: var(--error); box-shadow: 0 0 0 2px rgba(212,58,47,0.18); }
 
   .sig-canvas-wrap {
-    border: 1.5px dashed var(--border);
-    border-radius: 12px;
+    border: 1.5px dashed var(--ink-300);
+    border-radius: var(--r-md);
     position: relative;
-    height: 140px;
+    height: 150px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--gray);
+    color: var(--ink-400);
     font-size: 14px;
-    margin-bottom: 8px;
-    background: var(--light);
+    font-weight: 500;
+    margin-bottom: 10px;
+    background: var(--ink-50);
     cursor: crosshair;
     overflow: hidden;
   }
-  .sig-canvas-wrap.error { border-color: var(--danger); }
-  .sig-canvas-wrap canvas {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-  }
-  .sig-placeholder {
-    pointer-events: none;
-    z-index: 1;
-  }
-  .sig-actions {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
+  .sig-canvas-wrap.error { border-color: var(--error); }
+  .sig-canvas-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .sig-placeholder { pointer-events: none; z-index: 1; }
+
+  .sig-actions { display: flex; gap: 12px; margin-bottom: 20px; }
   .btn-clear {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px 16px;
-    font-family: 'Assistant', sans-serif;
+    background: var(--ags-white);
+    border: 1.5px solid var(--ink-300);
+    border-radius: var(--r-md);
+    padding: 8px 16px;
+    font-family: var(--font-sans);
     font-size: 13px;
-    color: var(--gray);
+    font-weight: 600;
+    color: var(--ink-700);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--dur) var(--ease);
   }
-  .btn-clear:hover { border-color: var(--danger); color: var(--danger); }
+  .btn-clear:hover { border-color: var(--ags-black); color: var(--ags-black); }
+  .btn-clear:active { transform: translate(1px, 1px); }
 
   .sig-agree {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 22px;
     font-size: 14px;
-    color: var(--text);
+    color: var(--ink-700);
     cursor: pointer;
   }
   .sig-agree input[type="checkbox"] {
-    margin-top: 3px;
+    margin-top: 2px;
     width: 18px;
     height: 18px;
-    accent-color: var(--green);
+    accent-color: var(--ags-mint-deep);
+    flex-shrink: 0;
   }
 
-  /* Terms Block */
-  .terms-block {
-    background: var(--light);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 24px;
-    font-size: 13.5px;
-    line-height: 1.9;
-    color: var(--text);
-  }
-  .terms-block p {
-    margin-bottom: 12px;
-  }
-  .terms-block p:last-child {
-    margin-bottom: 0;
-  }
-
+  /* Primary CTA — mint fill, black border + text, signature offset shadow */
   .sig-btn {
-    background: linear-gradient(135deg, var(--green), #27ae60);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 14px 32px;
-    font-family: 'Assistant', sans-serif;
+    background: var(--ags-mint);
+    color: var(--ags-black);
+    border: 2px solid var(--ags-black);
+    border-radius: var(--r-md);
+    padding: 15px 32px;
+    font-family: var(--font-sans);
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
     width: 100%;
-    transition: opacity 0.2s;
+    box-shadow: var(--shadow-hard);
+    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur);
   }
-  .sig-btn:hover { opacity: 0.9; }
-  .sig-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .sig-btn:hover { background: var(--ags-mint-deep); transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ags-black); }
+  .sig-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+  .sig-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
 
   .sig-error {
-    color: var(--danger);
+    color: var(--error);
     font-size: 13px;
-    margin-top: 10px;
+    font-weight: 600;
+    margin-top: 12px;
     text-align: center;
     display: none;
   }
 
-  /* Signed State */
+  /* Signed state — mint-soft panel, black border, stroke check */
   .signed-banner {
-    background: linear-gradient(135deg, rgba(46,204,113,0.08), rgba(39,174,96,0.12));
-    border: 1px solid rgba(46,204,113,0.3);
-    border-radius: 12px;
-    padding: 24px;
+    background: var(--ags-mint-soft);
+    border: 2px solid var(--ags-black);
+    border-radius: var(--r-md);
+    padding: 28px 24px;
     text-align: center;
   }
-  .signed-banner .signed-icon { font-size: 48px; margin-bottom: 12px; }
-  .signed-banner .signed-title { font-size: 20px; font-weight: 700; color: var(--green); margin-bottom: 8px; }
-  .signed-banner .signed-info { font-size: 14px; color: var(--gray); line-height: 1.8; }
-  .signed-banner .signed-sig-img { max-width: 200px; margin-top: 12px; opacity: 0.7; }
+  .signed-check {
+    width: 48px; height: 48px;
+    border-radius: 999px;
+    background: var(--ags-mint);
+    border: 2px solid var(--ags-black);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+  }
+  .signed-check svg { width: 26px; height: 26px; stroke: var(--ags-black); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .signed-title { font-size: 20px; font-weight: 900; letter-spacing: -0.01em; color: var(--ags-black); margin-bottom: 10px; }
+  .signed-info { font-family: var(--font-mono); font-size: 13px; color: var(--ink-700); line-height: 1.9; }
+  .signed-sig-img { max-width: 200px; margin-top: 14px; mix-blend-mode: multiply; opacity: 0.85; }
 
   /* Progress */
-  .progress-bar {
-    display: none;
-    margin-top: 16px;
-  }
+  .progress-bar { display: none; margin-top: 16px; }
   .progress-bar.show { display: block; }
-  .progress-text {
-    font-size: 13px;
-    color: var(--gray);
-    text-align: center;
-    margin-bottom: 8px;
-  }
-  .progress-track {
-    height: 4px;
-    background: var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    background: var(--green);
-    border-radius: 4px;
-    transition: width 0.4s;
-    width: 0;
-  }
+  .progress-text { font-family: var(--font-mono); font-size: 12px; color: var(--ink-500); text-align: center; margin-bottom: 8px; }
+  .progress-track { height: 4px; background: var(--ink-200); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--ags-mint-deep); border-radius: 999px; transition: width 0.4s var(--ease); width: 0; }
 
-  /* Footer */
+  /* Footer — black, company stamp + legal line */
   .footer {
-    background: var(--sky);
-    padding: 20px 40px;
+    background: var(--ags-black);
+    padding: 28px 40px;
     text-align: center;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.55);
     font-size: 12px;
   }
+  .footer-stamp { height: 64px; margin-bottom: 14px; }
+  .footer-legal { font-family: var(--font-mono); letter-spacing: 0.04em; }
 
   @media (max-width: 600px) {
-    .header { padding: 24px 20px; }
-    .title-section { padding: 28px 20px 20px; }
+    .header { padding: 22px 20px; }
+    .title-section { padding: 28px 20px 22px; }
     .project-name { font-size: 28px; }
     .specs-section { padding: 24px 20px; }
     .specs-grid { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: 1fr; }
+    .stat { border-inline-start: 0; }
+    .stat:first-child { border-bottom: 1.5px solid var(--ink-200); }
     .image-section { padding: 0 20px 24px; }
     .signature-section { padding: 24px 20px 32px; }
     .sig-grid { grid-template-columns: 1fr; }
-    .footer { padding: 16px 20px; }
+    .footer { padding: 22px 20px; }
   }
 
   @media print {
-    .page { box-shadow: none; }
+    .page { border: none; }
     .signature-section { page-break-inside: avoid; }
+    .sig-btn { display: none; }
   }
 </style>
 </head>
@@ -361,7 +415,7 @@
   <!-- Header -->
   <div class="header">
     <div class="header-right">
-      <img class="header-logo" src="ags-logo.png" alt="AGS">
+      <img class="header-logo" src="ags-logo.png" alt="A.G.S">
     </div>
     <div class="header-badge">מפרט טכני</div>
   </div>
@@ -376,6 +430,7 @@
   <!-- Technical Specs -->
   <div class="specs-section">
     <div class="specs-title">מפרט טכני</div>
+    <div class="stat-row" id="statRow"></div>
     <div class="specs-grid" id="specsGrid"></div>
   </div>
 
@@ -408,11 +463,11 @@
     </div>
 
     <div class="sig-canvas-wrap" id="canvasWrap">
-      <span class="sig-placeholder" id="sigPlaceholder">✍️ חתום כאן עם העכבר או האצבע</span>
+      <span class="sig-placeholder" id="sigPlaceholder">חתום כאן עם העכבר או האצבע</span>
       <canvas id="sigCanvas"></canvas>
     </div>
     <div class="sig-actions">
-      <button class="btn-clear" onclick="clearSignature()">🗑️ נקה חתימה</button>
+      <button class="btn-clear" onclick="clearSignature()">נקה חתימה</button>
     </div>
 
     <label class="sig-agree">
@@ -420,7 +475,7 @@
       <span>קראתי את התנאים לעיל ואני מאשר/ת את תוכן המפרט הטכני</span>
     </label>
 
-    <button class="sig-btn" id="sigBtn" onclick="submitSignature()">✓ אישור וחתימה</button>
+    <button class="sig-btn" id="sigBtn" onclick="submitSignature()">אישור וחתימה</button>
     <div class="sig-error" id="sigError"></div>
 
     <div class="progress-bar" id="progressBar">
@@ -431,7 +486,8 @@
 
   <!-- Footer -->
   <div class="footer">
-    SEMO AGS — סמו א.ג.ס בע"מ · כל הזכויות שמורות
+    <img class="footer-stamp" src="stamp-hebrew.gif" alt="חותמת סמו א.ג.ס" onerror="this.style.display='none'">
+    <div class="footer-legal">SEMO A.G.S — סמו א.ג.ס בע"מ · כל הזכויות שמורות</div>
   </div>
 
 </div>
@@ -461,9 +517,8 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
     document.querySelector('.page').innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:40px;">
         <div>
-          <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
-          <h2 style="color:#0A1628;margin-bottom:8px;">המפרט לא נמצא</h2>
-          <p style="color:#6B7280;">ייתכן שהקישור שגוי או שהמפרט פג תוקפו.</p>
+          <h2 style="font-family:'Heebo',sans-serif;font-weight:900;color:#0A0A0A;margin-bottom:8px;">המפרט לא נמצא</h2>
+          <p style="font-family:'Heebo',sans-serif;color:#6B6B6B;">ייתכן שהקישור שגוי או שהמפרט פג תוקפו.</p>
         </div>
       </div>`;
     return;
@@ -474,10 +529,12 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
 
   // ── Populate project info ──
   document.getElementById('projectName').textContent = specData.projectName || '';
-  document.getElementById('projectAddress').textContent = '📍 ' + (specData.address || '');
-  document.title = `מפרט טכני — ${specData.projectName || ''} | SEMO AGS`;
+  document.getElementById('projectAddress').textContent = specData.address || '';
+  document.title = `מפרט טכני — ${specData.projectName || ''} | SEMO A.G.S`;
 
-  // ── Build specs grid ──
+  // ── Build specs ──
+  // Highlight metrics (DC/AC) render as a bordered stat block with mono units;
+  // the rest render as flat hover-lift cards.
   const specs = [
     { label: 'הספק DC', value: specData.kwp, unit: 'kWp', highlight: true },
     { label: 'הספק AC', value: specData.acPower, unit: 'kW', highlight: true },
@@ -488,17 +545,31 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
   ];
 
   const grid = document.getElementById('specsGrid');
+  const statRow = document.getElementById('statRow');
+  let statCount = 0;
   specs.forEach(s => {
     if (!s.value) return;
-    const card = document.createElement('div');
-    card.className = 'spec-card' + (s.full ? ' full' : '') + (s.highlight ? ' highlight' : '');
-    const unitHtml = s.unit ? ` <small>${s.unit}</small>` : '';
-    const fontSize = s.full ? ' style="font-size:16px;"' : '';
-    card.innerHTML = `
-      <div class="spec-label">${s.label}</div>
-      <div class="spec-value"${fontSize}>${s.value}${unitHtml}</div>`;
-    grid.appendChild(card);
+    if (s.highlight) {
+      const stat = document.createElement('div');
+      stat.className = 'stat' + (statCount === 0 ? ' accent' : '');
+      statCount++;
+      const unitHtml = s.unit ? ` <span class="unit">${s.unit}</span>` : '';
+      stat.innerHTML = `
+        <div class="lbl">${s.label}</div>
+        <div class="num">${s.value}${unitHtml}</div>`;
+      statRow.appendChild(stat);
+    } else {
+      const card = document.createElement('div');
+      card.className = 'spec-card' + (s.full ? ' full' : '');
+      const unitHtml = s.unit ? ` <small>${s.unit}</small>` : '';
+      const fontSize = s.full ? ' style="font-size:16px;"' : '';
+      card.innerHTML = `
+        <div class="spec-label">${s.label}</div>
+        <div class="spec-value"${fontSize}>${s.value}${unitHtml}</div>`;
+      grid.appendChild(card);
+    }
   });
+  if (statCount === 0) statRow.style.display = 'none';
 
   // ── Design image ──
   const imgSection = document.getElementById('imageSection');
@@ -562,7 +633,7 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
     }
     section.innerHTML = `
       <div class="signed-banner">
-        <div class="signed-icon">✅</div>
+        <div class="signed-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
         <div class="signed-title">המפרט נחתם בהצלחה</div>
         <div class="signed-info">
           חותם: ${sig.signerName || ''}<br>
@@ -682,7 +753,7 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
 
     if (!processResult.saved) {
       btn.disabled = false;
-      btn.textContent = '✓ אישור וחתימה';
+      btn.textContent = 'אישור וחתימה';
       progressBar.classList.remove('show');
       errorEl.textContent = 'שגיאה בשמירת החתימה. נסה שוב.';
       errorEl.style.display = 'block';
