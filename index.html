@@ -1982,8 +1982,9 @@ function searchHubspot(q) {
         box.innerHTML = '<div style="padding:10px;color:#666;text-align:center">לא נמצאו תוצאות</div>';
         return;
       }
-      box.innerHTML = data.results.map(function(c) {
-        return '<div onclick=\'selectHubspotContact(' + JSON.stringify(c).replace(/'/g, "\\'") + ')\' style="padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background=\'#fff0eb\'" onmouseout="this.style.background=\'transparent\'">'
+      window._hsResults = data.results;
+      box.innerHTML = data.results.map(function(c, i) {
+        return '<div onclick="selectHubspotContact(window._hsResults[' + i + '])" style="padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background=\'#fff0eb\'" onmouseout="this.style.background=\'transparent\'">'
           + '<div style="font-weight:700;font-size:14px;color:#0A1628">' + (c.name || '—') + '</div>'
           + '<div style="font-size:12px;color:#666;display:flex;gap:12px;margin-top:2px">'
           + (c.phone ? '<span>📞 ' + c.phone + '</span>' : '')
