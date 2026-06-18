@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.02.06.03",
+    "date": "2026-06-18",
+    "type": "config",
+    "title": "Default panel wattage updated from 640W to 665W",
+    "changes": [
+      "Updated the default panel wattage from 640W to 665W across all 4 locations: quote-engine.js (calculation default), quote-ui.js (2 fallback values), and index.html (form input default). Reflects current panel specifications. Existing saved quotes are unaffected."
+    ],
+    "affected_modules": ["quote-engine.js", "quote-ui.js", "index.html"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.06.02",
     "date": "2026-06-10",
     "type": "fix",
