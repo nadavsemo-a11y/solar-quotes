@@ -413,7 +413,7 @@ const QuoteEngine = (() => {
       dcKW, acKW, hours = DEFAULT_HOURS,
       ppkw, batt = 0, roof, inv,
       customInvModel = '',
-      panelW = 640, roofArea,
+      panelW = 665, roofArea,
       city, hasUrbanPremium = false,
       planKey, inflationPct = 2.5,
       battFirstPrice = 8900,
