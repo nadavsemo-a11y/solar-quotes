@@ -252,7 +252,7 @@ class QuoteUI {
 
   _updatePanelCount() {
     const dcKW   = parseFloat(document.getElementById('sysKW')?.value) || 0;
-    const panelW = parseInt(document.getElementById('panelW')?.value) || 640;
+    const panelW = parseInt(document.getElementById('panelW')?.value) || 665;
     const countEl = document.getElementById('panelCount');
     if (countEl && panelW > 0) {
       countEl.value = Math.ceil((dcKW * 1000) / panelW);
@@ -270,7 +270,7 @@ class QuoteUI {
     const chk  = id => document.getElementById(id)?.checked ?? false;
 
     const dcKW    = parseFloat(get('sysKW')) || 0;
-    const panelW  = parseInt(get('panelW')) || 640;
+    const panelW  = parseInt(get('panelW')) || 665;
     const premiumPanel = parseFloat(get('premiumPanelPrice')) || 0;
     const usdRate      = parseFloat(get('usdRate')) || 3.65;
 
