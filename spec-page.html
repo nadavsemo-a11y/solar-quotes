@@ -402,9 +402,51 @@
   }
 
   @media print {
-    .page { border: none; }
-    .signature-section { page-break-inside: avoid; }
-    .sig-btn { display: none; }
+    /* ── Print / PDF layout (semo-pdf renders this via headless Chromium) ──
+       Goal: exactly 2 pages, design image guaranteed on page 1.
+       Root causes addressed (see PDF_LAYOUT_ROOT_CAUSE report):
+         1. unbreakable <img> pushed to p.2  → cap its height so it fits p.1
+         2. page-break-inside:avoid on huge section → removed (wasted a page)
+         3. min-height:100vh → reset (added phantom whitespace)
+         4. redundant live form chrome → hidden (data lives in injected block) */
+
+    /* Geometry: natural flow, no forced full-viewport height */
+    html, body, .page { min-height: auto !important; }
+    body { background: #fff; }
+    .page { border: none; max-width: none; }
+
+    /* Compact vertical rhythm so header+title+specs+image fit one A4 page */
+    .header { padding: 18px 40px; }
+    .title-section { padding: 24px 40px 18px; }
+    .specs-section { padding: 22px 40px; }
+    .stat { padding: 16px 24px; }
+    .stat .num { font-size: 32px; }
+    .specs-grid { gap: 10px; }
+    .spec-card { padding: 12px 16px; }
+    .image-section { padding: 0 40px 18px; }
+
+    /* Keep the design image whole AND on page 1: cap height so the
+       title+specs+image block fits within the A4 printable area (277mm). */
+    .design-image { max-height: 78mm; width: auto; max-width: 100%; display: block; }
+
+    /* The signature SECTION is taller than a page — never force it whole
+       (that wasted an entire page). Let it flow; keep only small blocks whole. */
+    .signature-section { page-break-inside: auto; padding: 22px 40px 26px; }
+    .terms-block {
+      break-inside: avoid; page-break-inside: avoid;
+      font-size: 12px; line-height: 1.6; padding: 16px 18px; margin-bottom: 0;
+    }
+
+    /* Hide interactive-only chrome — redundant in the signed PDF. The signer's
+       details + signature image are rendered by the injected
+       #semo-signature-block. The drawn canvas can't serialize into outerHTML,
+       so it would otherwise print blank. */
+    .sig-grid, .sig-canvas-wrap, .sig-actions, .sig-agree,
+    .sig-btn, .sig-error, .progress-bar { display: none !important; }
+
+    /* Footer compact */
+    .footer { padding: 18px 40px; }
+    .footer-stamp { height: 52px; }
   }
 </style>
 </head>
