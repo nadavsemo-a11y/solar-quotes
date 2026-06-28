@@ -13,6 +13,9 @@
  * verbatim (same formula) by the client widget for live illustration.
  */
 
+// Wrapped in an IIFE so top-level names (V, round, api, …) don't collide with the sibling
+// storage modules when the authoring page loads them as plain <script>s in one global scope.
+(function () {
 'use strict';
 
 const V = (typeof module !== 'undefined' && module.exports)
@@ -160,3 +163,4 @@ const api = {
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.StoragePublic = api;
+})();
