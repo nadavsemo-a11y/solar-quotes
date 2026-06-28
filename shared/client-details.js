@@ -39,7 +39,7 @@ function _formHTML() {
       <div><label style="${_C.lbl}">שם לקוח</label><input id="clientName" type="text" placeholder="שם מלא" style="${_C.inp}"></div>
       <div><label style="${_C.lbl}">טלפון</label><input id="clientPhone" type="tel" dir="ltr" placeholder="050-0000000" style="${_C.inp}"></div>
       <div><label style="${_C.lbl}">אימייל לקוח</label><input id="clientEmail" type="email" dir="ltr" placeholder="client@example.com" style="${_C.inp}"></div>
-      <div style="position:relative"><label style="${_C.lbl}">ישוב</label>
+      <div style="position:relative"><label style="${_C.lbl}">ישוב <span id="urbanPremiumBadge" style="display:none;background:#E89923;color:#fff;font-size:10px;padding:2px 8px;border-radius:50px;font-weight:700;margin-right:6px">★ פרמייה אורבנית</span></label>
         <input id="citySearch" type="text" autocomplete="off" placeholder="הקלד שם ישוב..." style="${_C.inp}">
         <ul id="cityDropdown" style="display:none;position:absolute;top:100%;right:0;left:0;list-style:none;margin:3px 0 0;padding:0;background:#fff;border:1.5px solid #9CF5C4;border-radius:8px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.12)"></ul>
       </div>
