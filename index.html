@@ -1437,24 +1437,8 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
       <div id="hubspotResults" style="max-height:200px;overflow-y:auto"></div>
     </div>
 
-    <div class="form-card">
-      <div class="card-header"><div class="icon">👤</div><h2>פרטי לקוח</h2></div>
-      <div class="card-body">
-        <div class="form-grid">
-          <div class="field"><label>שם לקוח</label><input id="clientName" type="text" placeholder="שם מלא"></div>
-          <div class="field"><label>טלפון</label><input id="clientPhone" type="text" placeholder="050-0000000"></div>
-          <div class="field"><label>אימייל לקוח</label><input id="clientEmail" type="email" placeholder="client@example.com"></div>
-          <div class="field" style="position:relative">
-            <label>ישוב <span id="urbanPremiumBadge" style="display:none;background:#f59e0b;color:white;font-size:10px;padding:2px 8px;border-radius:50px;font-weight:700;margin-right:6px">★ פרמייה אורבנית</span></label>
-            <input id="citySearch" type="text" placeholder="הקלד שם ישוב..." autocomplete="off">
-            <div id="cityDropdown" style="display:none;position:absolute;top:100%;right:0;left:0;background:white;border:2px solid var(--sun);border-radius:10px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.12);margin-top:3px"></div>
-          </div>
-          <div class="field"><label>כתובת (רחוב + מספר)</label><input id="clientAddress" type="text" placeholder="רחוב ומספר"></div>
-          <div class="field"><label>תאריך הצעה</label><input id="quoteDate" type="date"></div>
-          <div class="field"><label>ת.ז. לקוח (לחתימה)</label><input id="clientID" type="text" placeholder="000000000"></div>
-        </div>
-      </div>
-    </div>
+    <!-- Client details — shared component (shared/client-details.js); same element IDs quote-ui.js reads. -->
+    <div id="clientDetailsMount"></div>
 
     <div class="form-card">
       <div class="card-header"><div class="icon">⚡</div><h2>פרמטרי המערכת</h2></div>
@@ -1521,7 +1505,7 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
         <input type="hidden" id="inflationPct" value="2.5">
 
         <div class="form-grid" style="margin-top:18px">
-          <div class="field"><label>הערה אישית לגוף ההצעה</label><textarea id="customNote" placeholder="הוסף הערה שתופיע בהצעה..."></textarea></div>
+          <!-- note moved into the shared client-details component (single source) -->
         </div>
 
         <div class="live-preview">
@@ -1835,6 +1819,10 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
   }
   window.SignatureService = SignatureService;
 </script>
+<!-- Shared client-details component — render BEFORE quote-ui.js so its DOMContentLoaded init finds the
+     fields. wireAutocomplete:false → quote-ui.js keeps its own city autocomplete + selectedCity logic. -->
+<script src="shared/client-details.js"></script>
+<script>try{ClientDetails.renderClientDetails(document.getElementById('clientDetailsMount'),{wireAutocomplete:false});}catch(e){console.error('client-details render failed',e);}</script>
 <script src="quote-ui.js"></script>
 
 <!-- ==================== GLOBAL INLINE WRAPPERS ==================== -->
