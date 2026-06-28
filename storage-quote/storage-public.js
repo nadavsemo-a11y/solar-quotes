@@ -6,11 +6,11 @@
  * storage quote is data-driven so there is no engine: the snapshot is a deterministic
  * projection of the already-extracted state.
  *
- * The customer-facing LTV/DSCR slider is ILLUSTRATIVE ONLY. The legally signed offer
- * pins financing.canonicalLtv (and its derived DSCR/payment) — slider movement never
- * changes what is hashed/signed. computeFinancing() below is the SINGLE source of the
- * financing math, used by the server for the canonical scenario and re-implemented
- * verbatim (same formula) by the client widget for live illustration.
+ * The customer-facing financing widget (LTV / interest / term) is ILLUSTRATIVE ONLY. The
+ * legally signed offer pins the canonical DEFAULTS (financing.defaultLtvPct / defaultInterestPct
+ * / defaultTermYears) and their derived DSCR/payment — widget edits never change what is
+ * hashed/signed. computeFinancing() below is the SINGLE source of the financing math; its source
+ * string (COMPUTE_FINANCING_SRC) is injected into the client widget so both run identical code.
  */
 
 // Wrapped in an IIFE so top-level names (V, round, api, …) don't collide with the sibling
@@ -26,64 +26,80 @@ const round = n => Math.round(n);
 const round2 = n => Math.round(n * 100) / 100;
 
 /**
- * computeFinancing(capexTotal, cfads[], ltv, interestRate, termYears)
- * Illustrative debt scenario over the workbook's own rate/term. Pure arithmetic.
- *   loan = capex*ltv ; equity = capex-loan
- *   annual annuity payment = loan*r / (1-(1+r)^-n)   (r=0 → loan/n)
- *   dscrByYear[i] = cfads[i] / payment  (over the loan term)
- *   minDscr = min over loan term ; equityPayback = equity / (cfads[0]-payment)
- * Returns a deterministic object (rounded) so server + client agree exactly.
+ * computeFinancing({ totalProjectCost, cfadsByYear, ltvPct, annualInterestPct, termYears })
+ * THE single financing-math implementation. Percentages in (LTV 0–100, interest 0–30); the
+ * function clamps/validates and forces a positive-integer term. Pure annuity:
+ *   loan = cost·ltv ; equity = cost-loan
+ *   payment = loan·r / (1-(1+r)^-n)   (r=0 → loan/n)
+ *   dscrByYear[i] = cfads[i]/payment ; minDscr = min ; equityPaybackYears = equity/(cfads[0]-payment)
+ *
+ * SELF-CONTAINED (only Math, no external helpers) ON PURPOSE: its `.toString()` is injected
+ * verbatim into the customer widget (COMPUTE_FINANCING_SRC below), so server and browser run the
+ * EXACT same code — no duplicated/forkable formula.
  */
-function computeFinancing(capexTotal, cfads, ltv, interestRate, termYears) {
-  const n = termYears;
-  const r = interestRate;
-  const loan = capexTotal * ltv;
-  const equity = capexTotal - loan;
-  const payment = r > 0 ? (loan * r) / (1 - Math.pow(1 + r, -n)) : (n > 0 ? loan / n : 0);
-  const term = Math.max(0, Math.min(n, Array.isArray(cfads) ? cfads.length : 0));
-  const dscrByYear = [];
-  for (let i = 0; i < term; i++) dscrByYear.push(payment > 0 ? round2(cfads[i] / payment) : 0);
-  const minDscr = dscrByYear.length ? Math.min(...dscrByYear) : 0;
-  const firstYearNet = (cfads && cfads.length ? cfads[0] : 0) - payment;
-  const equityPayback = firstYearNet > 0 ? round2(equity / firstYearNet) : null;
+function computeFinancing(args) {
+  var P = Math.max(0, Number(args.totalProjectCost) || 0);
+  var cf = Array.isArray(args.cfadsByYear) ? args.cfadsByYear : [];
+  var ltv = Math.min(100, Math.max(0, Number(args.ltvPct) || 0)) / 100;
+  var r = Math.min(30, Math.max(0, Number(args.annualInterestPct) || 0)) / 100;
+  var n = Math.max(1, Math.round(Number(args.termYears) || 1));
+  var loan = P * ltv;
+  var equity = P - loan;
+  var payment = r > 0 ? (loan * r) / (1 - Math.pow(1 + r, -n)) : loan / n;
+  var t = Math.min(n, cf.length);
+  var dscr = [];
+  for (var i = 0; i < t; i++) dscr.push(payment > 0 ? Math.round((cf[i] / payment) * 100) / 100 : 0);
+  var minDscr = dscr.length ? Math.min.apply(null, dscr) : 0;
+  var firstNet = (cf.length ? cf[0] : 0) - payment;
+  var equityPaybackYears = firstNet > 0 ? Math.round((equity / firstNet) * 100) / 100 : null;
   return {
-    ltv: round2(ltv),
-    loan: round(loan),
-    equity: round(equity),
-    annualDebtPayment: round(payment),
-    dscrByYear,
-    minDscr: round2(minDscr),
-    equityPayback,
+    loanAmount: Math.round(loan),
+    equityAmount: Math.round(equity),
+    annualDebtPayment: Math.round(payment),
+    dscrByYear: dscr,
+    minDscr: Math.round(minDscr * 100) / 100,
+    equityPaybackYears: equityPaybackYears,
   };
 }
+// Injected verbatim into the customer widget so the browser runs the identical formula.
+const COMPUTE_FINANCING_SRC = computeFinancing.toString();
 
 /**
- * recomputeCanonicalFinancing(state) — derive the canonical financing block from the
- * extracted state deterministically. Used at extraction time to fill state.financing and
- * (defensively) at snapshot time so the signed financing is always self-consistent.
+ * recomputeCanonicalFinancing(state) — the CANONICAL (signed) financing scenario, computed
+ * deterministically from the product DEFAULTS stored in state.financing (LTV 80% / interest
+ * 4.5% / term = ceil(workbook loan years + 1)). Returns the full financing object (defaults +
+ * computed). The customer widget may simulate other inputs, but THIS is what is hashed/signed.
  */
 function recomputeCanonicalFinancing(state) {
   const cap = state.capex || {};
   const a = state.arrays20y || {};
   const f = state.financing || {};
-  const fin = computeFinancing(cap.totalProjectCost, a.cfads || [], f.canonicalLtv, f.interestRate, f.termYears);
+  const fin = computeFinancing({
+    totalProjectCost: cap.totalProjectCost,
+    cfadsByYear: a.cfads || [],
+    ltvPct: f.defaultLtvPct,
+    annualInterestPct: f.defaultInterestPct,
+    termYears: f.defaultTermYears,
+  });
   return {
-    canonicalLtv: fin.ltv,
-    interestRate: f.interestRate,
-    termYears: f.termYears,
-    loan: fin.loan,
-    equity: fin.equity,
+    defaultLtvPct: f.defaultLtvPct,
+    defaultInterestPct: f.defaultInterestPct,
+    defaultTermYears: f.defaultTermYears,
+    workbookLoanRepaymentYears: f.workbookLoanRepaymentYears,
+    assumptionsSource: f.assumptionsSource,
+    loanAmount: fin.loanAmount,
+    equityAmount: fin.equityAmount,
     annualDebtPayment: fin.annualDebtPayment,
     dscrByYear: fin.dscrByYear,
     minDscr: fin.minDscr,
-    equityPayback: fin.equityPayback,
+    equityPaybackYears: fin.equityPaybackYears,
   };
 }
 
 /**
  * buildStorageSignedSnapshot(state) — the deterministic CUSTOMER-FACING document the
  * signer agrees to. Display/legal values ONLY. No raw workbook, no 8760 data, no
- * transient slider state, no non-deterministic formatting. This is what gets hashed
+ * transient simulator state, no non-deterministic formatting. This is what gets hashed
  * into publicSnapshotHash and frozen at sign time. Takes NO knobs (storage is static).
  */
 function buildStorageSignedSnapshot(state /* , knobs ignored */) {
@@ -129,7 +145,7 @@ function buildStorageSignedSnapshot(state /* , knobs ignored */) {
       freeCashFlow: a.freeCashFlow.map(round),
       cumulativeCashFlow: a.cumulativeCashFlow.map(round),
     },
-    financing: fin, // canonical, illustrative-scenario assumptions (slider does NOT affect this)
+    financing: fin, // canonical default assumptions (the customer simulator does NOT affect this)
     source: {
       tool: (s.source && s.source.tool) || '',
       workbookHash: (s.source && s.source.workbookHash) || '',
@@ -158,7 +174,7 @@ function canonicalStorageKnobs(/* state */) {
 }
 
 const api = {
-  computeFinancing, recomputeCanonicalFinancing,
+  computeFinancing, COMPUTE_FINANCING_SRC, recomputeCanonicalFinancing,
   buildStorageSignedSnapshot, buildStorageInternalAudit, canonicalStorageKnobs,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
