@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>הפקת הצעת מחיר — מערכת אגירה מסחרית | SEMO A.G.S</title>
+<!--
+  storage-quote/portal.html — ISOLATED authoring page for commercial-storage (BESS) quotes.
+  Reuses the trunk endpoints (no trunk UI changes): /q/hubspot/search (contact pull),
+  /q/data/:id (duplicate), /q/save (persist). The Excel is parsed in THIS page only
+  (vendored SheetJS, authoring-only) — the customer page never loads any XLSX parser.
+-->
+<link rel="icon" type="image/png" href="https://nadavsemo-a11y.github.io/solar-quotes/ags-mark.png">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--black:#0A0A0A;--mint:#9CF5C4;--mint-deep:#5FE0A0;--mint-soft:#D8FBE7;--ink-200:#E4E4E4;--ink-300:#C4C4C4;--ink-500:#6B6B6B;--ink-50:#F8F8F8;--radius:4px;--hard:4px 4px 0 var(--black)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink-50);font-family:'Heebo',system-ui,Arial,sans-serif;color:var(--black);line-height:1.55}
+.wrap{max-width:780px;margin:0 auto;padding:24px 18px 60px}
+.topbar{display:flex;align-items:center;gap:12px;background:var(--black);padding:14px 20px;border-bottom:3px solid var(--mint);border-radius:var(--radius) var(--radius) 0 0}
+.topbar img{height:28px;filter:brightness(0) invert(1)}
+.topbar h1{color:#fff;font-size:16px;margin:0;font-weight:800}
+.card{background:#fff;border:1.5px solid var(--ink-200);border-radius:var(--radius);padding:20px;margin-top:16px}
+.card h2{font-size:15px;margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.card h2 .bar{width:5px;height:18px;background:var(--mint);border:1.5px solid var(--black)}
+label{display:block;font-size:13px;font-weight:700;margin:10px 0 4px}
+input[type=text],input[type=tel],input[type=email],input[type=date],textarea{width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:inherit;font-size:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;border-radius:var(--radius);padding:10px 16px;border:2px solid var(--black);background:#fff}
+.btn-mint{background:var(--mint)}
+.btn-mint:disabled{background:var(--ink-200);border-color:var(--ink-300);color:var(--ink-500);cursor:not-allowed;box-shadow:none}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.drop{border:2px dashed var(--ink-300);border-radius:var(--radius);padding:26px;text-align:center;cursor:pointer;background:var(--ink-50)}
+.drop.ok{border-color:var(--mint-deep);background:var(--mint-soft)}
+.drop.bad{border-color:#c0392b;background:#fdecea}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.kpi{background:var(--ink-50);border:1.5px solid var(--ink-200);border-radius:var(--radius);padding:12px;text-align:center}
+.kpi .v{font-size:18px;font-weight:900;font-family:'JetBrains Mono',monospace}
+.kpi .l{font-size:11px;color:var(--ink-500);margin-top:3px}
+.assert{font-size:13px;margin:3px 0}
+.assert.pass::before{content:"✓ ";color:var(--mint-deep);font-weight:900}
+.assert.fail::before{content:"✗ ";color:#c0392b;font-weight:900}
+.msg{font-size:13px;margin-top:8px;min-height:18px}
+.result a{font-family:'JetBrains Mono',monospace;font-weight:700;word-break:break-all}
+.hidden{display:none}
+#hubResults div{padding:8px;border:1px solid var(--ink-200);border-radius:4px;margin-top:6px;cursor:pointer;font-size:13px}
+#hubResults div:hover{background:var(--mint-soft)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <img src="https://nadavsemo-a11y.github.io/solar-quotes/ags-logo.png" alt="A.G.S">
+    <h1>הצעת מחיר — מערכת אגירה מסחרית</h1>
+  </div>
+
+  <!-- 1. CONTACT -->
+  <div class="card">
+    <h2><span class="bar"></span>פרטי הלקוח</h2>
+    <div class="btn-row">
+      <button class="btn" onclick="toggleHub()">שליפה מ-HubSpot</button>
+      <button class="btn" onclick="toggleDup()">שכפל הצעה קיימת</button>
+    </div>
+    <div id="hubBox" class="hidden" style="margin-top:10px">
+      <input id="hubQuery" type="text" placeholder="חיפוש לפי שם / טלפון / אימייל…" oninput="searchHub(this.value)">
+      <div id="hubResults"></div>
+    </div>
+    <div id="dupBox" class="hidden" style="margin-top:10px">
+      <div class="grid2"><input id="dupUrl" type="text" dir="ltr" placeholder="https://s-a.gs/q/abc123">
+      <button class="btn" onclick="loadDup()">טען</button></div>
+      <div id="dupMsg" class="msg"></div>
+    </div>
+    <div class="grid2">
+      <div><label>שם הלקוח / החברה</label><input id="cName" type="text"></div>
+      <div><label>טלפון</label><input id="cPhone" type="tel" dir="ltr"></div>
+    </div>
+    <div class="grid2">
+      <div><label>כתובת</label><input id="cAddr" type="text"></div>
+      <div><label>עיר</label><input id="cCity" type="text"></div>
+    </div>
+    <div class="grid2">
+      <div><label>תאריך</label><input id="cDate" type="date" dir="ltr"></div>
+      <div><label>הערה (אופציונלי)</label><input id="cNote" type="text"></div>
+    </div>
+  </div>
+
+  <!-- 2. EXCEL -->
+  <div class="card">
+    <h2><span class="bar"></span>קובץ סימולציה (enSights)</h2>
+    <div id="drop" class="drop" onclick="document.getElementById('file').click()">
+      גררו לכאן קובץ <strong>.xlsx</strong> של enSights Storage Sizing Tool, או לחצו לבחירה
+    </div>
+    <input id="file" type="file" accept=".xlsx" class="hidden" onchange="onFile(this.files[0])">
+    <div id="extractMsg" class="msg"></div>
+    <div id="kpis" class="kpis hidden"></div>
+    <div id="assertions" style="margin-top:10px"></div>
+  </div>
+
+  <!-- 3. SAVE -->
+  <div class="card">
+    <h2><span class="bar"></span>יצירת הצעה</h2>
+    <button id="saveBtn" class="btn btn-mint" disabled onclick="save()">צור קישור להצעה</button>
+    <div id="saveMsg" class="msg"></div>
+    <div id="result" class="result hidden">
+      <p>הקישור להצעה:</p>
+      <a id="resultLink" href="#" target="_blank"></a>
+      <div class="btn-row">
+        <button class="btn" onclick="copyLink()">העתק קישור</button>
+        <a id="waLink" class="btn" target="_blank">WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- authoring-only scripts: vendored SheetJS + the isolated storage modules (attach to globals) -->
+<script src="./vendor/xlsx.full.min.js"></script>
+<script src="./storage-validate.js"></script>
+<script src="./storage-public.js"></script>
+<script src="./storage-extract.js"></script>
+<script>
+const WORKER='https://s-a.gs';
+let currentState=null;
+
+// ── contact helpers ──
+function getContact(){return {name:val('cName'),phone:val('cPhone'),address:val('cAddr'),city:val('cCity'),date:val('cDate'),note:val('cNote')};}
+function val(id){return (document.getElementById(id).value||'').trim();}
+function setVal(id,v){document.getElementById(id).value=v||'';}
+(function(){var d=document.getElementById('cDate');try{d.value=new Date().toISOString().slice(0,10);}catch(e){}})();
+
+// ── HubSpot pull (reuses trunk /q/hubspot/search) ──
+function toggleHub(){document.getElementById('hubBox').classList.toggle('hidden');}
+function toggleDup(){document.getElementById('dupBox').classList.toggle('hidden');}
+let hubTimer=null;
+function searchHub(q){clearTimeout(hubTimer);if((q||'').length<2){document.getElementById('hubResults').innerHTML='';return;}
+  hubTimer=setTimeout(async()=>{try{const r=await fetch(WORKER+'/q/hubspot/search?q='+encodeURIComponent(q));const j=await r.json();
+    const box=document.getElementById('hubResults');const list=j.results||j.contacts||j||[];
+    box.innerHTML=(Array.isArray(list)?list:[]).map((c,i)=>{window['_hub'+i]=c;return '<div onclick="pickHub('+i+')">'+(c.name||c.firstname||'')+' '+(c.lastname||'')+' · '+(c.phone||'')+' · '+(c.email||'')+'</div>';}).join('');
+  }catch(e){document.getElementById('hubResults').innerHTML='<div>שגיאת חיפוש</div>';}},250);}
+function pickHub(i){const c=window['_hub'+i]||{};setVal('cName',c.name||((c.firstname||'')+' '+(c.lastname||'')).trim());setVal('cPhone',c.phone||'');setVal('cAddr',c.address||'');setVal('cCity',c.city||'');toggleHub();}
+
+// ── duplicate (reuses trunk /q/data/:id) ──
+async function loadDup(){const raw=val('dupUrl');const m=raw.match(/\/q\/([A-Za-z0-9_-]+)/);const id=m?m[1]:raw;
+  const msg=document.getElementById('dupMsg');msg.textContent='טוען…';
+  try{const r=await fetch(WORKER+'/q/data/'+encodeURIComponent(id));const j=await r.json();
+    if(!j.ok||!j.data){msg.textContent='לא נמצאה הצעה';return;}
+    const st=JSON.parse(decodeURIComponent(escape(atob(j.data))));
+    if(st.type!=='storage'){msg.textContent='זו אינה הצעת אגירה';return;}
+    currentState=StorageExtract?st:st; // reuse extracted figures
+    const c=st.customer||{};setVal('cName',c.name);setVal('cPhone',c.phone);setVal('cAddr',c.address);setVal('cCity',c.city);setVal('cNote',c.note);
+    showReport({ok:true,state:st,report:{kpis:kpisFromState(st),assertions:[],errors:[],warnings:[]}});
+    msg.textContent='שוכפל בהצלחה — עדכנו פרטים ושמרו';
+  }catch(e){msg.textContent='שגיאה בטעינה';}}
+function kpisFromState(st){return {totalProjectCost:st.capex.totalProjectCost,irrPct:+(st.metrics.irr*100).toFixed(1),paybackYears:st.metrics.paybackYears,storageKwh:st.project.storageKwh,pvKw:st.project.pvKw,cum20:st.arrays20y.cumulativeCashFlow[19]};}
+
+// ── Excel upload + extraction ──
+async function onFile(file){if(!file)return;
+  const drop=document.getElementById('drop');const msg=document.getElementById('extractMsg');
+  msg.textContent='מנתח את הקובץ…';drop.className='drop';
+  try{
+    const buf=await file.arrayBuffer();
+    const hashHex=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buf))).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const sheets=StorageExtract.parseWorkbook(XLSX,new Uint8Array(buf));
+    const res=StorageExtract.extractStorageState({sheets,workbookHash:'sha256:'+hashHex,extractedAt:new Date().toISOString(),customer:getContact()});
+    showReport(res);
+    if(res.ok){currentState=res.state;drop.className='drop ok';drop.innerHTML='✓ קובץ נטען ואומת — '+file.name;msg.textContent='';}
+    else{currentState=null;drop.className='drop bad';msg.textContent='האימות נכשל — ראו פירוט למטה';}
+  }catch(e){currentState=null;drop.className='drop bad';msg.textContent='שגיאה בקריאת הקובץ: '+e.message;}
+}
+function showReport(res){
+  const k=res.report.kpis||{};const box=document.getElementById('kpis');
+  const fmt=n=>Math.round(Number(n)||0).toLocaleString('he-IL');
+  box.classList.remove('hidden');
+  box.innerHTML=[
+    ['₪'+fmt(k.totalProjectCost),'עלות הפרויקט'],[(k.irrPct!=null?k.irrPct:'—')+'%','IRR'],
+    [fmt(k.paybackYears||0),'שנות החזר'],[fmt(k.storageKwh)+' kWh','אגירה'],[fmt(k.pvKw)+' kW','PV'],['₪'+fmt(k.cum20),'מצטבר 20ש']
+  ].map(x=>'<div class="kpi"><div class="v">'+x[0]+'</div><div class="l">'+x[1]+'</div></div>').join('');
+  const a=document.getElementById('assertions');
+  a.innerHTML=(res.report.assertions||[]).map(x=>'<div class="assert '+(x.pass?'pass':'fail')+'">'+x.name+(x.detail&&!x.pass?' — '+x.detail:'')+'</div>').join('')+
+    (res.report.errors&&res.report.errors.length?'<div class="assert fail">'+res.report.errors.join('<br>')+'</div>':'');
+  document.getElementById('saveBtn').disabled=!res.ok;
+}
+
+// ── save (reuses trunk /q/save) ──
+function encodeState(s){return btoa(unescape(encodeURIComponent(JSON.stringify(s))));}
+async function save(){
+  if(!currentState){return;}
+  currentState.customer=Object.assign(currentState.customer||{},getContact());
+  if(!currentState.customer.name){document.getElementById('saveMsg').textContent='נא למלא שם לקוח';return;}
+  const btn=document.getElementById('saveBtn');btn.disabled=true;
+  const msg=document.getElementById('saveMsg');msg.textContent='שומר…';
+  try{
+    const r=await fetch(WORKER+'/q/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:encodeState(currentState)})});
+    const j=await r.json();
+    if(!r.ok){msg.textContent='שגיאה: '+(j.error||r.status)+(j.details?' — '+j.details.join('; '):'');btn.disabled=false;return;}
+    msg.textContent='';
+    const link=j.url;document.getElementById('result').classList.remove('hidden');
+    const a=document.getElementById('resultLink');a.href=link;a.textContent=link;
+    const name=currentState.customer.name||'לקוח יקר';
+    const wa='https://wa.me/?text='+encodeURIComponent('שלום '+name+',\nמצורפת הצעת מחיר למערכת אגירה:\n'+link);
+    document.getElementById('waLink').href=wa;
+    btn.disabled=false;
+  }catch(e){msg.textContent='שגיאת רשת';btn.disabled=false;}
+}
+function copyLink(){const t=document.getElementById('resultLink').textContent;navigator.clipboard&&navigator.clipboard.writeText(t);}
+</script>
+</body>
+</html>
