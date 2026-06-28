@@ -54,9 +54,8 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
     <h1>הצעת מחיר — מערכת אגירה מסחרית</h1>
   </div>
 
-  <!-- 1. CONTACT -->
+  <!-- 1. CONTACT (shared client-details component) -->
   <div class="card">
-    <h2><span class="bar"></span>פרטי הלקוח</h2>
     <div class="btn-row">
       <button class="btn" onclick="toggleHub()">שליפה מ-HubSpot</button>
       <button class="btn" onclick="toggleDup()">שכפל הצעה קיימת</button>
@@ -70,18 +69,7 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
       <button class="btn" onclick="loadDup()">טען</button></div>
       <div id="dupMsg" class="msg"></div>
     </div>
-    <div class="grid2">
-      <div><label>שם הלקוח / החברה</label><input id="cName" type="text"></div>
-      <div><label>טלפון</label><input id="cPhone" type="tel" dir="ltr"></div>
-    </div>
-    <div class="grid2">
-      <div><label>כתובת</label><input id="cAddr" type="text"></div>
-      <div><label>עיר</label><input id="cCity" type="text"></div>
-    </div>
-    <div class="grid2">
-      <div><label>תאריך</label><input id="cDate" type="date" dir="ltr"></div>
-      <div><label>הערה (אופציונלי)</label><input id="cNote" type="text"></div>
-    </div>
+    <div id="clientDetailsMount"></div>
   </div>
 
   <!-- 2. EXCEL -->
@@ -114,6 +102,9 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 
 <!-- authoring-only scripts: vendored SheetJS + the isolated storage modules (attach to globals) -->
 <script src="./vendor/xlsx.full.min.js"></script>
+<script src="../shared/israel-cities.js"></script>
+<script src="../shared/client-details.js"></script>
+<script src="../shared/contact-adapters.js"></script>
 <script src="./storage-validate.js"></script>
 <script src="./storage-public.js"></script>
 <script src="./storage-extract.js"></script>
@@ -121,11 +112,11 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 const WORKER='https://s-a.gs';
 let currentState=null;
 
-// ── contact helpers ──
-function getContact(){return {name:val('cName'),phone:val('cPhone'),address:val('cAddr'),city:val('cCity'),date:val('cDate'),note:val('cNote')};}
-function val(id){return (document.getElementById(id).value||'').trim();}
-function setVal(id,v){document.getElementById(id).value=v||'';}
-(function(){var d=document.getElementById('cDate');try{d.value=new Date().toISOString().slice(0,10);}catch(e){}})();
+// ── contact helpers (shared client-details component) ──
+const cdMount=document.getElementById('clientDetailsMount');
+ClientDetails.renderClientDetails(cdMount,{});
+function getContact(){return ClientDetails.getClientDetailsValues(cdMount);}
+function val(id){var el=document.getElementById(id);return el?(el.value||'').trim():'';}
 
 // ── HubSpot pull (reuses trunk /q/hubspot/search) ──
 function toggleHub(){document.getElementById('hubBox').classList.toggle('hidden');}
@@ -136,7 +127,7 @@ function searchHub(q){clearTimeout(hubTimer);if((q||'').length<2){document.getEl
     const box=document.getElementById('hubResults');const list=j.results||j.contacts||j||[];
     box.innerHTML=(Array.isArray(list)?list:[]).map((c,i)=>{window['_hub'+i]=c;return '<div onclick="pickHub('+i+')">'+(c.name||c.firstname||'')+' '+(c.lastname||'')+' · '+(c.phone||'')+' · '+(c.email||'')+'</div>';}).join('');
   }catch(e){document.getElementById('hubResults').innerHTML='<div>שגיאת חיפוש</div>';}},250);}
-function pickHub(i){const c=window['_hub'+i]||{};setVal('cName',c.name||((c.firstname||'')+' '+(c.lastname||'')).trim());setVal('cPhone',c.phone||'');setVal('cAddr',c.address||'');setVal('cCity',c.city||'');toggleHub();}
+function pickHub(i){const c=window['_hub'+i]||{};ClientDetails.setClientDetailsValues(cdMount,{name:c.name||((c.firstname||'')+' '+(c.lastname||'')).trim(),phone:c.phone||'',email:c.email||'',address:c.address||'',city:c.city||''});toggleHub();}
 
 // ── duplicate (reuses trunk /q/data/:id) ──
 async function loadDup(){const raw=val('dupUrl');const m=raw.match(/\/q\/([A-Za-z0-9_-]+)/);const id=m?m[1]:raw;
@@ -145,8 +136,8 @@ async function loadDup(){const raw=val('dupUrl');const m=raw.match(/\/q\/([A-Za-
     if(!j.ok||!j.data){msg.textContent='לא נמצאה הצעה';return;}
     const st=JSON.parse(decodeURIComponent(escape(atob(j.data))));
     if(st.type!=='storage'){msg.textContent='זו אינה הצעת אגירה';return;}
-    currentState=StorageExtract?st:st; // reuse extracted figures
-    const c=st.customer||{};setVal('cName',c.name);setVal('cPhone',c.phone);setVal('cAddr',c.address);setVal('cCity',c.city);setVal('cNote',c.note);
+    currentState=st; // reuse extracted figures
+    ClientDetails.setClientDetailsValues(cdMount, ContactAdapters.contactFromStorageState(st));
     showReport({ok:true,state:st,report:{kpis:kpisFromState(st),assertions:[],errors:[],warnings:[]}});
     msg.textContent='שוכפל בהצלחה — עדכנו פרטים ושמרו';
   }catch(e){msg.textContent='שגיאה בטעינה';}}
@@ -184,7 +175,7 @@ function showReport(res){
 function encodeState(s){return btoa(unescape(encodeURIComponent(JSON.stringify(s))));}
 async function save(){
   if(!currentState){return;}
-  currentState.customer=Object.assign(currentState.customer||{},getContact());
+  currentState=ContactAdapters.applyContactToStorageState(currentState,getContact());
   if(!currentState.customer.name){document.getElementById('saveMsg').textContent='נא למלא שם לקוח';return;}
   const btn=document.getElementById('saveBtn');btn.disabled=true;
   const msg=document.getElementById('saveMsg');msg.textContent='שומר…';
