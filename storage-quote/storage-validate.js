@@ -14,8 +14,12 @@
  * shape + internal consistency of the already-computed figures.
  *
  * Customer-visible price = capex.totalProjectCost (a product decision — no margin field).
+ *
+ * Wrapped in an IIFE so its top-level names don't collide in the browser (the authoring page
+ * loads this + storage-public + storage-extract as plain <script>s sharing one global scope).
  */
 
+(function () {
 'use strict';
 
 const STORAGE_QUOTE_SCHEMA_VERSION = 1;
@@ -137,3 +141,4 @@ const api = {
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.StorageValidate = api;
+})();
