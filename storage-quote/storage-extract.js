@@ -12,6 +12,9 @@
  * unit-testable. `parseWorkbook` is the thin SheetJS adapter. The 8760-hour timeseries
  * ('Optimal Storage Use') is intentionally NOT read.
  */
+// Wrapped in an IIFE so top-level names (api, ROUND_TOL, V, P, num, …) don't collide with the
+// sibling storage modules when the authoring page loads them as plain <script>s in one scope.
+(function () {
 'use strict';
 
 const EXTRACTOR_VERSION = 'storage-extract@1';
@@ -195,3 +198,4 @@ function parseWorkbook(XLSX, data /* ArrayBuffer|Buffer */) {
 const api = { EXTRACTOR_VERSION, extractStorageState, parseWorkbook, num, scanKV, kvGet, arr20 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.StorageExtract = api;
+})();
