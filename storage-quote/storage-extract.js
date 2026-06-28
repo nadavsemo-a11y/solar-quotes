@@ -145,16 +145,21 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
     A(`${nm} is a valid number`, Number.isFinite(v), String(v));
   }
 
-  // ── financing (canonical illustrative scenario; slider is illustrative only) ──
-  const interestRate = num(kvGet(req, 'Interest Rate'));
-  const termYears = Math.round(num(kvGet(req, 'Loan Term')));
-  const canonicalLtv = 0.8;
+  // ── financing defaults (canonical, signed; the customer widget is illustrative only) ──
+  // workbookLoanRepaymentYears = the loan repayment duration from the workbook ('Loan Term').
+  // Default term = ceil(that + 1). Default LTV/interest are product constants (80% / 4.5%).
+  const workbookLoanRepaymentYears = num(kvGet(req, 'Loan Term'));
+  A('workbook loan repayment duration present', Number.isFinite(workbookLoanRepaymentYears) && workbookLoanRepaymentYears > 0, String(workbookLoanRepaymentYears));
+  const defaultLtvPct = V.DEFAULT_LTV_PCT;
+  const defaultInterestPct = V.DEFAULT_INTEREST_PCT;
+  const defaultTermYears = Number.isFinite(workbookLoanRepaymentYears) ? V.expectedDefaultTermYears(workbookLoanRepaymentYears) : NaN;
+  A('default financing term is a whole number', Number.isInteger(defaultTermYears), String(defaultTermYears));
 
   if (errors.length) {
-    return { ok: false, state: null, report: { kpis: { totalProjectCost, irr, paybackYears, storageKwh }, assertions, errors, warnings } };
+    return { ok: false, state: null, report: { kpis: { totalProjectCost, irr, paybackYears, storageKwh, workbookLoanRepaymentYears, defaultTermYears, defaultLtvPct, defaultInterestPct }, assertions, errors, warnings } };
   }
 
-  const fin = P.computeFinancing(totalProjectCost, cfads, canonicalLtv, interestRate, termYears);
+  const fin = P.computeFinancing({ totalProjectCost, cfadsByYear: cfads, ltvPct: defaultLtvPct, annualInterestPct: defaultInterestPct, termYears: defaultTermYears });
 
   const state = {
     type: 'storage', quoteSchemaVersion: V.STORAGE_QUOTE_SCHEMA_VERSION,
@@ -168,7 +173,12 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
     capex: { totalProjectCost, pvCost, storageCost, balanceOfPlantCost, otherVisibleItems: [] },
     metrics: { npv, irr, paybackYears, profitabilityIndex: Number.isFinite(profitabilityIndex) ? profitabilityIndex : null },
     arrays20y: { revenuesBaseline: revBaseline, revenuesOptimized: revOptimized, lowVoltageBonus: lvBonus, operationalProfit, cfads, freeCashFlow, cumulativeCashFlow },
-    financing: { canonicalLtv, interestRate, termYears, annualDebtPayment: fin.annualDebtPayment, dscrByYear: fin.dscrByYear, minDscr: fin.minDscr, equityPayback: fin.equityPayback },
+    financing: {
+      defaultLtvPct, defaultInterestPct, defaultTermYears, workbookLoanRepaymentYears,
+      assumptionsSource: 'enSights workbook',
+      loanAmount: fin.loanAmount, equityAmount: fin.equityAmount, annualDebtPayment: fin.annualDebtPayment,
+      dscrByYear: fin.dscrByYear, minDscr: fin.minDscr, equityPaybackYears: fin.equityPaybackYears,
+    },
   };
 
   // Final structural validation (defense in depth).
@@ -181,6 +191,8 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
     paybackYears, npv, storageKwh, pvKw, storageKw,
     revBaselineY1: revBaseline && revBaseline[0], revOptimizedY1: revOptimized && revOptimized[0],
     lvBonusY1: lvBonus && lvBonus[0], cum20: cumulativeCashFlow && cumulativeCashFlow[19],
+    // financing-simulation defaults shown to the salesperson in the extraction report
+    workbookLoanRepaymentYears, defaultTermYears, defaultLtvPct, defaultInterestPct,
   };
   return { ok: errors.length === 0, state: errors.length === 0 ? state : null, report: { kpis, assertions, errors, warnings } };
 }
