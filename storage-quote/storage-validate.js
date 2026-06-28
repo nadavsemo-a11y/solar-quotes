@@ -27,6 +27,13 @@ const STORAGE_SNAPSHOT_VERSION = 1;
 const YEARS = 20; // enSights operating period (year arrays length)
 const ROUND_TOL = 2; // ILS tolerance for CapEx cross-check (rounding in the workbook)
 
+// Canonical financing-simulation DEFAULTS (product constants). The customer can deviate from
+// these in the illustrative widget, but the signed snapshot pins exactly these defaults.
+// defaultTermYears is per-quote: ceil(workbookLoanRepaymentYears + 1).
+const DEFAULT_LTV_PCT = 80;
+const DEFAULT_INTEREST_PCT = 4.5;
+const expectedDefaultTermYears = (workbookYears) => Math.ceil(workbookYears + 1);
+
 const ARRAY_FIELDS = [
   'revenuesBaseline', 'revenuesOptimized', 'lowVoltageBonus',
   'operationalProfit', 'cfads', 'freeCashFlow', 'cumulativeCashFlow',
@@ -109,17 +116,26 @@ function validateStorageState(state) {
     warnings.push('arrays20y.revenuesOptimized[year1] is not greater than baseline — unusual for a storage project');
   }
 
-  // ── financing (canonical, deterministic; the slider is illustrative only) ──
+  // ── financing (canonical defaults + computed; the widget is illustrative only) ──
   const f = s.financing || {};
-  if (!isFiniteNum(f.canonicalLtv) || f.canonicalLtv < 0 || f.canonicalLtv > 1)
-    errors.push('financing.canonicalLtv must be a fraction in [0,1]');
-  if (!isFiniteNum(f.interestRate) || f.interestRate < 0) errors.push('financing.interestRate must be a finite non-negative number');
-  if (!Number.isInteger(f.termYears) || f.termYears <= 0) errors.push('financing.termYears must be a positive integer');
+  // canonical product defaults (pinned by the signed snapshot)
+  if (f.defaultLtvPct !== DEFAULT_LTV_PCT) errors.push(`financing.defaultLtvPct must be ${DEFAULT_LTV_PCT}`);
+  if (f.defaultInterestPct !== DEFAULT_INTEREST_PCT) errors.push(`financing.defaultInterestPct must be ${DEFAULT_INTEREST_PCT}`);
+  if (!isFiniteNum(f.workbookLoanRepaymentYears) || f.workbookLoanRepaymentYears <= 0)
+    errors.push('financing.workbookLoanRepaymentYears must be a positive number (loan repayment duration from the workbook)');
+  if (!Number.isInteger(f.defaultTermYears) || f.defaultTermYears <= 0)
+    errors.push('financing.defaultTermYears must be a positive integer');
+  else if (isFiniteNum(f.workbookLoanRepaymentYears) && f.defaultTermYears !== expectedDefaultTermYears(f.workbookLoanRepaymentYears))
+    errors.push(`financing.defaultTermYears must equal ceil(workbookLoanRepaymentYears + 1) = ${expectedDefaultTermYears(f.workbookLoanRepaymentYears)}`);
+  if (!isNonEmptyStr(f.assumptionsSource)) errors.push('financing.assumptionsSource required');
+  // canonical computed results (at the defaults)
+  if (!isFiniteNum(f.loanAmount) || f.loanAmount < 0) errors.push('financing.loanAmount must be a finite non-negative number');
+  if (!isFiniteNum(f.equityAmount) || f.equityAmount < 0) errors.push('financing.equityAmount must be a finite non-negative number');
   if (!isFiniteNum(f.annualDebtPayment) || f.annualDebtPayment < 0) errors.push('financing.annualDebtPayment must be a finite non-negative number');
-  if (!is20(f.dscrByYear) && !(Array.isArray(f.dscrByYear) && f.dscrByYear.length === f.termYears && f.dscrByYear.every(isFiniteNum)))
-    errors.push('financing.dscrByYear must be finite numbers (length = termYears or 20)');
+  if (!(Array.isArray(f.dscrByYear) && f.dscrByYear.length > 0 && f.dscrByYear.length <= YEARS && f.dscrByYear.every(isFiniteNum)))
+    errors.push(`financing.dscrByYear must be 1..${YEARS} finite numbers`);
   if (!isFiniteNum(f.minDscr)) errors.push('financing.minDscr must be a finite number');
-  if (f.equityPayback != null && !isFiniteNum(f.equityPayback)) errors.push('financing.equityPayback must be a finite number');
+  if (f.equityPaybackYears != null && !isFiniteNum(f.equityPaybackYears)) errors.push('financing.equityPaybackYears must be a finite number or null');
 
   // ── forbid raw timeseries leaking into the saved state ──
   if (a.hourly || a.timeseries || s.hourly || s.timeseries8760)
@@ -137,6 +153,7 @@ function assertStorageState(state) {
 
 const api = {
   STORAGE_QUOTE_SCHEMA_VERSION, STORAGE_SNAPSHOT_VERSION, YEARS, ARRAY_FIELDS,
+  DEFAULT_LTV_PCT, DEFAULT_INTEREST_PCT, expectedDefaultTermYears,
   validateStorageState, assertStorageState,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
