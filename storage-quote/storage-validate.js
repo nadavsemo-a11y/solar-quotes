@@ -90,6 +90,8 @@ function validateStorageState(state, opts) {
   for (const k of ['pvKw', 'storageKw', 'storageKwh']) {
     if (!isFiniteNum(p[k]) || p[k] < 0) errors.push(`project.${k} must be a finite non-negative number`);
   }
+  // acKw (AC interconnection capacity) is optional — older quotes predate it; when present it must be valid.
+  if (p.acKw != null && (!isFiniteNum(p.acKw) || p.acKw < 0)) errors.push('project.acKw must be a finite non-negative number');
 
   // ── capex ──
   const cap = s.capex || {};
