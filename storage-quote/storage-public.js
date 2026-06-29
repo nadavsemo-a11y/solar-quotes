@@ -173,9 +173,33 @@ function canonicalStorageKnobs(/* state */) {
   return JSON.stringify({ storage: (V && V.STORAGE_SNAPSHOT_VERSION) || 1 });
 }
 
+/**
+ * buildStorageHubspotSyncPayload(state, ctx) — the generation-time HubSpot sync payload for a
+ * storage quote. Pure + browser-safe (the storage portal calls this directly; the adapter
+ * delegates here so there is ONE source). Storage wording only — no solar "DC power".
+ * ctx = { quoteId, quoteUrl }.
+ */
+function buildStorageHubspotSyncPayload(state, ctx) {
+  const s = state || {}; const c = s.customer || {}; const p = s.project || {}; const cap = s.capex || {};
+  const x = ctx || {};
+  const quoteUrl = x.quoteUrl || (x.quoteId ? `https://s-a.gs/q/${x.quoteId}` : '');
+  const fmtILS = (n) => '₪' + round(n).toLocaleString('he-IL');
+  const metricLabel = 'קיבולת אגירה';
+  const metricValue = p.storageKwh ? `${round(p.storageKwh)} קוט"ש` : (cap.totalProjectCost ? fmtILS(cap.totalProjectCost) : '');
+  const name = c.name || '';
+  const noteBody = `הצעת מחיר — מערכת אגירה מסחרית — ${name}<br>${metricLabel}: ${metricValue}<br>עלות פרויקט: ${fmtILS(cap.totalProjectCost)}<br>לינק: <a href="${quoteUrl}" target="_blank">${quoteUrl}</a>`;
+  return {
+    quoteType: 'storage', quoteId: x.quoteId || '', quoteUrl,
+    customer: { name, phone: c.phone || '', email: c.email || '', address: c.address || '', city: c.city || '' },
+    headlineMetricLabel: metricLabel, headlineMetricValue: metricValue,
+    noteBody, taskTitle: `מעקב הצעת אגירה — ${name}`, taskBody: noteBody,
+  };
+}
+
 const api = {
   computeFinancing, COMPUTE_FINANCING_SRC, recomputeCanonicalFinancing,
   buildStorageSignedSnapshot, buildStorageInternalAudit, canonicalStorageKnobs,
+  buildStorageHubspotSyncPayload,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.StoragePublic = api;
