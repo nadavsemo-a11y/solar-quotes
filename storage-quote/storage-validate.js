@@ -24,7 +24,12 @@
 
 const STORAGE_QUOTE_SCHEMA_VERSION = 1;
 const STORAGE_SNAPSHOT_VERSION = 1;
-const YEARS = 20; // enSights operating period (year arrays length)
+// The project horizon (year-array length) is PER-QUOTE, not fixed: enSights workbooks run anywhere
+// from ~17 to ~25 operating years. We no longer assume 20 — we only require that ALL year arrays
+// share one length N and that N is within a sane range. YEARS stays as the nominal reference.
+const YEARS = 20; // nominal enSights operating period (reference only; horizon is dynamic)
+const MIN_YEARS = 5;   // shortest plausible BESS project horizon
+const MAX_YEARS = 40;  // longest plausible BESS project horizon
 const ROUND_TOL = 2; // ILS tolerance for CapEx cross-check (rounding in the workbook)
 
 // Canonical financing-simulation DEFAULTS (product constants). The customer can deviate from
@@ -41,7 +46,7 @@ const ARRAY_FIELDS = [
 
 function isFiniteNum(v) { return typeof v === 'number' && Number.isFinite(v); }
 function isNonEmptyStr(v) { return typeof v === 'string' && v.trim().length > 0; }
-function is20(v) { return Array.isArray(v) && v.length === YEARS && v.every(isFiniteNum); }
+function isFiniteArr(v) { return Array.isArray(v) && v.length > 0 && v.every(isFiniteNum); }
 
 /**
  * validateStorageState(state) → { ok:boolean, errors:string[], warnings:string[] }
@@ -102,17 +107,22 @@ function validateStorageState(state) {
   if (!isFiniteNum(m.paybackYears) || m.paybackYears <= 0) errors.push('metrics.paybackYears must be a positive number');
   if (m.profitabilityIndex != null && !isFiniteNum(m.profitabilityIndex)) errors.push('metrics.profitabilityIndex must be a finite number');
 
-  // ── 20-year arrays ──
+  // ── project-horizon arrays (length N is per-quote; all 7 must share the same N) ──
   const a = s.arrays20y || {};
+  let horizon = null;
   for (const f of ARRAY_FIELDS) {
-    if (!is20(a[f])) errors.push(`arrays20y.${f} must be exactly ${YEARS} finite numbers`);
+    if (!isFiniteArr(a[f])) { errors.push(`arrays20y.${f} must be a non-empty array of finite numbers`); continue; }
+    if (horizon == null) horizon = a[f].length;
+    else if (a[f].length !== horizon) errors.push(`arrays20y.${f} length (${a[f].length}) must equal the project horizon (${horizon} years)`);
   }
+  if (horizon != null && (horizon < MIN_YEARS || horizon > MAX_YEARS))
+    errors.push(`project horizon (${horizon} years) is outside the supported range ${MIN_YEARS}–${MAX_YEARS}`);
   // Low-Voltage Bonus is the heart of the 800-hour program — year 1 must be > 0.
-  if (is20(a.lowVoltageBonus) && !(a.lowVoltageBonus[0] > 0)) {
+  if (isFiniteArr(a.lowVoltageBonus) && !(a.lowVoltageBonus[0] > 0)) {
     errors.push('arrays20y.lowVoltageBonus[year1] must be > 0 (this is the 800-hour Low-Voltage Bonus; zero means the file is not an 800-hour case)');
   }
   // Optimized revenue must beat baseline in year 1 (sanity of the storage value prop).
-  if (is20(a.revenuesOptimized) && is20(a.revenuesBaseline) && !(a.revenuesOptimized[0] > a.revenuesBaseline[0])) {
+  if (isFiniteArr(a.revenuesOptimized) && isFiniteArr(a.revenuesBaseline) && !(a.revenuesOptimized[0] > a.revenuesBaseline[0])) {
     warnings.push('arrays20y.revenuesOptimized[year1] is not greater than baseline — unusual for a storage project');
   }
 
@@ -132,8 +142,9 @@ function validateStorageState(state) {
   if (!isFiniteNum(f.loanAmount) || f.loanAmount < 0) errors.push('financing.loanAmount must be a finite non-negative number');
   if (!isFiniteNum(f.equityAmount) || f.equityAmount < 0) errors.push('financing.equityAmount must be a finite non-negative number');
   if (!isFiniteNum(f.annualDebtPayment) || f.annualDebtPayment < 0) errors.push('financing.annualDebtPayment must be a finite non-negative number');
-  if (!(Array.isArray(f.dscrByYear) && f.dscrByYear.length > 0 && f.dscrByYear.length <= YEARS && f.dscrByYear.every(isFiniteNum)))
-    errors.push(`financing.dscrByYear must be 1..${YEARS} finite numbers`);
+  const dscrMax = horizon || MAX_YEARS;
+  if (!(Array.isArray(f.dscrByYear) && f.dscrByYear.length > 0 && f.dscrByYear.length <= dscrMax && f.dscrByYear.every(isFiniteNum)))
+    errors.push(`financing.dscrByYear must be 1..${dscrMax} finite numbers`);
   if (!isFiniteNum(f.minDscr)) errors.push('financing.minDscr must be a finite number');
   if (f.equityPaybackYears != null && !isFiniteNum(f.equityPaybackYears)) errors.push('financing.equityPaybackYears must be a finite number or null');
 
@@ -152,7 +163,7 @@ function assertStorageState(state) {
 }
 
 const api = {
-  STORAGE_QUOTE_SCHEMA_VERSION, STORAGE_SNAPSHOT_VERSION, YEARS, ARRAY_FIELDS,
+  STORAGE_QUOTE_SCHEMA_VERSION, STORAGE_SNAPSHOT_VERSION, YEARS, MIN_YEARS, MAX_YEARS, ARRAY_FIELDS,
   DEFAULT_LTV_PCT, DEFAULT_INTEREST_PCT, expectedDefaultTermYears,
   validateStorageState, assertStorageState,
 };
