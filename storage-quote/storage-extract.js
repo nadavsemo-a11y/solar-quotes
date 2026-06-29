@@ -172,6 +172,7 @@ const REQUEST_FIELDS = {
   useCase:            ['use case', 'program', 'tariff program'],
   pvKw:               ['additional dc capacity', 'additional pv capacity', 'dc capacity added', 'pv capacity added', 'pv capacity', 'additional solar capacity'],
   storageKw:          ['power rating', 'storage power rating', 'bess power rating', 'storage power', 'battery power'],
+  acKw:               ['ac capacity', 'ac power rating', 'ac power', 'inverter ac capacity'],
   batteryCost:        ['battery cost', 'storage cost per kwh', 'battery cost per kwh', 'cell cost'],
   pvCostPerKwp:       ['pv cost per kwp', 'pv cost', 'solar cost per kwp', 'pv capex per kwp'],
   balanceOfPlantCost: ['additional capex', 'balance of plant', 'bop cost', 'additional capital expenditure', 'other capex'],
@@ -256,6 +257,7 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   // ── project / inputs ──
   const pvKw = kv(reqKV, 'request', 'pvKw', REQUEST_FIELDS.pvKw, 'num');
   const storageKw = kv(reqKV, 'request', 'storageKw', REQUEST_FIELDS.storageKw, 'num');
+  const acKw = kv(reqKV, 'request', 'acKw', REQUEST_FIELDS.acKw, 'num'); // AC interconnection capacity (displayed as "הספק AC")
   const batteryCost = kv(reqKV, 'request', 'batteryCost', REQUEST_FIELDS.batteryCost, 'num');
   const pvCostPerKwp = kv(reqKV, 'request', 'pvCostPerKwp', REQUEST_FIELDS.pvCostPerKwp, 'num');
   const balanceOfPlantCost = kv(reqKV, 'request', 'balanceOfPlantCost', REQUEST_FIELDS.balanceOfPlantCost, 'num');
@@ -343,7 +345,7 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
       extractorVersion: EXTRACTOR_VERSION, extractedAt: extractedAt || '',
       validationSummary: `${assertions.filter(a => a.pass).length}/${assertions.length} assertions passed`,
     },
-    project: { pvKw, storageKw, storageKwh, currency: 'ILS' },
+    project: { pvKw, storageKw, storageKwh, acKw: Number.isFinite(acKw) ? acKw : null, currency: 'ILS' },
     capex: { totalProjectCost, pvCost, storageCost, balanceOfPlantCost, otherVisibleItems: [] },
     metrics: { npv, irr, paybackYears, profitabilityIndex: Number.isFinite(profitabilityIndex) ? profitabilityIndex : null },
     arrays20y: { revenuesBaseline: revBaseline, revenuesOptimized: revOptimized, lowVoltageBonus: lvBonus, operationalProfit, cfads, freeCashFlow, cumulativeCashFlow },
