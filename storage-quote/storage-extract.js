@@ -212,8 +212,9 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
     },
   };
 
-  // Final structural validation (defense in depth).
-  const vr = V.validateStorageState(state);
+  // Final structural validation (defense in depth). Customer name is NOT required here — it is
+  // filled in the client-details form and applied just before save (the Worker enforces it then).
+  const vr = V.validateStorageState(state, { requireCustomer: false });
   vr.errors.forEach(e => errors.push(e));
   vr.warnings.forEach(w => warnings.push(w));
 
