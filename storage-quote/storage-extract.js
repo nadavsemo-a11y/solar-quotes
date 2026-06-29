@@ -56,7 +56,7 @@ function kvGet(map, label) {
 }
 
 // Find a labeled data row that lives UNDER a given block header (block-aware; handles the
-// repeated "Total" / "Low Voltage Bonus" labels). Returns the 20 data columns (B..U).
+// repeated "Total" / "Low Voltage Bonus" labels). Returns ALL numeric value columns (B..).
 function rowInBlock(rows, blockLabel, rowLabel) {
   const wantBlock = norm(blockLabel), wantRow = norm(rowLabel);
   let inBlock = blockLabel == null;
@@ -64,17 +64,31 @@ function rowInBlock(rows, blockLabel, rowLabel) {
     const r = rows[i]; if (!r) continue;
     const c0 = norm(r[0]);
     if (!inBlock) { if (c0 === wantBlock) inBlock = true; continue; }
-    if (c0 === wantRow) return r.slice(1, 21).map(num);
+    if (c0 === wantRow) return r.slice(1).map(num);
     // stop if we hit the NEXT block header (a non-empty label with an empty value col after data)
   }
   return null;
 }
-function arr20(rows, blockLabel, rowLabel) {
+// Read exactly `n` year columns for a labeled row (n = the project horizon, detected dynamically).
+// Returns null if the row is missing; otherwise its first n values (a row with fewer than n
+// numeric columns yields a short array, which the caller's "n finite values" assertion rejects).
+function arrN(rows, blockLabel, rowLabel, n) {
   const a = rowInBlock(rows, blockLabel, rowLabel);
   if (!a) return null;
-  const out = a.slice(0, 20);
-  while (out.length < 20) out.push(NaN);
-  return out;
+  return a.slice(0, n);
+}
+// Detect the project horizon N = count of contiguous year columns on the sheet's "Period" header
+// row. enSights files are NOT always 20 years (observed 17–25), so the horizon must be read, not
+// assumed. Stops at the first non-numeric cell (trailing label/blank columns).
+function countPeriodYears(rows) {
+  for (const r of rows) {
+    if (r && norm(r[0]) === 'period') {
+      let n = 0;
+      for (let i = 1; i < r.length; i++) { if (Number.isFinite(num(r[i]))) n++; else break; }
+      return n;
+    }
+  }
+  return 0;
 }
 
 /**
@@ -122,23 +136,35 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   const paybackYears = num(kvGet(met, 'Payback (years)'));
   const profitabilityIndex = num(kvGet(met, 'Profitability Index'));
 
-  // ── 20-year arrays (block-aware) ──
-  const revBaseline = arr20(sheets['Revenues'], 'Baseline Revenues (Without Storage)', 'Total');
-  const revOptimized = arr20(sheets['Revenues'], 'Optimized Revenues (With Storage)', 'Total');
-  const lvBonus = arr20(sheets['Revenues'], 'Optimized Revenues (With Storage)', 'Low Voltage Bonus');
+  // ── project horizon (dynamic; enSights files run 17–25y, NOT always 20) ──
   const cf = sheets['Cash Flow & Debt Service'];
-  const operationalProfit = arr20(cf, null, 'Operational Profit');
-  const cfads = arr20(cf, null, 'CFADS');
-  const freeCashFlow = arr20(cf, null, 'Free Cash Flow');
-  const cumulativeCashFlow = arr20(cf, null, 'Cumulative Cash Flow');
+  const horizonRev = countPeriodYears(sheets['Revenues']);
+  const horizonCf = countPeriodYears(cf);
+  const periodsAnalyzed = num(kvGet(met, 'Periods analyzed'));
+  const horizon = horizonRev || horizonCf;
+
+  // ── project-horizon arrays (block-aware; length = horizon, per-quote) ──
+  const revBaseline = arrN(sheets['Revenues'], 'Baseline Revenues (Without Storage)', 'Total', horizon);
+  const revOptimized = arrN(sheets['Revenues'], 'Optimized Revenues (With Storage)', 'Total', horizon);
+  const lvBonus = arrN(sheets['Revenues'], 'Optimized Revenues (With Storage)', 'Low Voltage Bonus', horizon);
+  const operationalProfit = arrN(cf, null, 'Operational Profit', horizon);
+  const cfads = arrN(cf, null, 'CFADS', horizon);
+  const freeCashFlow = arrN(cf, null, 'Free Cash Flow', horizon);
+  const cumulativeCashFlow = arrN(cf, null, 'Cumulative Cash Flow', horizon);
 
   // ── assertions (mirror the spec) ──
   A('Total Project Cost present', Number.isFinite(totalProjectCost) && totalProjectCost > 0, String(totalProjectCost));
   A('PV cost = additional kWp × cost/kWp', Math.abs(pvKw * pvCostPerKwp - pvCost) < 1, `${pvKw}×${pvCostPerKwp} vs ${pvCost}`);
   A('storage cost = kWh × battery cost', Math.abs(storageKwh * batteryCost - storageCost) < batteryCost, `${storageKwh}×${batteryCost} vs ${storageCost}`);
   A('capex components sum to total', Math.abs(pvCost + storageCost + balanceOfPlantCost - totalProjectCost) <= ROUND_TOL, `${pvCost}+${storageCost}+${balanceOfPlantCost} vs ${totalProjectCost}`);
+  // Project horizon: detected from the "Period" header rows; both data sheets must agree, and (when
+  // present) it must match the Metrics "Periods analyzed" figure. All year arrays are then length N.
+  A('project horizon detected', horizon >= 5 && horizon <= 40, `Revenues=${horizonRev}, CashFlow=${horizonCf}`);
+  A('Revenues and Cash Flow horizons agree', horizonRev > 0 && horizonRev === horizonCf, `${horizonRev} vs ${horizonCf}`);
+  if (Number.isFinite(periodsAnalyzed))
+    A('horizon matches Metrics "Periods analyzed"', periodsAnalyzed === horizon, `${periodsAnalyzed} vs ${horizon}`);
   for (const [nm, ar] of [['revBaseline', revBaseline], ['revOptimized', revOptimized], ['lvBonus', lvBonus], ['operationalProfit', operationalProfit], ['cfads', cfads], ['freeCashFlow', freeCashFlow], ['cumulativeCashFlow', cumulativeCashFlow]]) {
-    A(`${nm} is 20 finite values`, Array.isArray(ar) && ar.length === 20 && ar.every(Number.isFinite));
+    A(`${nm} is ${horizon} finite values`, Array.isArray(ar) && ar.length === horizon && ar.every(Number.isFinite));
   }
   A('Low Voltage Bonus year1 > 0', Array.isArray(lvBonus) && lvBonus[0] > 0, lvBonus ? String(lvBonus[0]) : 'missing');
   for (const [nm, v] of [['npv', npv], ['irr', irr], ['paybackYears', paybackYears], ['pvKw', pvKw], ['storageKw', storageKw]]) {
@@ -156,7 +182,12 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   A('default financing term is a whole number', Number.isInteger(defaultTermYears), String(defaultTermYears));
 
   if (errors.length) {
-    return { ok: false, state: null, report: { kpis: { totalProjectCost, irr, paybackYears, storageKwh, workbookLoanRepaymentYears, defaultTermYears, defaultLtvPct, defaultInterestPct }, assertions, errors, warnings } };
+    return { ok: false, state: null, report: { kpis: {
+      totalProjectCost, irr, irrPct: Number.isFinite(irr) ? +(irr * 100).toFixed(1) : null,
+      paybackYears, storageKwh, pvKw, storageKw, horizonYears: horizon,
+      cumLast: Array.isArray(cumulativeCashFlow) ? cumulativeCashFlow[cumulativeCashFlow.length - 1] : NaN,
+      workbookLoanRepaymentYears, defaultTermYears, defaultLtvPct, defaultInterestPct,
+    }, assertions, errors, warnings } };
   }
 
   const fin = P.computeFinancing({ totalProjectCost, cfadsByYear: cfads, ltvPct: defaultLtvPct, annualInterestPct: defaultInterestPct, termYears: defaultTermYears });
@@ -190,7 +221,8 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
     totalProjectCost, irr, irrPct: Number.isFinite(irr) ? +(irr * 100).toFixed(1) : null,
     paybackYears, npv, storageKwh, pvKw, storageKw,
     revBaselineY1: revBaseline && revBaseline[0], revOptimizedY1: revOptimized && revOptimized[0],
-    lvBonusY1: lvBonus && lvBonus[0], cum20: cumulativeCashFlow && cumulativeCashFlow[19],
+    lvBonusY1: lvBonus && lvBonus[0], horizonYears: horizon,
+    cumLast: cumulativeCashFlow && cumulativeCashFlow[cumulativeCashFlow.length - 1],
     // financing-simulation defaults shown to the salesperson in the extraction report
     workbookLoanRepaymentYears, defaultTermYears, defaultLtvPct, defaultInterestPct,
   };
@@ -207,7 +239,7 @@ function parseWorkbook(XLSX, data /* ArrayBuffer|Buffer */) {
   return sheets;
 }
 
-const api = { EXTRACTOR_VERSION, extractStorageState, parseWorkbook, num, scanKV, kvGet, arr20 };
+const api = { EXTRACTOR_VERSION, extractStorageState, parseWorkbook, num, scanKV, kvGet, arrN, countPeriodYears };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.StorageExtract = api;
 })();
