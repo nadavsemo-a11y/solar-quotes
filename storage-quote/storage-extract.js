@@ -315,11 +315,13 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   }
 
   // ── financing defaults (canonical, signed; the customer widget is illustrative only) ──
-  // Default term = ceil(workbook Loan Term + 1); default LTV/interest are product constants.
+  // Default term = ceil(paybackYears) + 1 (a one-year buffer over the investment payback, rounded
+  // up to whole years). Default LTV/interest are product constants. workbookLoanRepaymentYears is
+  // still captured from the workbook (reference only; no longer drives the term).
   A('workbook loan repayment duration present', Number.isFinite(workbookLoanRepaymentYears) && workbookLoanRepaymentYears > 0, String(workbookLoanRepaymentYears));
   const defaultLtvPct = V.DEFAULT_LTV_PCT;
   const defaultInterestPct = V.DEFAULT_INTEREST_PCT;
-  const defaultTermYears = Number.isFinite(workbookLoanRepaymentYears) ? V.expectedDefaultTermYears(workbookLoanRepaymentYears) : NaN;
+  const defaultTermYears = Number.isFinite(paybackYears) ? V.expectedDefaultTermYears(paybackYears) : NaN;
   A('default financing term is a whole number', Number.isInteger(defaultTermYears), String(defaultTermYears));
 
   if (errors.length) {
