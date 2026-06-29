@@ -34,10 +34,12 @@ const ROUND_TOL = 2; // ILS tolerance for CapEx cross-check (rounding in the wor
 
 // Canonical financing-simulation DEFAULTS (product constants). The customer can deviate from
 // these in the illustrative widget, but the signed snapshot pins exactly these defaults.
-// defaultTermYears is per-quote: ceil(workbookLoanRepaymentYears + 1).
+// defaultTermYears is per-quote: a one-year buffer over the investment payback, rounded up to
+// whole years = ceil(paybackYears) + 1. E.g. payback 3.4y → 5y term.
 const DEFAULT_LTV_PCT = 80;
 const DEFAULT_INTEREST_PCT = 4.5;
-const expectedDefaultTermYears = (workbookYears) => Math.ceil(workbookYears + 1);
+const MAX_TERM_YEARS = 40;
+const expectedDefaultTermYears = (paybackYears) => Math.ceil(Number(paybackYears)) + 1;
 
 const ARRAY_FIELDS = [
   'revenuesBaseline', 'revenuesOptimized', 'lowVoltageBonus',
@@ -139,10 +141,13 @@ function validateStorageState(state, opts) {
   if (f.defaultInterestPct !== DEFAULT_INTEREST_PCT) errors.push(`financing.defaultInterestPct must be ${DEFAULT_INTEREST_PCT}`);
   if (!isFiniteNum(f.workbookLoanRepaymentYears) || f.workbookLoanRepaymentYears <= 0)
     errors.push('financing.workbookLoanRepaymentYears must be a positive number (loan repayment duration from the workbook)');
-  if (!Number.isInteger(f.defaultTermYears) || f.defaultTermYears <= 0)
-    errors.push('financing.defaultTermYears must be a positive integer');
-  else if (isFiniteNum(f.workbookLoanRepaymentYears) && f.defaultTermYears !== expectedDefaultTermYears(f.workbookLoanRepaymentYears))
-    errors.push(`financing.defaultTermYears must equal ceil(workbookLoanRepaymentYears + 1) = ${expectedDefaultTermYears(f.workbookLoanRepaymentYears)}`);
+  if (!Number.isInteger(f.defaultTermYears) || f.defaultTermYears <= 0 || f.defaultTermYears > MAX_TERM_YEARS)
+    errors.push(`financing.defaultTermYears must be a positive integer (1–${MAX_TERM_YEARS})`);
+  else if (isFiniteNum(m.paybackYears) && f.defaultTermYears !== expectedDefaultTermYears(m.paybackYears))
+    // Soft check: the derivation lives in the extractor (single source). A mismatch is surfaced but
+    // does NOT block — it would otherwise break re-saving / duplicating quotes authored under an
+    // earlier rule.
+    warnings.push(`financing.defaultTermYears (${f.defaultTermYears}) is not ceil(payback)+1 = ${expectedDefaultTermYears(m.paybackYears)} (payback ${m.paybackYears})`);
   if (!isNonEmptyStr(f.assumptionsSource)) errors.push('financing.assumptionsSource required');
   // canonical computed results (at the defaults)
   if (!isFiniteNum(f.loanAmount) || f.loanAmount < 0) errors.push('financing.loanAmount must be a finite non-negative number');
