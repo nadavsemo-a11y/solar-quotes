@@ -141,7 +141,7 @@ async function loadDup(){const raw=val('dupUrl');const m=raw.match(/\/q\/([A-Za-
     showReport({ok:true,state:st,report:{kpis:kpisFromState(st),assertions:[],errors:[],warnings:[]}});
     msg.textContent='שוכפל בהצלחה — עדכנו פרטים ושמרו';
   }catch(e){msg.textContent='שגיאה בטעינה';}}
-function kpisFromState(st){return {totalProjectCost:st.capex.totalProjectCost,irrPct:+(st.metrics.irr*100).toFixed(1),paybackYears:st.metrics.paybackYears,storageKwh:st.project.storageKwh,pvKw:st.project.pvKw,cum20:st.arrays20y.cumulativeCashFlow[19]};}
+function kpisFromState(st){var cum=st.arrays20y.cumulativeCashFlow||[];return {totalProjectCost:st.capex.totalProjectCost,irrPct:+(st.metrics.irr*100).toFixed(1),paybackYears:st.metrics.paybackYears,storageKwh:st.project.storageKwh,pvKw:st.project.pvKw,horizonYears:cum.length,cumLast:cum[cum.length-1]};}
 
 // ── Excel upload + extraction ──
 async function onFile(file){if(!file)return;
@@ -163,7 +163,7 @@ function showReport(res){
   box.classList.remove('hidden');
   box.innerHTML=[
     ['₪'+fmt(k.totalProjectCost),'עלות הפרויקט'],[(k.irrPct!=null?k.irrPct:'—')+'%','IRR'],
-    [fmt(k.paybackYears||0),'שנות החזר'],[fmt(k.storageKwh)+' kWh','אגירה'],[fmt(k.pvKw)+' kW','PV'],['₪'+fmt(k.cum20),'מצטבר 20ש']
+    [fmt(k.paybackYears||0),'שנות החזר'],[fmt(k.storageKwh)+' kWh','אגירה'],[fmt(k.pvKw)+' kW','PV'],['₪'+fmt(k.cumLast),'מצטבר '+(k.horizonYears||20)+'ש']
   ].map(x=>'<div class="kpi"><div class="v">'+x[0]+'</div><div class="l">'+x[1]+'</div></div>').join('');
   const a=document.getElementById('assertions');
   a.innerHTML=(res.report.assertions||[]).map(x=>'<div class="assert '+(x.pass?'pass':'fail')+'">'+x.name+(x.detail&&!x.pass?' — '+x.detail:'')+'</div>').join('')+
