@@ -186,6 +186,12 @@ async function save(){
     msg.textContent='';
     const link=j.url;document.getElementById('result').classList.remove('hidden');
     const a=document.getElementById('resultLink');a.href=link;a.textContent=link;
+    // Generation-time HubSpot sync (contact + Note + follow-up Task) — same endpoint as solar,
+    // storage-specific wording from the shared payload builder. Best-effort: never blocks the link.
+    try{
+      const hsBody=StoragePublic.buildStorageHubspotSyncPayload(currentState,{quoteId:j.id,quoteUrl:link});
+      fetch(WORKER+'/q/hubspot/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hsBody)});
+    }catch(e){/* best-effort */}
     const name=currentState.customer.name||'לקוח יקר';
     const wa='https://wa.me/?text='+encodeURIComponent('שלום '+name+',\nמצורפת הצעת מחיר למערכת אגירה:\n'+link);
     document.getElementById('waLink').href=wa;
