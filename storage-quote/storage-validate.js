@@ -49,11 +49,17 @@ function isNonEmptyStr(v) { return typeof v === 'string' && v.trim().length > 0;
 function isFiniteArr(v) { return Array.isArray(v) && v.length > 0 && v.every(isFiniteNum); }
 
 /**
- * validateStorageState(state) → { ok:boolean, errors:string[], warnings:string[] }
+ * validateStorageState(state, opts) → { ok:boolean, errors:string[], warnings:string[] }
  * Fails LOUDLY: any structural or consistency problem is an error (blocks save/sign).
  * Warnings do not block but are surfaced to the salesperson.
+ *
+ * opts.requireCustomer (default true): enforce customer.name. The Worker save/sign guard keeps
+ * this strict. Extraction passes false — at upload time the salesperson has not yet filled the
+ * client-details form (the contact is applied just before save), so the workbook-derived figures
+ * must validate WITHOUT a customer name. customer.name is still authoritatively required at save.
  */
-function validateStorageState(state) {
+function validateStorageState(state, opts) {
+  const requireCustomer = !opts || opts.requireCustomer !== false;
   const errors = [];
   const warnings = [];
   const s = state || {};
@@ -62,9 +68,9 @@ function validateStorageState(state) {
   if (s.quoteSchemaVersion !== STORAGE_QUOTE_SCHEMA_VERSION)
     errors.push(`quoteSchemaVersion must be ${STORAGE_QUOTE_SCHEMA_VERSION}`);
 
-  // ── customer ──
+  // ── customer (name required only at save/sign; provisional during extraction) ──
   const c = s.customer || {};
-  if (!isNonEmptyStr(c.name)) errors.push('customer.name required');
+  if (requireCustomer && !isNonEmptyStr(c.name)) errors.push('customer.name required');
   // phone/address/city/date/note are optional but must be strings if present
   for (const k of ['phone', 'address', 'city', 'date', 'note']) {
     if (c[k] != null && typeof c[k] !== 'string') errors.push(`customer.${k} must be a string`);
