@@ -107,6 +107,27 @@ function validateStorageState(state, opts) {
     }
   }
 
+  // ── summaryCharts (optional): the Summary-sheet charts as compressed image data-URIs. Bounded so
+  //    a quote can't bloat KV / the frozen HTML without limit. Each must be a safe image data-URI. ──
+  const sc = s.summaryCharts;
+  if (sc != null) {
+    if (!Array.isArray(sc)) errors.push('summaryCharts must be an array or null');
+    else if (sc.length > 12) errors.push('summaryCharts must have at most 12 items');
+    else {
+      let total = 0;
+      sc.forEach((ch, i) => {
+        const uri = ch && ch.dataUri;
+        if (typeof uri !== 'string' || !/^data:image\/(png|webp|jpe?g);base64,[A-Za-z0-9+/=]+$/.test(uri))
+          errors.push(`summaryCharts[${i}].dataUri must be a safe image data-URI`);
+        else if (uri.length > 1500000) errors.push(`summaryCharts[${i}].dataUri exceeds 1.5MB`);
+        else total += uri.length;
+        if (ch && ch.title != null && typeof ch.title !== 'string') errors.push(`summaryCharts[${i}].title must be a string`);
+        if (ch && ch.caption != null && typeof ch.caption !== 'string') errors.push(`summaryCharts[${i}].caption must be a string`);
+      });
+      if (total > 6000000) errors.push('summaryCharts total size exceeds 6MB');
+    }
+  }
+
   // ── capex ──
   const cap = s.capex || {};
   for (const k of ['totalProjectCost', 'pvCost', 'storageCost', 'balanceOfPlantCost']) {
