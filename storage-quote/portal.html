@@ -108,6 +108,8 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 <script src="./storage-validate.js"></script>
 <script src="./storage-public.js"></script>
 <script src="./storage-extract.js"></script>
+<script src="../shared/summary-charts.js"></script>
+<script src="./summary-charts-browser.js"></script>
 <script>
 const WORKER='https://s-a.gs';
 let currentState=null;
@@ -153,7 +155,16 @@ async function onFile(file){if(!file)return;
     const sheets=StorageExtract.parseWorkbook(XLSX,new Uint8Array(buf));
     const res=StorageExtract.extractStorageState({sheets,workbookHash:'sha256:'+hashHex,extractedAt:new Date().toISOString(),customer:getContact()});
     showReport(res);
-    if(res.ok){currentState=res.state;drop.className='drop ok';drop.innerHTML='✓ קובץ נטען ואומת — '+file.name;msg.textContent='';}
+    if(res.ok){
+      currentState=res.state;drop.className='drop ok';drop.innerHTML='✓ קובץ נטען ואומת — '+file.name;msg.textContent='';
+      // Extract + compress the Summary-sheet charts (best-effort; never blocks the quote).
+      try{
+        msg.textContent='מחלץ גרפים מלשונית Summary…';
+        const charts=await SummaryChartsBrowser.extract(buf);
+        currentState.summaryCharts=charts;
+        msg.textContent=charts.length?('✓ '+charts.length+' גרפים נוספו להצעה'):'';
+      }catch(e){currentState.summaryCharts=[];msg.textContent='';}
+    }
     else{currentState=null;drop.className='drop bad';msg.textContent='האימות נכשל — ראו פירוט למטה';}
   }catch(e){currentState=null;drop.className='drop bad';msg.textContent='שגיאה בקריאת הקובץ: '+e.message;}
 }
