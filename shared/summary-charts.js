@@ -16,7 +16,7 @@
 // Titles + captions in the order enSights lays the charts out on the Summary sheet. The browser
 // extractor maps the Nth chart image to META[N]; extra images fall back to a generic caption.
 const SUMMARY_CHART_META = [
-  { title: 'תפעול יומי טיפוסי', caption: 'לאורך יממה: טעינה מהרשת בשעות הזול (לילה), טעינה מהשמש בצהריים, ומכירה/הזרמה לרשת בשעות השיא בערב.' },
+  { title: 'תפעול יומי טיפוסי', caption: 'לאורך יממה: טעינה מהרשת בשעות תעריף השפל (לילה), טעינה מהשמש בצהריים, ומכירה/הזרמה לרשת בשעות השיא בערב.' },
   { title: 'מצב הטעינה של הסוללה (SoC)', caption: 'כמות האנרגיה האגורה בסוללה בכל שעה, לצד עוצמת הטעינה והפריקה לאורך היממה.' },
   { title: 'תשואה מול גודל הסוללה', caption: 'כיצד ה-IRR משתנה עם קיבולת האגירה — עם סימון הקיבולת שנבחרה כאופטימלית לפרויקט.' },
   { title: 'מחזורי טעינה ליום', caption: 'תדירות הטעינה/פריקה לאורך השנה — הרבה מתחת לגבול היצרן, לאריכות חיי הסוללה.' },
