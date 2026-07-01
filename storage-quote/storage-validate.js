@@ -92,6 +92,20 @@ function validateStorageState(state, opts) {
   }
   // acKw (AC interconnection capacity) is optional — older quotes predate it; when present it must be valid.
   if (p.acKw != null && (!isFiniteNum(p.acKw) || p.acKw < 0)) errors.push('project.acKw must be a finite non-negative number');
+  // Optional enrichment fields (owner-selected extras) — validated only when present.
+  for (const k of ['cabinetKwh', 'gridConnectionKw', 'annualSunHours', 'degradationPct', 'feedInTariff', 'normalizedDischargeKwhPerKw']) {
+    if (p[k] != null && (!isFiniteNum(p[k]) || p[k] < 0)) errors.push(`project.${k} must be a finite non-negative number`);
+  }
+  if (p.couplingType != null && typeof p.couplingType !== 'string') errors.push('project.couplingType must be a string');
+
+  // ── gridAnalysis (optional): year-1 solar-vs-grid split. Scalar aggregates ONLY (never raw hourly). ──
+  const ga = s.gridAnalysis;
+  if (ga != null) {
+    if (typeof ga !== 'object' || Array.isArray(ga)) errors.push('gridAnalysis must be an object or null');
+    else for (const k of ['gridImportKwh', 'gridExportKwh', 'gridPurchaseCostY1', 'effectiveSaleRate', 'eta', 'totalEnergySaleY1', 'solarRevenueY1', 'gridResaleRevenueY1', 'gridArbitrageNetY1']) {
+      if (!isFiniteNum(ga[k])) errors.push(`gridAnalysis.${k} must be a finite number`);
+    }
+  }
 
   // ── capex ──
   const cap = s.capex || {};
