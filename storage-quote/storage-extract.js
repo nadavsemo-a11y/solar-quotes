@@ -165,6 +165,31 @@ function countPeriodYears(rows) {
   return 0;
 }
 
+// Aggregate the ~8,760-hour "Optimal Storage Use" sheet into YEAR-1 grid totals WITHOUT storing any
+// raw hourly data. Columns are found by header ("Grid Import", "Grid Export", "Import Rate"), so a
+// column reorder is tolerated. Returns null when the sheet / required columns are absent.
+function computeGridAggregates(rows) {
+  if (!Array.isArray(rows)) return null;
+  let hdr = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i]; if (!Array.isArray(r)) continue;
+    if (r.some(c => canon(c).indexOf('grid import') === 0)) { hdr = i; break; }
+  }
+  if (hdr < 0) return null;
+  const head = rows[hdr].map(canon);
+  const colOf = (needle) => head.findIndex(h => h.indexOf(needle) === 0);
+  const ci = colOf('grid import'), ce = colOf('grid export'), cr = colOf('import rate');
+  if (ci < 0 || ce < 0) return null;
+  let imp = 0, exp = 0, cost = 0, hours = 0;
+  for (let i = hdr + 1; i < rows.length; i++) {
+    const r = rows[i]; if (!Array.isArray(r)) continue;
+    const gi = num(r[ci]); if (!Number.isFinite(gi)) continue;
+    const ge = num(r[ce]); const ir = cr >= 0 ? num(r[cr]) : NaN;
+    imp += gi; exp += Number.isFinite(ge) ? ge : 0; cost += gi * (Number.isFinite(ir) ? ir : 0); hours++;
+  }
+  return hours ? { gridImportKwh: imp, gridExportKwh: exp, gridPurchaseCostY1: cost, hours } : null;
+}
+
 // ── FIELD SPECS — the single place to extend when enSights changes a label. Order aliases most-
 //    specific first. Adding a synonym here is the entire cost of absorbing a future rename. ──
 const REQUEST_FIELDS = {
@@ -177,6 +202,13 @@ const REQUEST_FIELDS = {
   pvCostPerKwp:       ['pv cost per kwp', 'pv cost', 'solar cost per kwp', 'pv capex per kwp'],
   balanceOfPlantCost: ['additional capex', 'balance of plant', 'bop cost', 'additional capital expenditure', 'other capex'],
   loanTerm:           ['loan term', 'loan duration', 'loan repayment term', 'loan repayment period', 'debt term'],
+  // ── optional enrichment fields (owner-selected; absent → simply not displayed) ──
+  cabinetKwh:         ['cabinet capacity', 'nameplate capacity', 'rated capacity', 'battery capacity'],
+  couplingType:       ['coupling type', 'coupling'],
+  gridConnectionKw:   ['grid connection limit', 'grid connection', 'interconnection limit', 'grid limit'],
+  annualSunHours:     ['annual sun hours', 'sun hours', 'solar hours', 'peak sun hours'],
+  feedInTariff:       ['feed-in tariff', 'feed in tariff', 'fit', 'export tariff'],
+  roundTripEff:       ['round-trip efficiency', 'round trip efficiency', 'rte'],
 };
 const METRICS_FIELDS = {
   totalProjectCost:   ['total project cost', 'total capex', 'total investment', 'project cost', 'total capital cost'],
@@ -263,6 +295,21 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   const balanceOfPlantCost = kv(reqKV, 'request', 'balanceOfPlantCost', REQUEST_FIELDS.balanceOfPlantCost, 'num');
   const workbookLoanRepaymentYears = kv(reqKV, 'request', 'loanTerm', REQUEST_FIELDS.loanTerm, 'num');
 
+  // ── optional enrichment inputs (owner-selected extras; null when absent) ──
+  const cabinetKwh = kv(reqKV, 'request', 'cabinetKwh', REQUEST_FIELDS.cabinetKwh, 'num');
+  const couplingType = kv(reqKV, 'request', 'couplingType', REQUEST_FIELDS.couplingType); // string ("AC"/"DC")
+  const gridConnectionKw = kv(reqKV, 'request', 'gridConnectionKw', REQUEST_FIELDS.gridConnectionKw, 'num');
+  const annualSunHours = kv(reqKV, 'request', 'annualSunHours', REQUEST_FIELDS.annualSunHours, 'num');
+  const feedInTariff = kv(reqKV, 'request', 'feedInTariff', REQUEST_FIELDS.feedInTariff, 'num');
+  const roundTripEff = kv(reqKV, 'request', 'roundTripEff', REQUEST_FIELDS.roundTripEff, 'num');
+  // "Annual Degradation Rate" appears twice (PV ~0.2% and battery ~2%); take the larger (battery) —
+  // it dominates the storage asset story and matches the owner's expectation.
+  const degradationPct = (function () {
+    const ds = reqKV.filter(e => sim(e.key, ['annual degradation rate', 'degradation rate', 'degradation']) >= 0.85)
+      .map(e => num(e.cells.find(c => Number.isFinite(num(c))))).filter(Number.isFinite);
+    return ds.length ? Math.max.apply(null, ds) : NaN;
+  })();
+
   // ── capex (Metrics sheet is authoritative for costs) ──
   const totalProjectCost = kv(metKV, 'metrics', 'totalProjectCost', METRICS_FIELDS.totalProjectCost, 'num');
   const pvCost = kv(metKV, 'metrics', 'pvCost', METRICS_FIELDS.pvCost, 'num');
@@ -295,6 +342,36 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   }
   const { revenuesBaseline: revBaseline, revenuesOptimized: revOptimized, lowVoltageBonus: lvBonus,
     operationalProfit, cfads, freeCashFlow, cumulativeCashFlow } = arrOut;
+
+  // ── normalized peak-discharge (kWh/kW) — proves the 800h threshold ──
+  const ndRow = rowFind(SH.revenues, ['normalized discharged energy', 'discharged energy', 'normalized discharge'], null);
+  const normalizedDischargeKwhPerKw = (ndRow && Number.isFinite(ndRow.values[0])) ? ndRow.values[0] : NaN;
+
+  // ── grid analysis (optional): split year-1 energy-sale revenue into solar-origin vs re-sold grid
+  //    power, and surface the grid purchase cost. Aggregated from the hourly sheet; only a handful
+  //    of scalars are stored (never the raw 8760 series). Absent/zero-export → left null (all-solar).
+  const totalEnergySaleY1 = (Array.isArray(revOptimized) && Array.isArray(lvBonus)) ? (revOptimized[0] - lvBonus[0]) : NaN;
+  const eta = (Number.isFinite(roundTripEff) && roundTripEff > 0 && roundTripEff <= 1) ? roundTripEff : 0.9;
+  const optSheetName = resolveSheet(sheets, ['optimal storage use', 'hourly system operation', 'storage use', 'dispatch']).name;
+  const agg = optSheetName ? computeGridAggregates(sheets[optSheetName]) : null;
+  let gridAnalysis = null;
+  if (agg && agg.gridExportKwh > 0 && Number.isFinite(totalEnergySaleY1) && totalEnergySaleY1 > 0) {
+    const effectiveSaleRate = totalEnergySaleY1 / agg.gridExportKwh;
+    const gridOriginExportKwh = agg.gridImportKwh * eta;
+    const gridResaleRevenueY1 = Math.max(0, gridOriginExportKwh * effectiveSaleRate);
+    const solarRevenueY1 = Math.max(0, totalEnergySaleY1 - gridResaleRevenueY1);
+    gridAnalysis = {
+      gridImportKwh: Math.round(agg.gridImportKwh),
+      gridExportKwh: Math.round(agg.gridExportKwh),
+      gridPurchaseCostY1: Math.round(agg.gridPurchaseCostY1),
+      effectiveSaleRate: Math.round(effectiveSaleRate * 1000) / 1000,
+      eta,
+      totalEnergySaleY1: Math.round(totalEnergySaleY1),
+      solarRevenueY1: Math.round(solarRevenueY1),
+      gridResaleRevenueY1: Math.round(gridResaleRevenueY1),
+      gridArbitrageNetY1: Math.round(gridResaleRevenueY1 - agg.gridPurchaseCostY1),
+    };
+  }
 
   // ── assertions: structure + ALGEBRAIC GUARDRAILS (these catch any mis-resolved cell) ──
   A('Total Project Cost present', Number.isFinite(totalProjectCost) && totalProjectCost > 0, String(totalProjectCost));
@@ -345,10 +422,21 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
       extractorVersion: EXTRACTOR_VERSION, extractedAt: extractedAt || '',
       validationSummary: `${assertions.filter(a => a.pass).length}/${assertions.length} assertions passed`,
     },
-    project: { pvKw, storageKw, storageKwh, acKw: Number.isFinite(acKw) ? acKw : null, currency: 'ILS' },
+    project: {
+      pvKw, storageKw, storageKwh, acKw: Number.isFinite(acKw) ? acKw : null, currency: 'ILS',
+      // optional enrichment fields (owner-selected; null when the workbook lacks them)
+      cabinetKwh: Number.isFinite(cabinetKwh) ? cabinetKwh : null,
+      couplingType: couplingType || null,
+      gridConnectionKw: Number.isFinite(gridConnectionKw) ? gridConnectionKw : null,
+      annualSunHours: Number.isFinite(annualSunHours) ? annualSunHours : null,
+      degradationPct: Number.isFinite(degradationPct) ? degradationPct : null,
+      feedInTariff: Number.isFinite(feedInTariff) ? feedInTariff : null,
+      normalizedDischargeKwhPerKw: Number.isFinite(normalizedDischargeKwhPerKw) ? normalizedDischargeKwhPerKw : null,
+    },
     capex: { totalProjectCost, pvCost, storageCost, balanceOfPlantCost, otherVisibleItems: [] },
     metrics: { npv, irr, paybackYears, profitabilityIndex: Number.isFinite(profitabilityIndex) ? profitabilityIndex : null },
     arrays20y: { revenuesBaseline: revBaseline, revenuesOptimized: revOptimized, lowVoltageBonus: lvBonus, operationalProfit, cfads, freeCashFlow, cumulativeCashFlow },
+    gridAnalysis, // null unless the hourly sheet yielded a solar-vs-grid split
     financing: {
       defaultLtvPct, defaultInterestPct, defaultTermYears, workbookLoanRepaymentYears,
       assumptionsSource: 'enSights workbook',
