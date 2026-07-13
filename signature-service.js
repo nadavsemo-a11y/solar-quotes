@@ -246,6 +246,101 @@ class SignatureService {
 
     return { ok: true, signature };
   }
+
+  /**
+   * buildSignPayload(opts) — THE single source of truth for building a VIEWER-CONTRACT
+   * `POST /sign/:id` request body from collected signature evidence. Every viewer-contract
+   * signer (solar public viewer, storage) MUST call this instead of hand-assembling the body.
+   * Hand-assembly is what produced the "collect() wrapper sent as body.signature" defect: the
+   * real signer fields ended up nested under `signature.signature`, so the server saw
+   * `signature.sigImg === undefined` and rejected every signature with HTTP 400.
+   *
+   * Returns a discriminated result — never the raw collect() wrapper:
+   *   success → { ok:true, signature, body }   // body.signature === signature, a FLAT object
+   *   failure → { ok:false, errors }            // NO body; caller must not POST anything
+   *
+   * The viewer contract carries signer identity + canvas ONLY. The browser-built `quoteSnapshot`
+   * and its client-side `snapshotHash` are intentionally stripped — the server reconstructs and
+   * hashes the authoritative snapshot itself. Signing material (publicSnapshotHash / signingToken
+   * / idempotencyKey / knobs) lives at the request-body top level, never inside `signature`.
+   * Does not mutate any caller-supplied object.
+   */
+  async buildSignPayload({
+    name, idNum, email, sigDate, agreed,
+    clientData = {}, docType = 'quote', knobs = {},
+    publicSnapshotHash, signingToken, idempotencyKey,
+  } = {}) {
+    // Collect + validate exactly once. quoteSnapshot is intentionally empty for the viewer
+    // contract (the server owns the authoritative snapshot); it is stripped below regardless.
+    const result = await this.collect({
+      name, idNum, agreed, email, sigDate,
+      quoteSnapshot: {}, clientData,
+    });
+    if (!result.ok) return { ok: false, errors: result.errors || [] };
+
+    // Unwrap the FLAT signature and drop the browser-side snapshot fields the viewer must not send.
+    const { quoteSnapshot, snapshotHash, ...collected } = result.signature;
+    void quoteSnapshot; void snapshotHash;
+
+    // New object — never mutate result.signature; add the signer fields the server reads.
+    const signature = Object.assign({}, collected, {
+      email: email,
+      sigDate: sigDate,
+      agreed: agreed === true,
+    });
+
+    return {
+      ok: true,
+      signature: signature,
+      body: {
+        docType: docType,
+        signature: signature,           // FLAT: sigImg / name / idNum are top-level here
+        knobs: knobs,
+        publicSnapshotHash: publicSnapshotHash,
+        signingToken: signingToken,
+        idempotencyKey: idempotencyKey,
+      },
+    };
+  }
+
+  /**
+   * describeValidationErrors(errors) — map the raw field codes returned by validate()/collect()
+   * (['name','idNum','email','sigDate','canvas','agree']) to the shared SIG_HTML error spans and
+   * Hebrew messages. One source so every signer surfaces field errors identically (previously the
+   * signers looped expecting `{field}` objects and silently showed nothing for invalid ID/email).
+   */
+  static describeValidationErrors(errors) {
+    const MAP = {
+      name:    { field: 'sigName',   msg: 'יש להזין שם מלא' },
+      idNum:   { field: 'sigID',     msg: 'תעודת זהות לא תקינה' },
+      email:   { field: 'sigEmail',  msg: 'כתובת אימייל לא תקינה' },
+      sigDate: { field: 'sigDate',   msg: 'יש לבחור תאריך חתימה' },
+      canvas:  { field: 'sigCanvas', msg: 'יש לחתום בתיבת החתימה' },
+      agree:   { field: 'sigDate',   msg: 'יש לאשר את תנאי ההסכם' },
+    };
+    return (Array.isArray(errors) ? errors : []).map(function (e) {
+      return MAP[e] || { field: 'sigDate', msg: 'שדה לא תקין' };
+    });
+  }
+
+  /**
+   * describeSignError(status, out) — map a failed /sign response to a safe, specific Hebrew
+   * message WITHOUT leaking server internals (no raw error strings, tokens, KV, or crypto detail
+   * reach the user). One source so every signer shows consistent guidance. Callers should also
+   * console.error the raw code for engineers; that is the caller's job, not this pure mapper's.
+   */
+  static describeSignError(status, out) {
+    out = out || {};
+    const err = String(out.error || '');
+    if (status === 409) return 'המסמך כבר נחתם.';
+    if (out.reason === 'token_expired') return 'פג תוקף החתימה — יש לרענן את הדף ולחתום שוב.';
+    if (out.reason === 'signing_unavailable') return 'החתימה אינה זמינה כעת — נסו שוב מאוחר יותר.';
+    if (/sigImg|Signature image|strokeData|stroke/i.test(err)) return 'החתימה לא נקלטה כראוי — נסו לחתום שוב.';
+    if (/Israeli ID|signer name|Invalid email|signature date|Terms/i.test(err)) return 'אחד מפרטי החותם אינו תקין — בדקו את השם, ת"ז והאימייל ונסו שוב.';
+    if (/Snapshot hash mismatch|token_hash_mismatch|token_knobs_mismatch|Invalid signing token|token_bad_signature|token_wrong_quote/i.test(err)) return 'ההצעה עודכנה מאז שנטענה — רעננו את הדף וחתמו שוב.';
+    if (/not found|Bad quote|Not a signable/i.test(err)) return 'ההצעה לא נמצאה או אינה זמינה לחתימה — רעננו את הדף.';
+    return 'אירעה שגיאה בשליחת החתימה. נסו שוב בעוד רגע.';
+  }
 }
 
 if (typeof module !== 'undefined' && module.exports) {
