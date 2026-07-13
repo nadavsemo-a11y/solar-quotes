@@ -134,7 +134,13 @@ function pickHub(i){const c=window['_hub'+i]||{};ClientDetails.setClientDetailsV
 // ── duplicate (reuses trunk /q/data/:id) ──
 async function loadDup(){const raw=val('dupUrl');const m=raw.match(/\/q\/([A-Za-z0-9_-]+)/);const id=m?m[1]:raw;
   const msg=document.getElementById('dupMsg');msg.textContent='טוען…';
-  try{const r=await fetch(WORKER+'/q/data/'+encodeURIComponent(id));const j=await r.json();
+  try{
+    // /q/data requires the admin key (it exposes internal pricing). Send stored key; on 401 prompt+retry.
+    let _ak='';try{_ak=localStorage.getItem('semo_admin_key')||'';}catch(e){}
+    const _f=(k)=>fetch(WORKER+'/q/data/'+encodeURIComponent(id),k?{headers:{'X-Admin-Key':k}}:undefined);
+    let r=await _f(_ak);
+    if(r.status===401){const e2=prompt('נדרש מפתח ניהול (ADMIN_KEY) כדי לטעון הצעה קיימת:');if(e2){_ak=e2.trim();try{localStorage.setItem('semo_admin_key',_ak);}catch(e){}r=await _f(_ak);}}
+    const j=await r.json();
     if(!j.ok||!j.data){msg.textContent='לא נמצאה הצעה';return;}
     const st=JSON.parse(decodeURIComponent(escape(atob(j.data))));
     if(st.type!=='storage'){msg.textContent='זו אינה הצעת אגירה';return;}
