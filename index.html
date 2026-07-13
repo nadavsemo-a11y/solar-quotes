@@ -1922,7 +1922,22 @@ async function loadFromQuoteUrl() {
       var m = raw.match(/\/q\/([A-Za-z0-9_-]+)/);
       if (!m) { _setDupMsg('לא הצלחתי לזהות מזהה הצעה בכתובת', false); btn.disabled = false; btn.textContent = oldLabel; return; }
       var id = m[1];
-      var res = await fetch('https://s-a.gs/q/data/' + encodeURIComponent(id));
+      // /q/data now requires the admin key (it exposes internal pricing). Send the stored key;
+      // on 401 prompt once, remember it, and retry — keeps "duplicate quote" working for staff.
+      var _akey = '';
+      try { _akey = localStorage.getItem('semo_admin_key') || ''; } catch (e) {}
+      var _doFetch = function (k) {
+        return fetch('https://s-a.gs/q/data/' + encodeURIComponent(id), k ? { headers: { 'X-Admin-Key': k } } : undefined);
+      };
+      var res = await _doFetch(_akey);
+      if (res.status === 401) {
+        var _entered = prompt('נדרש מפתח ניהול (ADMIN_KEY) כדי לטעון הצעה קיימת:');
+        if (_entered) {
+          _akey = _entered.trim();
+          try { localStorage.setItem('semo_admin_key', _akey); } catch (e) {}
+          res = await _doFetch(_akey);
+        }
+      }
       if (!res.ok) {
         var err = await res.json().catch(function(){ return {}; });
         _setDupMsg(err.error ? ('שגיאה: ' + err.error) : ('שגיאת שרת ' + res.status), false);
