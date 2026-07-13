@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.02.06.04",
+    "date": "2026-07-13",
+    "type": "fix",
+    "title": "Fix digital-signature submission failure (storage + solar viewer)",
+    "changes": [
+      "Root cause: SignatureService.collect() returns a { ok, signature } wrapper, but the storage and solar viewer signers sent the wrapper itself as body.signature — so the server saw signature.sigImg === undefined and rejected every signature with HTTP 400, shown to customers as the generic Hebrew error.",
+      "Added one authoritative builder SignatureService.buildSignPayload() (single source of truth): calls collect() once, checks ok, unwraps the flat signature, strips browser quoteSnapshot/snapshotHash, adds email/sigDate/agreed, and returns { ok, body, signature } with body.signature flat.",
+      "Migrated both viewer-contract signers (storage-template.js STORAGE_SIGNER_JS, viewer-signature.js VIEWER_SIG_JS) to the shared builder; removed duplicated manual payload assembly and no-op deletes.",
+      "Added shared describeValidationErrors (field codes → error spans + Hebrew) so invalid ID/email now display, and describeSignError (safe Hebrew server-error mapping without leaking internals).",
+      "Server (worker.js) unchanged: still rejects nested wrappers and enforces token/hash/knobs/idempotency. Legacy quote-ui.js path left intact (separate token-free contract).",
+      "Verified end-to-end against a live local Worker (storage + solar): real client builder → POST /sign → validation → persistence → signed-state; nested wrapper reproduced the 400; token/hash tamper still rejected."
+    ],
+    "affected_modules": ["signature-service.js", "viewer-signature.js", "storage-quote/storage-template.js"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.06.03",
     "date": "2026-06-18",
     "type": "config",
