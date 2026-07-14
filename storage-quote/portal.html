@@ -45,6 +45,32 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 .hidden{display:none}
 #hubResults div{padding:8px;border:1px solid var(--ink-200);border-radius:4px;margin-top:6px;cursor:pointer;font-size:13px}
 #hubResults div:hover{background:var(--mint-soft)}
+/* payment-milestones editor */
+.pm-ed-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pm-ed-reset{cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;border:1.5px solid var(--black);border-radius:var(--radius);background:#fff;padding:5px 10px}
+.pm-ed-row{display:grid;grid-template-columns:34px 1.1fr 1.3fr 1.9fr 96px 30px;gap:6px;align-items:center;padding:7px 0;border-bottom:1px solid var(--ink-200)}
+.pm-ed-row.pm-ed-residual{background:var(--mint-soft)}
+.pm-ed-order{display:flex;flex-direction:column;gap:2px}
+.pm-ed-mini{cursor:pointer;border:1px solid var(--ink-300);background:#fff;border-radius:3px;font-size:9px;line-height:1;padding:2px 0}
+.pm-ed-mini:disabled{opacity:.3;cursor:not-allowed}
+.pm-ed-row input,.pm-ed-row select{width:100%;padding:6px 7px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:inherit;font-size:12px}
+.pm-ed-rule{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.pm-ed-rule select{flex:1 1 100%}
+.pm-ed-rule label{display:inline-flex;align-items:center;gap:2px;margin:0;font-size:11px;font-weight:600}
+.pm-ed-rule input[type=number]{width:72px}
+.pm-ed-auto{font-size:11px;color:var(--ink-500);font-weight:700}
+.pm-ed-amount{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;text-align:left;direction:ltr}
+.pm-ed-amount.pm-ed-neg{color:#c0392b}
+.pm-ed-del{cursor:pointer;border:1.5px solid var(--ink-300);background:#fff;border-radius:var(--radius);font-weight:800;color:#c0392b;padding:4px}
+.pm-ed-del:disabled{opacity:.3;cursor:not-allowed;color:var(--ink-500)}
+.pm-ed-add{margin-top:10px;cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;border:1.5px dashed var(--ink-300);border-radius:var(--radius);background:var(--ink-50);padding:8px 14px;width:100%}
+.pm-ed-foot{margin-top:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.pm-ed-total{font-size:14px;font-weight:800}
+.pm-ed-target{font-weight:600;color:var(--ink-500);font-size:12px}
+.pm-ed-msg{font-size:12px;font-weight:700;text-align:left}
+.pm-ed-msg.ok{color:var(--mint-deep)}
+.pm-ed-msg.err{color:#c0392b}
+@media(max-width:680px){.pm-ed-row{grid-template-columns:28px 1fr 92px 26px;grid-template-areas:"o name amount del" "o desc rule rule";row-gap:4px}.pm-ed-row .pm-ed-order{grid-area:o}.pm-ed-name{grid-area:name}.pm-ed-desc{grid-area:desc}.pm-ed-rule{grid-area:rule}.pm-ed-amount{grid-area:amount}.pm-ed-del{grid-area:del}}
 </style>
 </head>
 <body>
@@ -84,7 +110,14 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
     <div id="assertions" style="margin-top:10px"></div>
   </div>
 
-  <!-- 3. SAVE -->
+  <!-- 3. PAYMENT MILESTONES (editable per-quote schedule; shown once a quote is loaded) -->
+  <div id="milestonesCard" class="card hidden">
+    <h2><span class="bar"></span>אבני דרך לתשלום</h2>
+    <p style="font-size:12px;color:var(--ink-500);margin:0 0 10px">ניתן להתאים לכל לקוח. הסכומים מחושבים אוטומטית מסכום העסקה; שורת "היתרה" משלימה תמיד ל-100%.</p>
+    <div id="milestonesMount"></div>
+  </div>
+
+  <!-- 4. SAVE -->
   <div class="card">
     <h2><span class="bar"></span>יצירת הצעה</h2>
     <button id="saveBtn" class="btn btn-mint" disabled onclick="save()">צור קישור להצעה</button>
@@ -105,11 +138,13 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 <script src="../shared/israel-cities.js"></script>
 <script src="../shared/client-details.js"></script>
 <script src="../shared/contact-adapters.js"></script>
+<script src="./storage-payment-milestones.js"></script>
 <script src="./storage-validate.js"></script>
 <script src="./storage-public.js"></script>
 <script src="./storage-extract.js"></script>
 <script src="../shared/summary-charts.js"></script>
 <script src="./summary-charts-browser.js"></script>
+<script src="./storage-milestones-editor.js"></script>
 <script>
 const WORKER='https://s-a.gs';
 let currentState=null;
@@ -119,6 +154,15 @@ const cdMount=document.getElementById('clientDetailsMount');
 ClientDetails.renderClientDetails(cdMount,{});
 function getContact(){return ClientDetails.getClientDetailsValues(cdMount);}
 function val(id){var el=document.getElementById(id);return el?(el.value||'').trim():'';}
+
+// ── payment-milestones editor (internal only; consumes the pure StoragePaymentMilestones domain) ──
+const msMount=document.getElementById('milestonesMount');
+function mountMilestones(){
+  const card=document.getElementById('milestonesCard');
+  if(!currentState||!currentState.capex||!(currentState.capex.totalProjectCost>0)){card.classList.add('hidden');return;}
+  card.classList.remove('hidden');
+  StorageMilestonesEditor.render(msMount,{capex:currentState.capex,schedule:currentState.paymentMilestones});
+}
 
 // ── HubSpot pull (reuses trunk /q/hubspot/search) ──
 function toggleHub(){document.getElementById('hubBox').classList.toggle('hidden');}
@@ -144,6 +188,7 @@ async function loadDup(){const raw=val('dupUrl');const m=raw.match(/\/q\/([A-Za-
     currentState=st; // reuse extracted figures
     ClientDetails.setClientDetailsValues(cdMount, ContactAdapters.contactFromStorageState(st));
     showReport({ok:true,state:st,report:{kpis:kpisFromState(st),assertions:[],errors:[],warnings:[]}});
+    mountMilestones();
     msg.textContent='שוכפל בהצלחה — עדכנו פרטים ושמרו';
   }catch(e){msg.textContent='שגיאה בטעינה';}}
 function kpisFromState(st){var cum=st.arrays20y.cumulativeCashFlow||[];return {totalProjectCost:st.capex.totalProjectCost,irrPct:+(st.metrics.irr*100).toFixed(1),paybackYears:st.metrics.paybackYears,storageKwh:st.project.storageKwh,pvKw:st.project.pvKw,horizonYears:cum.length,cumLast:cum[cum.length-1]};}
@@ -167,8 +212,9 @@ async function onFile(file){if(!file)return;
         currentState.summaryCharts=charts;
         msg.textContent=charts.length?('✓ '+charts.length+' גרפים נוספו להצעה'):'';
       }catch(e){currentState.summaryCharts=[];msg.textContent='';}
+      mountMilestones();
     }
-    else{currentState=null;drop.className='drop bad';msg.textContent='האימות נכשל — ראו פירוט למטה';}
+    else{currentState=null;mountMilestones();drop.className='drop bad';msg.textContent='האימות נכשל — ראו פירוט למטה';}
   }catch(e){currentState=null;drop.className='drop bad';msg.textContent='שגיאה בקריאת הקובץ: '+e.message;}
 }
 function showReport(res){
@@ -191,6 +237,9 @@ async function save(){
   if(!currentState){return;}
   currentState=ContactAdapters.applyContactToStorageState(currentState,getContact());
   if(!currentState.customer.name){document.getElementById('saveMsg').textContent='נא למלא שם לקוח';return;}
+  // Persist the negotiated milestone schedule (normalized). Block save on an invalid schedule.
+  if(!StorageMilestonesEditor.isValid(msMount)){document.getElementById('saveMsg').textContent='לוח אבני הדרך אינו תקין — תקנו לפני שמירה';return;}
+  currentState.paymentMilestones=StorageMilestonesEditor.getSchedule(msMount);
   const btn=document.getElementById('saveBtn');btn.disabled=true;
   const msg=document.getElementById('saveMsg');msg.textContent='שומר…';
   try{
