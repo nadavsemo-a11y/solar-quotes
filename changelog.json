@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.02.06.06",
+    "date": "2026-07-14",
+    "type": "feature",
+    "title": "Payment Milestones (\"אבני דרך לתשלום\") in the storage quote",
+    "changes": [
+      "New bottom-of-document section in the commercial-storage quote: a 3-column table (שם אבן הדרך / תיאור + הערות / סכום) with a total row and a shared 'לכל תשלום יתווסף מע\"מ כדין.' note. Amounts are on the ex-VAT deal value (capex.totalProjectCost) and always sum to it exactly.",
+      "Single source of truth: new pure domain module storage-payment-milestones.js owns the default schedule, the typed/versioned rule schema (fixed_amount / cumulative_total_percent / component_percent_delta / residual_to_total), resolution and validation. buildStorageSignedSnapshot pins the resolved schedule; buildStorageDocumentContract formats it into shared rows consumed by BOTH the web page and the PDF mapper — neither presenter recomputes amounts.",
+      "Editable per quote for negotiation via a new internal editor (storage-milestones-editor.js) in the authoring portal: rename/re-describe, edit rule params, reorder, add/remove, restore defaults, live preview + inline validation. The final 'residual' row always balances to 100% and is protected. Max 12 milestones (one unsplittable print block).",
+      "Owner-specified default (6 rows): ₪10,000 deposit → cumulative 10% (IEC approval) → 35% (design) → DC/PV top-up 35→80% (panels) → storage top-up 35→80% (delivery) → residual to 100% (commissioning).",
+      "Backward compatible: legacy quotes with no schedule render the default on the fly (no migration); already-signed quotes serve their frozen html/pdfData and are unaffected. storage-validate.js now accepts + validates the optional state.paymentMilestones (blocks /q/save on an invalid schedule).",
+      "PDF: the mapper emits a structured payment_milestones array (not fixed placeholders); the reference template/renderer gained a generic repeating-row block. NOTE: the external @semo/pdf production service must add the same repeating block before milestones render in the production PDF (data is already frozen at signing).",
+      "Verified: 59 storage unit/integration tests pass (exact worked example, sum equality, all validation rejections, snapshot/hash reactivity, web + PDF coverage, pagination keep-together)."
+    ],
+    "affected_modules": ["storage-quote/storage-payment-milestones.js", "storage-quote/storage-milestones-editor.js", "storage-quote/storage-public.js", "storage-quote/storage-document-contract.js", "storage-quote/storage-render.js", "storage-quote/storage-styles.js", "storage-quote/storage-pdf-map.js", "storage-quote/storage-validate.js", "storage-quote/portal.html", "deploy_helper.py"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.06.05",
     "date": "2026-07-14",
     "type": "config",
