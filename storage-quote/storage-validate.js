@@ -22,6 +22,12 @@
 (function () {
 'use strict';
 
+// Payment-milestone domain layer (optional per-quote schedule). Loaded before this file in the
+// browser (plain <script>) and required in Node/Worker — the single authority for schedule validity.
+const PM = (typeof module !== 'undefined' && module.exports)
+  ? require('./storage-payment-milestones.js')
+  : (typeof globalThis !== 'undefined' ? globalThis.StoragePaymentMilestones : undefined);
+
 const STORAGE_QUOTE_SCHEMA_VERSION = 1;
 const STORAGE_SNAPSHOT_VERSION = 1;
 // The project horizon (year-array length) is PER-QUOTE, not fixed: enSights workbooks run anywhere
@@ -141,6 +147,20 @@ function validateStorageState(state, opts) {
     const parts = (cap.pvCost || 0) + (cap.storageCost || 0) + (cap.balanceOfPlantCost || 0) + visible;
     if (Math.abs(parts - cap.totalProjectCost) > ROUND_TOL) {
       errors.push(`capex components (${Math.round(parts)}) do not sum to totalProjectCost (${Math.round(cap.totalProjectCost)}) within ±${ROUND_TOL}`);
+    }
+  }
+
+  // ── paymentMilestones (optional per-quote negotiated schedule) ──
+  // Absent → the default schedule is generated at snapshot time (legacy states render unchanged).
+  // Present → it must be a well-formed, valid partition of capex.totalProjectCost (delegated to the
+  // domain layer, the single authority). Only checked when the total itself is valid (else the capex
+  // errors above already fire and milestone messages would be noise).
+  if (s.paymentMilestones != null) {
+    if (typeof s.paymentMilestones !== 'object' || Array.isArray(s.paymentMilestones)) {
+      errors.push('paymentMilestones must be an object or null');
+    } else if (PM && typeof PM.validateSchedule === 'function' && isFiniteNum(cap.totalProjectCost) && cap.totalProjectCost > 0) {
+      const vr = PM.validateSchedule(PM.normalizeSchedule(s.paymentMilestones), cap);
+      if (!vr.ok) vr.errors.forEach(e => errors.push('paymentMilestones: ' + e.message));
     }
   }
 
