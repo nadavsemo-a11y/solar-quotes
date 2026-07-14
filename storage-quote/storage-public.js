@@ -21,6 +21,11 @@
 const V = (typeof module !== 'undefined' && module.exports)
   ? require('./storage-validate.js')
   : (typeof globalThis !== 'undefined' ? globalThis.StorageValidate : undefined);
+// Payment-milestone domain layer — the single authority for the payment schedule (default wording,
+// formulas, resolution, validation). The snapshot PINS the resolved schedule the customer signs.
+const PM = (typeof module !== 'undefined' && module.exports)
+  ? require('./storage-payment-milestones.js')
+  : (typeof globalThis !== 'undefined' ? globalThis.StoragePaymentMilestones : undefined);
 
 const round = n => Math.round(n);
 const round2 = n => Math.round(n * 100) / 100;
@@ -146,6 +151,14 @@ function buildStorageSignedSnapshot(state /* , knobs ignored */) {
       cumulativeCashFlow: a.cumulativeCashFlow.map(round),
     },
     financing: fin, // canonical default assumptions (the customer simulator does NOT affect this)
+    // Payment schedule the customer signs: the per-quote (negotiated) config resolved to whole-shekel
+    // amounts, or the default schedule for legacy states with none. Resolved ONCE here (single source);
+    // presenters format these amounts and never recompute. Σ(rows.amount) === capex.totalProjectCost.
+    // Resolve only when the total is present — a missing/zero total is reported by the contract's
+    // canonical `cost.total` guard, not here, so the precise "missing cost.total" error is preserved.
+    paymentMilestones: (Number(cap.totalProjectCost) > 0)
+      ? PM.resolveMilestonesForState(s)
+      : { version: PM.MILESTONES_SCHEMA_VERSION, schedule: [], rows: [], total: 0 },
     source: {
       tool: (s.source && s.source.tool) || '',
       workbookHash: (s.source && s.source.workbookHash) || '',
