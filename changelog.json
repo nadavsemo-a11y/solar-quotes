@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.02.06.05",
+    "date": "2026-07-14",
+    "type": "config",
+    "title": "Remove ADMIN_KEY requirement from \"duplicate existing quote\"",
+    "changes": [
+      "Per owner decision: the /q/data/:id endpoint (raw quote state used by 'שכפל הצעה קיימת') no longer requires the admin key. Staff can now duplicate a quote without being prompted for ADMIN_KEY.",
+      "worker.js handleLoadQuoteData: removed the isAdminAuthorized() gate (redirect/spec rejection kept). isAdminAuthorized() still guards other admin endpoints.",
+      "index.html loadFromQuoteUrl + storage-quote/portal.html loadDup: removed the stored-key send / 401 prompt+retry logic; both now do a plain unauthenticated fetch.",
+      "TRADE-OFF (accepted by owner): a customer holding a /q/:id link can now swap to /q/data/:id and read internal cost/margin data + full PII. Reverse by re-adding isAdminAuthorized() in handleLoadQuoteData."
+    ],
+    "affected_modules": ["worker.js", "index.html", "storage-quote/portal.html"],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.06.04",
     "date": "2026-07-13",
     "type": "fix",
