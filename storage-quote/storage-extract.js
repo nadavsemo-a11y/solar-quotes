@@ -266,7 +266,9 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
 
   // KV field resolver: picks the right cell (first numeric for a number field, first non-empty for
   // a string), records diagnostics, and warns on a loose label match.
-  function kv(entries, sheetKey, fieldKey, aliases, parse) {
+  // kvInfo also reports WHICH label matched (null = the workbook has no such row) — callers that
+  // must distinguish "absent" from "present but unparsable" use it.
+  function kvInfo(entries, sheetKey, fieldKey, aliases, parse) {
     const r = kvFind(entries, aliases);
     const raw = parse === 'num'
       ? r.cells.find(c => Number.isFinite(num(c)))
@@ -274,7 +276,10 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
     const value = parse === 'num' ? num(raw) : (raw == null ? '' : String(raw).trim());
     resolution.push({ kind: 'kv', field: fieldKey, sheet: sheetKey, matched: r.key, confidence: +r.score.toFixed(2) });
     if (r.key && r.score < MATCH_STRONG) warnings.push(`"${fieldKey}" matched loosely to "${r.key}" (${(r.score * 100) | 0}%) — verify the figure`);
-    return value;
+    return { value, key: r.key, score: r.score };
+  }
+  function kv(entries, sheetKey, fieldKey, aliases, parse) {
+    return kvInfo(entries, sheetKey, fieldKey, aliases, parse).value;
   }
 
   // ── currency (ignore the stale "USD thousands" subtitle enSights sometimes prints) ──
@@ -312,8 +317,20 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
 
   // ── capex (Metrics sheet is authoritative for costs) ──
   const totalProjectCost = kv(metKV, 'metrics', 'totalProjectCost', METRICS_FIELDS.totalProjectCost, 'num');
-  const pvCost = kv(metKV, 'metrics', 'pvCost', METRICS_FIELDS.pvCost, 'num');
   const storageCost = kv(metKV, 'metrics', 'storageCost', METRICS_FIELDS.storageCost, 'num');
+  // STORAGE-ONLY RETROFIT: when no PV is added to the deal, enSights prints NO PV cost line under
+  // "Project Costs" (the Request sheet still reports the site's EXISTING DC capacity and a PV
+  // cost/kWp rate — neither is purchased here). Only then is the component derived as the CapEx
+  // residual; the guardrail assertion below still has to hold, so a genuinely mis-resolved PV row
+  // cannot hide behind the residual.
+  const pvCostInfo = kvInfo(metKV, 'metrics', 'pvCost', METRICS_FIELDS.pvCost, 'num');
+  const pvCostDerived = !pvCostInfo.key;
+  const pvCostResidual = totalProjectCost - storageCost - balanceOfPlantCost;
+  const pvCost = !pvCostDerived ? pvCostInfo.value
+    : (Math.abs(pvCostResidual) <= ROUND_TOL ? 0 : pvCostResidual);
+  if (pvCostDerived) {
+    warnings.push(`no PV cost line in Metrics — derived from the CapEx residual (₪${Math.round(pvCost)}); treated as a storage-only project when 0`);
+  }
   const storageKwh = (Number.isFinite(storageCost) && batteryCost > 0) ? Math.round(storageCost / batteryCost) : NaN;
 
   // ── metrics ──
@@ -375,10 +392,19 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
 
   // ── assertions: structure + ALGEBRAIC GUARDRAILS (these catch any mis-resolved cell) ──
   A('Total Project Cost present', Number.isFinite(totalProjectCost) && totalProjectCost > 0, String(totalProjectCost));
-  // PV cost identity (skip the product when there is no PV expansion: pvKw 0 ⇒ pvCost ≈ 0).
+  // PV cost identity. Only meaningful when PV is actually bought in this deal (pvCost > 0) — a
+  // storage-only retrofit has pvCost 0 while the workbook still reports the existing array's kWp.
   A('PV cost = additional kWp × cost/kWp',
-    pvKw === 0 ? Math.abs(pvCost || 0) < 1 : Math.abs(pvKw * pvCostPerKwp - pvCost) < 1,
+    Math.abs(pvCost || 0) < 1 ? true : Math.abs(pvKw * pvCostPerKwp - pvCost) < 1,
     `${pvKw}×${pvCostPerKwp} vs ${pvCost}`);
+  // Guardrail for the derived (residual) PV cost: it must be either 0 (storage-only) or exactly the
+  // kWp × cost/kWp product (the PV line was merely labelled differently). Anything else means a
+  // mis-resolved cost cell, which the capex-sum identity below can no longer catch.
+  if (pvCostDerived) {
+    A('derived PV cost is 0 or matches kWp × cost/kWp',
+      pvCost >= 0 && (pvCost < 1 || Math.abs(pvKw * pvCostPerKwp - pvCost) < 1),
+      `residual ${pvCostResidual} vs ${pvKw}×${pvCostPerKwp}`);
+  }
   A('storage cost = kWh × battery cost', Math.abs(storageKwh * batteryCost - storageCost) < batteryCost, `${storageKwh}×${batteryCost} vs ${storageCost}`);
   A('capex components sum to total', Math.abs(pvCost + storageCost + balanceOfPlantCost - totalProjectCost) <= ROUND_TOL, `${pvCost}+${storageCost}+${balanceOfPlantCost} vs ${totalProjectCost}`);
   A('project horizon detected', horizon >= HORIZON_MIN && horizon <= HORIZON_MAX, `Revenues=${horizonRev}, CashFlow=${horizonCf}`);
