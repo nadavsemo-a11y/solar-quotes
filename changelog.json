@@ -1,5 +1,28 @@
 [
   {
+    "version": "1.02.06.07",
+    "date": "2026-07-21",
+    "type": "fix",
+    "title": "הצעות אגירה-בלבד (BESS על גג עם PV קיים) — חילוץ תקין ותצוגה נכונה",
+    "changes": [
+      "תוקן: קובץ enSights של פרויקט אגירה-בלבד נכשל בחילוץ. כשלא נרכש PV, הגיליון Metrics לא מכיל שורת 'PV System Cost', אבל גיליון Request עדיין מדווח על המערכת הקיימת (DC Capacity) ועל תעריף ₪/kWp — ולכן בדיקת הזהות 'PV = kWp × ₪/kWp' דרשה רכיב שאינו חלק מהעסקה ו-pvCost נשאר NaN.",
+      "storage-extract.js: פונקציית kvInfo חדשה מדווחת גם איזו תווית הותאמה, כדי להבחין בין 'השורה נעדרת מהקובץ' לבין 'קיימת ולא נקראה'. רק כששורת ה-PV נעדרת, pvCost נגזר כשארית ה-CapEx (סה\"כ − אגירה − BOP, מתאפס בתוך סף העיגול) עם אזהרה מפורשת.",
+      "שומר סף אלגברי חדש: ערך שנגזר כשארית חייב להיות 0 או בדיוק kWp × ₪/kWp — אחרת החילוץ נכשל בקול. בלי זה השארית הייתה מספקת את בדיקת הסכימה מעצם הגדרתה, ותא עלות שגוי היה עובר בשקט.",
+      "תצוגה: שורת 'הרחבת מערכת סולארית (PV)' אינה מוצגת כשאין רכיב PV; אבן הדרך 'אספקת הפאנלים ₪0' מוסתרת מהטבלה (השורה עצמה נשמרת ב-snapshot החתום לצורך ביקורת ושחזור, והסכום הכולל אינו משתנה); ואריח המפרט מוצג כ'מערכת סולארית קיימת' במקום 'הרחבת PV'.",
+      "מיפוי ה-PDF שולח מערך cost_rows מובנה (אותו מנגנון שורות-חוזרות של אבני הדרך) ושדה sys.pv_label, לצד המפתחות השטוחים cost.bess/pv/bop לתאימות לאחור עם הצעות חתומות קפואות. שירות @semo/pdf עודכן בהתאמה (marker COST_ROWS + ברירת מחדל לכיתוב).",
+      "הצעות עם רכיב PV לא השתנו כלל. אומת: 61/61 storage-extract (כולל 3 מקרי רגרסיה חדשים), 33/33 storage-quote, 24/24 financing, 22/22 triggers, 61/61 בסוויטות החוזה/PDF, ו-10/10 acceptance מול Chromium אמיתי בשירות ה-PDF."
+    ],
+    "affected_modules": [
+      "storage-quote/storage-extract.js",
+      "storage-quote/storage-document-contract.js",
+      "storage-quote/storage-pdf-map.js",
+      "storage-quote/pdf/storage-pdf-template.html",
+      "tests/storage-extract.test.js",
+      "storage-quote/storage-document-contract.test.js"
+    ],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.06.06",
     "date": "2026-07-14",
     "type": "feature",
@@ -13,7 +36,18 @@
       "PDF: the mapper emits a structured payment_milestones array (not fixed placeholders); the reference template/renderer gained a generic repeating-row block. NOTE: the external @semo/pdf production service must add the same repeating block before milestones render in the production PDF (data is already frozen at signing).",
       "Verified: 59 storage unit/integration tests pass (exact worked example, sum equality, all validation rejections, snapshot/hash reactivity, web + PDF coverage, pagination keep-together)."
     ],
-    "affected_modules": ["storage-quote/storage-payment-milestones.js", "storage-quote/storage-milestones-editor.js", "storage-quote/storage-public.js", "storage-quote/storage-document-contract.js", "storage-quote/storage-render.js", "storage-quote/storage-styles.js", "storage-quote/storage-pdf-map.js", "storage-quote/storage-validate.js", "storage-quote/portal.html", "deploy_helper.py"],
+    "affected_modules": [
+      "storage-quote/storage-payment-milestones.js",
+      "storage-quote/storage-milestones-editor.js",
+      "storage-quote/storage-public.js",
+      "storage-quote/storage-document-contract.js",
+      "storage-quote/storage-render.js",
+      "storage-quote/storage-styles.js",
+      "storage-quote/storage-pdf-map.js",
+      "storage-quote/storage-validate.js",
+      "storage-quote/portal.html",
+      "deploy_helper.py"
+    ],
     "author": "Claude"
   },
   {
@@ -27,7 +61,11 @@
       "index.html loadFromQuoteUrl + storage-quote/portal.html loadDup: removed the stored-key send / 401 prompt+retry logic; both now do a plain unauthenticated fetch.",
       "TRADE-OFF (accepted by owner): a customer holding a /q/:id link can now swap to /q/data/:id and read internal cost/margin data + full PII. Reverse by re-adding isAdminAuthorized() in handleLoadQuoteData."
     ],
-    "affected_modules": ["worker.js", "index.html", "storage-quote/portal.html"],
+    "affected_modules": [
+      "worker.js",
+      "index.html",
+      "storage-quote/portal.html"
+    ],
     "author": "Claude"
   },
   {
@@ -43,7 +81,11 @@
       "Server (worker.js) unchanged: still rejects nested wrappers and enforces token/hash/knobs/idempotency. Legacy quote-ui.js path left intact (separate token-free contract).",
       "Verified end-to-end against a live local Worker (storage + solar): real client builder → POST /sign → validation → persistence → signed-state; nested wrapper reproduced the 400; token/hash tamper still rejected."
     ],
-    "affected_modules": ["signature-service.js", "viewer-signature.js", "storage-quote/storage-template.js"],
+    "affected_modules": [
+      "signature-service.js",
+      "viewer-signature.js",
+      "storage-quote/storage-template.js"
+    ],
     "author": "Claude"
   },
   {
@@ -54,7 +96,11 @@
     "changes": [
       "Updated the default panel wattage from 640W to 665W across all 4 locations: quote-engine.js (calculation default), quote-ui.js (2 fallback values), and index.html (form input default). Reflects current panel specifications. Existing saved quotes are unaffected."
     ],
-    "affected_modules": ["quote-engine.js", "quote-ui.js", "index.html"],
+    "affected_modules": [
+      "quote-engine.js",
+      "quote-ui.js",
+      "index.html"
+    ],
     "author": "Claude"
   },
   {
@@ -65,7 +111,10 @@
     "changes": [
       "Newlines (\\n) from the 'הערה אישית' textarea are now converted to <br> before injection into the quote HTML, so multi-line notes render with visible line breaks instead of a single paragraph."
     ],
-    "affected_modules": ["quote-ui.js", "template-engine.js"],
+    "affected_modules": [
+      "quote-ui.js",
+      "template-engine.js"
+    ],
     "author": "Claude"
   },
   {
@@ -77,7 +126,9 @@
       "Swapped slider edge label order so 'שמרני' sits at the red (low) end and 'אופטימי' sits at the green (high) end. Previously the labels were reversed relative to the gradient.",
       "Slider always initializes at 1,750 (QuoteEngine.DEFAULT_HOURS), regardless of the seller-entered d.hours. This is the neutral 'what-if' reference point; the customer adjusts up/down from there. _initSunHoursSlider no longer takes a `d` argument."
     ],
-    "affected_modules": ["quote-ui.js"],
+    "affected_modules": [
+      "quote-ui.js"
+    ],
     "author": "Claude"
   },
   {
@@ -94,7 +145,10 @@
       "Does NOT affect: system price, payment stages, upgrades, potential costs, plan tariff/rate, VAT toggle state, or the saved payload.",
       "Composition with VAT toggle: hours mutates p (income side); VAT mutates the investment basis. Both axes pass through _refreshQuoteFinancials → _applyVatSensitiveRender so they always compose coherently — switching plans or toggling VAT preserves the current slider position."
     ],
-    "affected_modules": ["quote-ui.js", "index.html"],
+    "affected_modules": [
+      "quote-ui.js",
+      "index.html"
+    ],
     "author": "Claude"
   },
   {
@@ -112,7 +166,11 @@
       "Side fix: ROI strip label '... שנים מתוך 25' previously disappeared after plan switch (only initial render had it). Now consistent across initial render and all plan switches.",
       "No payload changes — toggle is display-only and per-session. Saved quotes remain canonical excl-VAT."
     ],
-    "affected_modules": ["quote-engine.js", "quote-ui.js", "index.html"],
+    "affected_modules": [
+      "quote-engine.js",
+      "quote-ui.js",
+      "index.html"
+    ],
     "author": "Claude"
   },
   {
@@ -130,7 +188,11 @@
       "Cleanup: removed dead _updatePlanBadges (referred to removed DOM IDs pc-green/green-rate-badge/meter-price-preview*) and the unused calcWeightedRate alias inside _buildQuoteHTML.",
       "Customer-facing rate note changed from 'תעריף משוקלל' to 'תעריף הזנה לרשת' — neutral wording that fits both auto and manual without exposing internal mode."
     ],
-    "affected_modules": ["quote-engine.js", "quote-ui.js", "index.html"],
+    "affected_modules": [
+      "quote-engine.js",
+      "quote-ui.js",
+      "index.html"
+    ],
     "author": "Claude"
   },
   {
@@ -144,7 +206,9 @@
       "Result includes data_source = 'hubspot-by-id' | 'hubspot-by-email' | 'hubspot-by-name' | 'form-only', plus name_match_ambiguous = true when the name search returned >1 contact (so duplicates surface in /admin/signature-events)",
       "Rationale: not all leads have email addresses, but every quote either pulls the customer from HubSpot via the prefill toolbar or auto-syncs the name into HubSpot at quote-creation time — making name a near-universally available identifier in this CRM"
     ],
-    "affected_modules": ["worker.js"],
+    "affected_modules": [
+      "worker.js"
+    ],
     "author": "Claude"
   },
   {
@@ -159,7 +223,9 @@
       "Address composition: address + city + zip from HubSpot (more complete than the form's address+city only)",
       "Item name now uses HubSpot firstname+lastname when available, ensuring consistency with how the contact is stored in the CRM"
     ],
-    "affected_modules": ["worker.js"],
+    "affected_modules": [
+      "worker.js"
+    ],
     "author": "Claude"
   },
   {
@@ -173,7 +239,10 @@
       "actionAddToCustomersBoard now performs a 2nd Monday mutation after create_item: change_column_value on integration_mm1fjmne (the HubSpot Contact column) with the contact ID. If Monday rejects the integration-column write format the item creation still succeeds; the result includes hubspot_linked + hubspot_link_error fields so the failure is visible in /admin/signature-events",
       "Old quotes (signed before 1.02.01.00) without hsId still work — the action just creates the customer item with name/phone/email/address; no HubSpot link"
     ],
-    "affected_modules": ["worker.js", "quote-ui.js"],
+    "affected_modules": [
+      "worker.js",
+      "quote-ui.js"
+    ],
     "author": "Claude"
   },
   {
@@ -189,7 +258,11 @@
       "Other docTypes (spec, agreement, work-order) are unchanged",
       "Subject line of the post-sign email now includes the customer name (from 1.01.03 staging note — Apps Script side awaits clasp push)"
     ],
-    "affected_modules": ["worker.js", "version.json", "changelog.json"],
+    "affected_modules": [
+      "worker.js",
+      "version.json",
+      "changelog.json"
+    ],
     "author": "Claude"
   },
   {
@@ -203,7 +276,9 @@
       "Removed the post-render _onUpgradeToggle() call since base-price initial state is already self-consistent",
       "Filter from 1.01.02.00 stays: upgrades unchecked in portal still don't appear at all"
     ],
-    "affected_modules": ["quote-ui.js"],
+    "affected_modules": [
+      "quote-ui.js"
+    ],
     "author": "Claude"
   },
   {
@@ -219,7 +294,9 @@
       "Added a one-shot _onUpgradeToggle() call right after page.innerHTML = html so payment-stages (pay-dep/p2/p3/p4) recompute against the upgrades-included total — no flash-of-stale-numbers on first paint",
       "Polished _onUpgradeToggle visuals: hardcoded #22c55e ON green and #cbd5e1 OFF gray replaced with var(--ags-mint-deep) and var(--ags-ink-300) for AGS palette consistency"
     ],
-    "affected_modules": ["quote-ui.js"],
+    "affected_modules": [
+      "quote-ui.js"
+    ],
     "author": "Claude"
   },
   {
@@ -235,7 +312,9 @@
       "Added @media (max-width:700px) overrides that shrink offset shadows from 4-6px → 3px on mobile and tighten qpage padding so cards no longer kiss the page edge",
       "Restyled WhatsApp + Download-PDF share buttons to AGS borders + mint variant"
     ],
-    "affected_modules": ["index.html"],
+    "affected_modules": [
+      "index.html"
+    ],
     "author": "Claude"
   },
   {
@@ -274,7 +353,9 @@
       "Moved both modal panels (HubSpot search, paste-link box) out of the card-body to live right under the toolbar, so they pop down adjacent to the trigger button instead of appearing inside the form",
       "Added subtle hover lift on both buttons"
     ],
-    "affected_modules": ["index.html"],
+    "affected_modules": [
+      "index.html"
+    ],
     "author": "Claude"
   },
   {
