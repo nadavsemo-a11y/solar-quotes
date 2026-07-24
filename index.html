@@ -1794,6 +1794,8 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
 </style>
 
 <!-- ==================== MODULES ==================== -->
+<!-- canonical editorial content source — MUST load before content-manager.js (which projects its defaults from it) -->
+<script src="solar-quote/solar-content-blocks.js"></script>
 <script src="content-manager.js"></script>
 <script src="quote-engine.js"></script>
 <script src="url-shortener.js"></script>
