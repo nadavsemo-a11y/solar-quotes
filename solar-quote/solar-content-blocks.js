@@ -925,6 +925,99 @@ const SOLAR_POTENTIAL_INTRO = {
   "subtitle": "הוצאות אלו עשויות להידרש בהתאם לתנאי השטח. <strong>אינן כלולות בעלות הפרויקט</strong> — במידה ויידרש, הלקוח יחויב בהתאם:"
 };
 
+// ── the CALCULATED (priced) sections' customer-visible wording ─────────────────────────────────────
+// These headings and sub-headings are part of what the customer document SAYS, so they belong to the
+// editorial corpus — not to the contract builder or to a renderer. Sub-headings are STRUCTURED
+// (spans, with an optional `emphasis`) because the canonical corpus must never carry raw HTML.
+const SOLAR_CALC_TITLES = {
+  "financials": "המערכת הסולארית במספרים",
+  "upgrades-section": SOLAR_UPGRADES_INTRO.title,
+  "price-breakdown": "פירוט מחיר ההצעה",
+  "potential-costs": SOLAR_POTENTIAL_INTRO.title,
+  "payment-section": "תנאי תשלום",
+};
+
+const SOLAR_CALC_SUBTITLES = {
+  "upgrades-section": [
+    { "text": "ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:" },
+  ],
+  "potential-costs": [
+    { "text": "הוצאות אלו עשויות להידרש בהתאם לתנאי השטח. " },
+    { "text": "אינן כלולות בעלות הפרויקט", "emphasis": "strong" },
+    { "text": " — במידה ויידרש, הלקוח יחויב בהתאם:" },
+  ],
+};
+
+// ── document-semantic LABELS ───────────────────────────────────────────────────────────────────────
+// Every customer-visible label that names a calculated value. One authoritative location: a renderer
+// or mapper that needs one of these reads it from the resolved corpus, never from its own literal.
+const SOLAR_LABELS = {
+  // system specification rows
+  "sys.type": "סוג מערכת",
+  "sys.dc_kw": "הספק DC",
+  "sys.ac_kw": "הספק AC",
+  "sys.panels": "פאנלים",
+  "sys.roof": "סוג גג",
+  "sys.roof_area": "שטח גג",
+  "sys.connection": "גודל חיבור",
+  "sys.inverter": "ממיר",
+  "sys.production": "ייצור שנתי מוערך",
+  // financial summary
+  "fin.plan.name": "מסלול תעריף",
+  "fin.plan.rateNote": "מבנה תעריף",
+  "fin.annualIncome": "הכנסה שנתית",
+  "fin.totalIncome": "הכנסה מצטברת",
+  "fin.avg": "ממוצע שנתי",
+  "fin.priceExcl": "עלות המערכת · לא כולל מע״מ",
+  "fin.priceIncl": "עלות המערכת · כולל מע״מ",
+  "fin.profit": "רווח נקי מוערך",
+  "fin.roi": "תשואה שנה 1",
+  "fin.payback": "החזר השקעה",
+  // price breakdown
+  "price.base": "מערכת בסיסית (turnkey)",
+  "price.meter": "לוח מונה ייצור",
+  "price.projectTotal": "סה״כ לפני מע״מ",
+  "price.projectTotalVat": "סה״כ כולל מע״מ",
+  // print table column headers (the PDF renders the optional-costs table as a table)
+  "table.item": "פריט",
+  "table.price": "מחיר (₪)",
+  // payments
+  "pay.total": "סה״כ",
+  // renderer section headings that name a calculated group (customer-visible document wording)
+  "section.systemSpec": "פרטי מערכת",
+  "section.controls": "הבחירות שלך",
+  // customer controls
+  "ctrl.plan": "מסלול תעריף",
+  "ctrl.sunHours": "שעות שמש שנתיות",
+  "ctrl.inflationPct": "אחוז אינפלציה",
+  "ctrl.vatDisplay": "תצוגת מחיר",
+  "ctrl.upgrades": "שדרוגים נבחרים",
+  "ctrl.battQty": "כמות בטריות",
+};
+
+// ── document-semantic PHRASES / units ──────────────────────────────────────────────────────────────
+// Sentences, unit suffixes and enumerated control values that the customer reads. `{{…}}` tokens are
+// resolved by solar-content-resolve exactly like editorial text.
+const SOLAR_PHRASES = {
+  "dash": "—",
+  "urbanPremium": "יישוב {{city}} זכאי לפרמייה אורבנית — תוספת 6 אג׳ לכל קוט״ש מיוצר, בתוקף ל-15 השנים הראשונות.",
+  "meterIncludeItem": "לוח מונה ייצור",
+  "processTimeline": "* לוח זמנים צפוי: עד 60 ימי עסקים מחתימת ההסכם",
+  "unit.kw": "קילו-וואט",
+  "unit.sqm": "מ״ר",
+  "unit.kwhPerYear": "קוט״ש/שנה",
+  "unit.years": "שנים",
+  "unit.hours": "שעות",
+  "connection.nominal": "נומ׳",
+  "plan.green": "מסלול ירוק",
+  "plan.regular": "מסלול רגיל",
+  "plan.fast": "החזר מהיר",
+  "plan.index": "צמוד מדד",
+  "vat.incl": "כולל מע״מ",
+  "vat.excl": "לא כולל מע״מ",
+  "upgrades.none": "אין",
+};
+
 const SOLAR_PAYMENT_DESCRIPTIONS = [
   {
     "id": "pay-1",
@@ -955,6 +1048,10 @@ const api = {
   SOLAR_UPGRADES_INTRO,
   SOLAR_POTENTIAL_INTRO,
   SOLAR_PAYMENT_DESCRIPTIONS,
+  SOLAR_CALC_TITLES,
+  SOLAR_CALC_SUBTITLES,
+  SOLAR_LABELS,
+  SOLAR_PHRASES,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.SolarContentBlocks = api;
