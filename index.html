@@ -122,6 +122,17 @@ body { font-family: 'Heebo', 'Assistant', system-ui, sans-serif; background: var
 .field textarea { resize:vertical; min-height:70px; }
 .field .hint { font-size:11px; color:var(--gray-light); }
 
+/* Required-field validation (quote-ui.js `_showFieldError`). The `.field-error` class on the
+   wrapping .field is the single switch — it drives the border, the label and the message. */
+.req-mark { color:#dc2626; font-weight:800; }
+.field.field-error input, .field.field-error select { border-color:#dc2626; background:#fef2f2; }
+.field.field-error input:focus, .field.field-error select:focus {
+  border-color:#dc2626; box-shadow:0 0 0 4px rgba(220,38,38,0.12);
+}
+.field.field-error > label { color:#dc2626; }
+.field .field-error-msg { font-size:11px; font-weight:700; color:#dc2626; display:none; }
+.field.field-error .field-error-msg { display:block; }
+
 .divider { height:1px; background:var(--border); margin:22px 0; }
 
 .radio-group { display:flex; gap:8px; flex-wrap:wrap; }
@@ -1469,7 +1480,7 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
             <input id="hoursPerKw" type="number" value="1750" step="10" min="500" max="3000">
             <span class="hint">ברירת מחדל: 1,750 שעות לשנה</span>
           </div>
-          <div class="field"><label>שטח גג (מ"ר)</label><input id="roofArea" type="number" value="170"></div>
+          <div class="field"><label>שטח גג (מ"ר) <span class="req-mark">*</span></label><input id="roofArea" type="number" required min="0.1" step="0.1" placeholder="חובה — שטח הגג בפועל"></div>
         </div>
         <div class="divider"></div>
         <div class="form-grid">
@@ -1482,15 +1493,10 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
             </div>
           </div>
           <div class="field">
-            <label>ממיר</label>
-            <div class="radio-group">
-              <label class="radio-btn"><input type="radio" name="inv" value="Sungrow" checked><span>Sungrow</span></label>
-              <label class="radio-btn"><input type="radio" name="inv" value="אחר"><span>אחר</span></label>
-            </div>
-          </div>
-          <div class="field" id="customInvField" style="display:none">
-            <label>דגם ממיר</label>
-            <input id="customInvModel" type="text" placeholder="למשל: Huawei SUN2000">
+            <label>יצרן ממיר <span class="req-mark">*</span></label>
+            <!-- options are populated by quote-ui.js from shared/inverter-catalog.js — the ONE list -->
+            <select id="inv" required></select>
+            <span class="hint" id="invLegacyHint" style="display:none;color:#92400e;font-weight:700"></span>
           </div>
         </div>
         <div class="divider"></div>
@@ -1524,29 +1530,32 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
         <p style="font-size:13px;color:var(--gray);margin-bottom:18px">ערכי ברירת מחדל לפי המחירון — ניתן לשנות לכל הצעה</p>
         <!-- BATTERY PRICING -->
         <div class="form-grid">
+          <!-- Prices are filled by quote-ui.js from shared/upgrade-pricing.js for the SELECTED
+               inverter. Do not re-add a hardcoded value= here: it would become a second source of
+               truth that silently disagrees with the price book. -->
           <div class="field">
             <label>מצבר ראשון — 5 קו"ט (₪)</label>
-            <input id="battFirstPrice" type="number" value="8900" step="100">
+            <input id="battFirstPrice" type="number" step="100" data-inverter-price="batteryFirst">
           </div>
           <div class="field">
             <label>כל מצבר נוסף — 5 קו"ט (₪)</label>
-            <input id="battExtraPrice" type="number" value="6500" step="100">
+            <input id="battExtraPrice" type="number" step="100" data-inverter-price="batteryAdditional">
           </div>
         </div>
         <div class="divider"></div>
         <div class="form-grid four">
           <div class="field">
             <label>לוח מונה ייצור (₪) <span style="font-size:10px;color:#92400e;font-weight:700">AC > 15kW</span></label>
-            <input id="meterPanelPrice" type="number" value="2500" step="100">
+            <input id="meterPanelPrice" type="number" step="100" data-input-default="meterPanelPrice">
           </div>
           <div class="field">
             <label>פאנל פרמיום שחור ($ לקו"ט DC)</label>
-            <input id="premiumPanelPrice" type="number" value="100" step="10">
+            <input id="premiumPanelPrice" type="number" step="10" data-input-default="premiumPanelUsd">
             <span class="hint">בדולרים — יחושב לפי שער יציג</span>
           </div>
           <div class="field">
             <label>שער דולר יציג (₪)</label>
-            <input id="usdRate" type="number" value="3.09" step="0.01">
+            <input id="usdRate" type="number" step="0.01" data-input-default="usdRate">
           </div>
         </div>
         <div class="divider"></div>
@@ -1797,6 +1806,11 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
 <!-- canonical editorial content source — MUST load before content-manager.js (which projects its defaults from it) -->
 <script src="solar-quote/solar-content-blocks.js"></script>
 <script src="content-manager.js"></script>
+<!-- Pure domain modules shared with the Worker. inverter-catalog must load first: both
+     upgrade-pricing and quote-validation read it. -->
+<script src="shared/inverter-catalog.js"></script>
+<script src="shared/upgrade-pricing.js"></script>
+<script src="shared/quote-validation.js"></script>
 <script src="quote-engine.js"></script>
 <script src="url-shortener.js"></script>
 <script src="storage-service.js"></script>
@@ -2243,7 +2257,7 @@ function ceResetDefaults() {
 </script>
 
 <!-- Unified Version Display -->
-<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.02.08.01</div>
+<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.02.09.00</div>
 
 </body>
 </html>
