@@ -416,6 +416,11 @@ const QuoteEngine = (() => {
       panelW = 665, roofArea,
       city, hasUrbanPremium = false,
       planKey, inflationPct = 2.5,
+      // LEGACY FALLBACKS ONLY. Every live caller (quote-ui.js, quote-public.js) passes resolved
+      // unit prices; these are reached only by a state saved before prices travelled with it.
+      // The price book (shared/upgrade-pricing.js → LEGACY_INVERTER_PRICING) is the source of
+      // truth, and tests/inverter-pricing.test.js fails if these two ever drift apart. They are
+      // not imported here on purpose: quote-engine.js stays dependency-free in all three runtimes.
       battFirstPrice = 8900,
       battExtraPrice = 6500,
       premiumPanel = 100,
