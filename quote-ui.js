@@ -29,6 +29,10 @@ class QuoteUI {
     this.quoteInflation  = 2.5;
     this.quoteData       = null; // תוצאת QuoteEngine.calculate אחרון
 
+    // Free-text inverter model carried by a LEGACY quote being reviewed in the portal.
+    // Empty for every new quote — the free-text field no longer exists.
+    this._legacyInverterModel = '';
+
     // תעריף ירוק/רגיל — auto by default
     this._tariffState = { mode: 'auto', manualAgPerKwh: null, manualSetAtAcKW: null };
   }
@@ -139,13 +143,16 @@ class QuoteUI {
   // ══════════════════════════════════════════════════════════════════════
 
   init() {
+    // Seed the price inputs BEFORE anything reads them: they carry no value= in the HTML, so the
+    // price book (shared/upgrade-pricing.js) is their only source.
+    this._applyNewQuoteInputDefaults();
+    this._initInverterSelect();
     this._renderExtrasUI();
     this._initCitySearch();
     // Tariff override listeners must register BEFORE the generic input listener
     // so that _tariffState is up-to-date when _updatePreview runs.
     this._initTariffOverride();
     this._bindInputListeners();
-    this._initInverterToggle();
     this._initBatteryValidation();
     this._updatePanelCount();
     this._updatePreview();
@@ -164,7 +171,9 @@ class QuoteUI {
     html += `<div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:4px">שדרוגים (נכללים בעלות הפרויקט)</div>`;
     html += `<div style="font-size:12px;color:var(--gray);margin-bottom:14px">הלקוח יוכל להפעיל/לכבות — המחיר יתעדכן בהתאם</div>`;
 
-    for (const item of (cfg.upgrades || [])) {
+    // `legacy` upgrades (e.g. the SolarEdge surcharge) are withdrawn from sale: never offered on a
+    // new quote, still priced by the shared module when an already-signed quote is re-rendered.
+    for (const item of (cfg.upgrades || []).filter(i => !i.legacy)) {
       html += this._renderExtraItem(item, 'upgrade');
     }
 
@@ -185,7 +194,9 @@ class QuoteUI {
   _renderExtraItem(item, category) {
     const id = item.id;
     const isBattery = item.calcType === 'batteries';
-    const isCalc = item.calcType === 'premium' || item.calcType === 'solaredge' || item.calcType === 'fixed' && !item.defaultPrice;
+    // The editable price starts at the price book's value for the SELECTED inverter — that is what
+    // makes `hybrid-inv` inverter-dependent without a single conditional in this file.
+    const defaultPrice = this._upgradeDefaultPrice(item);
 
     let rightHtml = '';
     if (isBattery) {
@@ -198,13 +209,11 @@ class QuoteUI {
       </div>`;
     } else if (item.calcType === 'premium') {
       rightHtml = `<span style="font-size:11px;color:var(--gray)">$100 לקילו-וואט DC × שער דולר</span>`;
-    } else if (item.calcType === 'solaredge') {
-      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${item.defaultPrice || 0}" step="100" oninput="updatePreview()">`;
     } else if (id === 'ev') {
-      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${item.defaultPrice || 4500}" step="100" oninput="updatePreview()">
+      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${defaultPrice}" step="100" oninput="updatePreview()">
         <input id="evModel" type="text" placeholder="דגם (אופציונלי)" style="width:140px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;margin-right:8px">`;
     } else {
-      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${item.defaultPrice || 0}" step="50" oninput="updatePreview()">`;
+      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${defaultPrice}" step="50" oninput="updatePreview()">`;
     }
 
     return `<div class="extra-item" id="ex-${id}">
@@ -216,13 +225,80 @@ class QuoteUI {
     </div>`;
   }
 
-  _initInverterToggle() {
-    document.querySelectorAll('input[name="inv"]').forEach(el => {
-      el.addEventListener('change', () => {
-        const field = document.getElementById('customInvField');
-        if (field) field.style.display = el.value === 'אחר' && el.checked ? 'block' : 'none';
-      });
+  // ══════════════════════════════════════════════════════════════════════
+  // INVERTER SELECTION + INVERTER-DEPENDENT UPGRADE PRICING
+  // The manufacturer list lives in shared/inverter-catalog.js and the prices in
+  // shared/upgrade-pricing.js. This class only wires them to the DOM.
+  // ══════════════════════════════════════════════════════════════════════
+
+  /** Builds the manufacturer <select> from the catalog and selects the default. */
+  _initInverterSelect() {
+    const sel = document.getElementById('inv');
+    if (!sel) return;
+    sel.innerHTML = InverterCatalog.listInverters()
+      .map(i => `<option value="${i.id}">${i.label}</option>`).join('');
+    sel.value = InverterCatalog.getDefaultInverter();
+    sel.addEventListener('change', () => {
+      this._clearLegacyInverterNotice();
+      this._applyInverterPricingDefaults();
+      this._clearFieldError('inv');
+      this._updatePreview();
     });
+    this._applyInverterPricingDefaults();
+  }
+
+  /** The manufacturer currently selected in the portal (may be a legacy value being reviewed). */
+  _selectedInverter() {
+    return document.getElementById('inv')?.value || '';
+  }
+
+  /**
+   * Fills the one-off portal price inputs that have no value= in the HTML.
+   * Their defaults belong to the price book, not to the markup.
+   */
+  _applyNewQuoteInputDefaults() {
+    const defaults = UpgradePricing.getNewQuoteInputDefaults();
+    document.querySelectorAll('[data-input-default]').forEach(el => {
+      const key = el.dataset.inputDefault;
+      if (defaults[key] != null && el.value === '') el.value = String(defaults[key]);
+    });
+  }
+
+  /**
+   * Applies the SELECTED inverter's default upgrade prices to the seller-facing price inputs.
+   * A field the salesperson edited by hand is left alone — an intentional per-quote override
+   * outranks a catalog default — and they are told which ones were kept.
+   */
+  _applyInverterPricingDefaults() {
+    const inverter = this._selectedInverter();
+    const book = UpgradePricing.resolveInverterDefaults(inverter);
+    const kept = [];
+
+    const apply = (el, value) => {
+      if (!el || value == null) return;
+      if (el.dataset.userOverride === '1') { kept.push(el); return; }
+      el.value = String(value);
+    };
+    apply(document.getElementById('battFirstPrice'), book.batteryFirst);
+    apply(document.getElementById('battExtraPrice'), book.batteryAdditional);
+    apply(document.getElementById('price-hybrid-inv'), book.hybridInverter);
+
+    if (kept.length && EmailService?.showToast) {
+      EmailService.showToast('מחירי שדרוגים שנערכו ידנית נשמרו ולא הוחלפו');
+    }
+  }
+
+  /**
+   * The default price for one upgrade item under the currently selected inverter.
+   * Used when rendering the editable price input, so the field and the price book agree.
+   */
+  _upgradeDefaultPrice(item) {
+    return UpgradePricing.resolvePrice(item, { inverter: this._selectedInverter() }).price;
+  }
+
+  /** Marks a price input as intentionally overridden (only real user typing counts). */
+  _markUserOverride(el) {
+    if (el && el.dataset) el.dataset.userOverride = '1';
   }
 
   _initBatteryValidation() {
@@ -271,8 +347,10 @@ class QuoteUI {
 
     const dcKW    = parseFloat(get('sysKW')) || 0;
     const panelW  = parseInt(get('panelW')) || 665;
+    const inputDefaults = UpgradePricing.getNewQuoteInputDefaults();
+    const invBook = UpgradePricing.resolveInverterDefaults(get('inv'));
     const premiumPanel = parseFloat(get('premiumPanelPrice')) || 0;
-    const usdRate      = parseFloat(get('usdRate')) || 3.65;
+    const usdRate      = parseFloat(get('usdRate')) || inputDefaults.usdRate;
 
     return {
       // לקוח
@@ -294,14 +372,17 @@ class QuoteUI {
       roofArea: parseFloat(get('roofArea'))    || 0,
       hours:    parseFloat(get('hoursPerKw'))  || 0,
       roof:     radio('roof'),
-      inv:      radio('inv'),
-      customInvModel: get('customInvModel'),
+      inv:      get('inv'),
+      // Only ever non-empty while a LEGACY quote is loaded (see _setFormFromState). A new quote
+      // has no free-text inverter field at all; the engine still needs this to render an old one.
+      customInvModel: this._legacyInverterModel || '',
       plan:     radio('planRadio') || 'green',
       inflation: parseFloat(get('inflationPct')) || 2.5,
 
-      // מחירי יחידה
-      battFirstPrice:  parseFloat(get('battFirstPrice'))   || 8900,
-      battExtraPrice:  parseFloat(get('battExtraPrice'))   || 6500,
+      // מחירי יחידה — an empty input falls back to the SELECTED inverter's price book,
+      // never to a number typed into this file.
+      battFirstPrice:  parseFloat(get('battFirstPrice'))   || invBook.batteryFirst,
+      battExtraPrice:  parseFloat(get('battExtraPrice'))   || invBook.batteryAdditional,
       premiumPanel,
       usdRate,
       meterPanelPrice: parseFloat(get('meterPanelPrice'))  || 0,
@@ -313,89 +394,60 @@ class QuoteUI {
   }
 
   /**
-   * Returns extras config — reads category assignments from localStorage
-   * (set by extras-manager.html). Falls back to defaults if not configured.
+   * Returns the extras catalog — the shared code catalog (shared/upgrade-pricing.js) reconciled
+   * with the seller's own category/label/price edits from `semo-extras-config` (extras-manager.html).
+   * mergeCatalog owns the reconciliation rule: STRUCTURE is code-owned, LABEL/PRICE config-owned.
    */
   _getExtrasConfig() {
-    const defaults = {
-      upgrades: [
-        { id: 'hybrid-inv', label: 'שדרוג לממיר היברידי', defaultPrice: 8900, calcType: 'fixed' },
-        { id: 'batteries', label: 'מצברי אגירה (בטריות)', defaultPrice: 0, calcType: 'batteries' },
-        { id: 'premium', label: 'שדרוג לפאנל פרמיום שחור', defaultPrice: 0, calcType: 'premium' },
-        { id: 'solaredge', label: 'תוספת ממיר SolarEdge', defaultPrice: 0, calcType: 'solaredge' },
-        { id: 'ev', label: 'עמדת טעינה לרכב חשמלי', defaultPrice: 4500 },
-        { id: 'monitoring', label: 'ניטור ובקרה מרחוק (שנתי)', defaultPrice: 1500 },
-      ],
-      potential: [
-        { id: 'drilling', label: 'קידוח ומעבר קיר בטון / בלוק', defaultPrice: 500 },
-        { id: 'wifi', label: 'התקנת מגביר טווח אלחוטי (WiFi Extender)', defaultPrice: 450 },
-        { id: 'support', label: 'קריאת שירות לשינויים בהגדרות האינטרנט', defaultPrice: 450 },
-        { id: 'inspector', label: 'ביקור חשמלאי בודק לפני ההתקנה', defaultPrice: 850 },
-      ]
-    };
+    let saved = null;
     try {
-      const saved = localStorage.getItem('semo-extras-config');
-      if (saved) {
-        const cfg = JSON.parse(saved);
-        if (!cfg.upgrades) cfg.upgrades = [];
-        if (!cfg.potential) cfg.potential = [];
-        // Merge missing default items (both upgrades and potential)
-        const allIds = new Set([...cfg.upgrades.map(i=>i.id), ...cfg.potential.map(i=>i.id)]);
-        for (const item of defaults.upgrades) {
-          if (!allIds.has(item.id)) cfg.upgrades.push(item);
-        }
-        for (const item of defaults.potential) {
-          if (!allIds.has(item.id)) cfg.potential.push(item);
-        }
-        return cfg;
-      }
-    } catch (e) { /* use defaults */ }
-    return defaults;
+      const raw = localStorage.getItem('semo-extras-config');
+      if (raw) saved = JSON.parse(raw);
+    } catch (e) { /* unreadable config → pure defaults */ }
+    return UpgradePricing.mergeCatalog(saved);
   }
 
-  /** מחזיר רשימת extras (upgrades + potential) עם מצב checked ומחיר */
+  /**
+   * מחזיר רשימת extras (upgrades + potential) עם מצב checked ומחיר.
+   * The DOM supplies WHAT the seller chose; shared/upgrade-pricing.js decides what it COSTS.
+   * The identical call is made server-side in quote-public.js, so portal and customer agree.
+   */
   _getExtras(dcKW, premiumPanel, usdRate) {
     const cfg = this._getExtrasConfig();
-    const panelCount = parseInt(document.getElementById('panelCount')?.value) || 0;
-    const batt = parseInt(document.getElementById('batteries')?.value) || 0;
-    const battFirstPrice = parseFloat(document.getElementById('battFirstPrice')?.value) || 8900;
-    const battExtraPrice = parseFloat(document.getElementById('battExtraPrice')?.value) || 6500;
+    const items = UpgradePricing.flattenCatalog(cfg);
+    const numOf = (id) => {
+      const v = parseFloat(document.getElementById(id)?.value);
+      return Number.isFinite(v) ? v : undefined;
+    };
 
-    const allItems = [
-      ...(cfg.upgrades || []).map(i => ({ ...i, category: 'upgrade' })),
-      ...(cfg.potential || []).map(i => ({ ...i, category: 'potential' })),
-    ];
-    return allItems.map(item => {
-      const el = document.getElementById('chk-' + item.id);
-      const checked = el ? el.checked : false; // no checkbox = not selected by client
-      let price;
-      let displayNote = '';
-      switch (item.calcType) {
-        case 'premium':
-          price = Math.round(premiumPanel * usdRate * dcKW);
-          displayNote = `$100 × ${dcKW} קו"ט × ${usdRate}$`;
-          break;
-        case 'solaredge':
-          price = Math.round(270 * panelCount);
-          displayNote = `270₪ × ${panelCount} פאנלים`;
-          break;
-        case 'batteries':
-          if (batt >= 2) {
-            price = battFirstPrice + (batt - 1) * battExtraPrice;
-          } else if (batt === 1) {
-            price = battFirstPrice;
-          } else {
-            price = 0;
-          }
-          displayNote = batt > 0 ? `${batt} בטריות` : 'לא נבחרו בטריות';
-          break;
-        default:
-          price = parseFloat(document.getElementById('price-' + item.id)?.value) || item.defaultPrice || 0;
-      }
-      const row = document.getElementById('ex-' + item.id);
-      if (row) row.classList.toggle('selected', checked);
-      return { id: item.id, label: item.label, checked, price, category: item.category, calcType: item.calcType, displayNote };
+    const selections = {};
+    for (const item of items) {
+      selections[item.id] = {
+        checked: document.getElementById('chk-' + item.id)?.checked ?? false,
+        price: document.getElementById('price-' + item.id)?.value,
+      };
+    }
+
+    const resolved = UpgradePricing.resolveExtras({
+      catalog: cfg,
+      selections,
+      ctx: {
+        inverter: this._selectedInverter(),
+        dcKW,
+        panelCount: parseInt(document.getElementById('panelCount')?.value) || 0,
+        batteryQuantity: parseInt(document.getElementById('batteries')?.value) || 0,
+        usdRate,
+        premiumPanelUsd: premiumPanel,
+        batteryFirstPrice: numOf('battFirstPrice'),
+        batteryAdditionalPrice: numOf('battExtraPrice'),
+      },
     });
+
+    for (const e of resolved) {
+      const row = document.getElementById('ex-' + e.id);
+      if (row) row.classList.toggle('selected', e.checked);
+    }
+    return resolved;
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -442,7 +494,16 @@ class QuoteUI {
 
   _bindInputListeners() {
     document.querySelectorAll('input,select,textarea').forEach(el => {
-      el.addEventListener('input', () => { this._updatePanelCount(); this._updatePreview(); });
+      el.addEventListener('input', (e) => {
+        // A trusted edit of a price field is a deliberate per-quote override; programmatic
+        // writes (restoring a quote, applying inverter defaults) must not count as one.
+        if (e.isTrusted && el.dataset && (el.dataset.inverterPrice || el.id?.startsWith('price-'))) {
+          this._markUserOverride(el);
+        }
+        if (e.isTrusted && el.id === 'roofArea') this._clearFieldError('roofArea');
+        this._updatePanelCount();
+        this._updatePreview();
+      });
     });
     document.querySelectorAll('input[type=radio]').forEach(el => {
       el.addEventListener('change', () => { this._updatePanelCount(); this._updatePreview(); });
@@ -541,6 +602,67 @@ class QuoteUI {
   }
 
   // ══════════════════════════════════════════════════════════════════════
+  // NEW-QUOTE VALIDATION
+  // The RULES are pure and live in shared/quote-validation.js. Everything here is DOM plumbing:
+  // paint the field, focus it, say why. Applies to authoring only — never to a customer view.
+  // ══════════════════════════════════════════════════════════════════════
+
+  /** Field id → the .field wrapper that carries the error styling. */
+  _fieldWrapper(id) {
+    return document.getElementById(id)?.closest('.field') || null;
+  }
+
+  _showFieldError(id, message) {
+    const el = document.getElementById(id);
+    const wrap = this._fieldWrapper(id);
+    if (!wrap || !el) return;
+    wrap.classList.add('field-error');
+    let msg = wrap.querySelector('.field-error-msg');
+    if (!msg) {
+      msg = document.createElement('span');
+      msg.className = 'field-error-msg';
+      wrap.appendChild(msg);
+    }
+    msg.textContent = message;
+  }
+
+  _clearFieldError(id) {
+    this._fieldWrapper(id)?.classList.remove('field-error');
+  }
+
+  _clearAllFieldErrors() {
+    document.querySelectorAll('.field.field-error').forEach(w => w.classList.remove('field-error'));
+  }
+
+  /**
+   * _validateNewQuote() → boolean
+   * The single gate every "produce a new quote" path goes through. Returns false and explains
+   * itself in the form; the caller simply aborts.
+   */
+  _validateNewQuote() {
+    this._clearAllFieldErrors();
+    const result = QuoteValidation.validateNewQuote({
+      roofArea: document.getElementById('roofArea')?.value,
+      inverter: this._selectedInverter(),
+    });
+    if (result.valid) return true;
+
+    const FIELD_TO_INPUT = { roofArea: 'roofArea', inverter: 'inv' };
+    for (const e of result.errors) {
+      this._showFieldError(FIELD_TO_INPUT[e.field] || e.field, e.message);
+    }
+    const first = document.getElementById(FIELD_TO_INPUT[result.errors[0].field] || result.errors[0].field);
+    if (first) {
+      first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      first.focus({ preventScroll: true });
+    }
+    if (EmailService?.showToast) {
+      EmailService.showToast('⚠️ ' + result.errors.map(e => e.message).join(' · '), true);
+    }
+    return false;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
   // GENERATE QUOTE
   // ══════════════════════════════════════════════════════════════════════
 
@@ -550,6 +672,10 @@ class QuoteUI {
    * clientMode=true: הלקוח צופה (ללא share bar).
    */
   async generateQuote(clientMode = false) {
+    // AUTHORING GATE. Only the salesperson's portal path is validated: a customer opening a quote
+    // signed long ago must never be blocked by rules that did not exist when it was written.
+    if (!clientMode && !this._validateNewQuote()) return;
+
     const vals = this._getFormValues();
     const d    = QuoteEngine.calculate({
       ...vals,
@@ -752,6 +878,10 @@ class QuoteUI {
   // ══════════════════════════════════════════════════════════════════════
 
   async _initShareBar(vals) {
+    // Defence in depth: nothing invalid may reach KV even if a future call path skips
+    // generateQuote(). This is the last boundary before the quote becomes a customer URL.
+    if (!this._validateNewQuote()) return;
+
     const bar     = document.getElementById('share-bar');
     const loading = document.getElementById('share-loading');
     const ready   = document.getElementById('share-ready');
@@ -1056,9 +1186,10 @@ class QuoteUI {
   _buildExtrasState() {
     const vals = this._getFormValues();
     const dcKW = parseFloat(vals.kw) || 0;
-    const premiumPanel = parseFloat(document.getElementById('premiumPanel')?.value) || 100;
-    const usdRate = parseFloat(document.getElementById('usdRate')?.value) || 3.14;
-    const computed = this._getExtras(dcKW, premiumPanel, usdRate);
+    // Read from the form values, not from the DOM again: this used to look up an element id that
+    // does not exist (`premiumPanel` vs `premiumPanelPrice`) and silently fall back to 100/3.14,
+    // so the stored extras price disagreed with the quote's own USD rate.
+    const computed = this._getExtras(dcKW, vals.premiumPanel, vals.usdRate);
 
     const state = {};
     for (const item of computed) {
@@ -1068,6 +1199,74 @@ class QuoteUI {
       };
     }
     return state;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // LEGACY QUOTE COMPATIBILITY (restoring a quote written before the catalog existed)
+  // ══════════════════════════════════════════════════════════════════════
+
+  /**
+   * Restores the inverter from a saved state.
+   * A value the catalog no longer sells is NOT rewritten to a supported one — that would corrupt
+   * the record of what was actually quoted. It is shown as-is, flagged, and refused by
+   * _validateNewQuote() until the salesperson picks a current manufacturer.
+   */
+  _restoreInverter(s) {
+    const sel = document.getElementById('inv');
+    if (!sel) return;
+    const saved = s.inv || '';
+    this._legacyInverterModel = '';
+
+    if (!saved || InverterCatalog.isSupportedInverter(saved)) {
+      if (saved) sel.value = saved;
+      this._clearLegacyInverterNotice();
+      return;
+    }
+
+    // Unsupported historical inverter: keep it visible and selected so nothing is silently lost.
+    this._legacyInverterModel = s.customInvModel || '';
+    const label = InverterCatalog.legacyInverterLabel(saved, this._legacyInverterModel);
+    const opt = document.createElement('option');
+    opt.value = saved;
+    opt.dataset.legacy = '1';
+    opt.textContent = `${label} — לא זמין להצעות חדשות`;
+    sel.appendChild(opt);
+    sel.value = saved;
+
+    const hint = document.getElementById('invLegacyHint');
+    if (hint) {
+      hint.textContent = `ההצעה המקורית הופקה עם ${label}. יש לבחור יצרן נתמך לפני הפקת הצעה חדשה.`;
+      hint.style.display = 'block';
+    }
+  }
+
+  /** Drops the legacy option + hint once a supported manufacturer is chosen. */
+  _clearLegacyInverterNotice() {
+    const sel = document.getElementById('inv');
+    if (sel) sel.querySelectorAll('option[data-legacy]').forEach(o => {
+      if (o.value !== sel.value) o.remove();
+    });
+    const hint = document.getElementById('invLegacyHint');
+    if (hint && InverterCatalog.isSupportedInverter(sel?.value)) {
+      hint.style.display = 'none';
+      this._legacyInverterModel = '';
+      sel.querySelectorAll('option[data-legacy]').forEach(o => o.remove());
+    }
+  }
+
+  /**
+   * Tells the salesperson when a duplicated quote carried an upgrade that is no longer sold.
+   * The old quote keeps it; the new one cannot, and saying so beats a silent price drop.
+   */
+  _noticeWithdrawnUpgrades(extras) {
+    if (!extras) return;
+    const cfg = this._getExtrasConfig();
+    const withdrawn = UpgradePricing.flattenCatalog(cfg)
+      .filter(i => i.legacy && extras[i.id] && extras[i.id].checked)
+      .map(i => i.label);
+    if (withdrawn.length && EmailService?.showToast) {
+      EmailService.showToast(`⚠️ ${withdrawn.join(', ')} — אינו זמין להצעות חדשות והוסר מההצעה`, true);
+    }
   }
 
   /** Restores extras checkboxes + prices from saved state */
@@ -1084,27 +1283,11 @@ class QuoteUI {
   }
 
   /**
-   * Backward compat: converts old hardcoded state (exEv, exMonitor...)
-   * to new dynamic extras format. Called from _setFormFromState.
+   * Backward compat: converts old hardcoded state (exEv, exMonitor...) to the dynamic extras
+   * format. The rule itself lives in shared/upgrade-pricing.js so the Worker migrates identically.
    */
   _migrateOldExtrasState(s) {
-    if (s.extras) return s.extras; // already new format
-    const map = {
-      ev:         { checked: s.exEv,        price: s.exEvP },
-      monitoring: { checked: s.exMonitor,   price: s.exMonitorP },
-      premium:    { checked: s.exPremium,   price: '' },
-      drilling:   { checked: s.exDrilling,  price: s.exDrillingP },
-      wifi:       { checked: s.exWifi,      price: s.exWifiP },
-      support:    { checked: s.exSupport,   price: s.exSupportP },
-      inspector:  { checked: s.exInspector, price: s.exInspectorP },
-    };
-    const result = {};
-    for (const [id, val] of Object.entries(map)) {
-      if (val.checked !== undefined) {
-        result[id] = { checked: val.checked || false, price: val.price || '' };
-      }
-    }
-    return Object.keys(result).length > 0 ? result : null;
+    return UpgradePricing.migrateExtrasSelections(s);
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1122,7 +1305,10 @@ class QuoteUI {
       batt: get('batteries'), panelW: get('panelW'), panelCt: get('panelCount'),
       roofArea: get('roofArea'), hours: get('hoursPerKw'), infl: get('inflationPct'),
       roof: vals.roof, inv: vals.inv, plan: vals.plan,
-      customInvModel: get('customInvModel'),
+      customInvModel: vals.customInvModel,
+      // Which pricing SHAPE produced this quote. The prices themselves are snapshotted in the
+      // fields below (battFP/battEP/premP/usdRate/extras[].price) — this only records the schema.
+      pricingSchema: UpgradePricing.PRICING_SCHEMA_VERSION,
       battFP: get('battFirstPrice'), battEP: get('battExtraPrice'),
       premP: get('premiumPanelPrice'), usdRate: get('usdRate'),
       meterP: get('meterPanelPrice'),
@@ -1151,7 +1337,8 @@ class QuoteUI {
     set('batteries', s.batt); set('panelW', s.panelW); set('panelCount', s.panelCt);
     set('roofArea', s.roofArea); set('hoursPerKw', s.hours);
     set('inflationPct', s.infl);
-    set('customInvModel', s.customInvModel);
+    // The SAVED quote's own unit prices win — a stored quote is never repriced from today's
+    // catalog. (Switching the inverter afterwards is an explicit act and does apply new defaults.)
     set('battFirstPrice', s.battFP); set('battExtraPrice', s.battEP);
     set('premiumPanelPrice', s.premP); set('usdRate', s.usdRate);
     set('meterPanelPrice', s.meterP);
@@ -1167,15 +1354,12 @@ class QuoteUI {
       const r = document.querySelector(`input[name="${name}"][value="${val}"]`);
       if (r) r.checked = true;
     };
-    radio('roof', s.roof); radio('inv', s.inv);
+    radio('roof', s.roof);
     radio('planRadio', s.plan);
-    // Show custom inv field if needed
-    if (s.inv === 'אחר') {
-      const field = document.getElementById('customInvField');
-      if (field) field.style.display = 'block';
-    }
+    this._restoreInverter(s);
     // extras — dynamic restore (with backward compat for old format)
     this._restoreExtrasState(this._migrateOldExtrasState(s));
+    this._noticeWithdrawnUpgrades(this._migrateOldExtrasState(s));
     // Store digital signature preference for client mode
     this._digitalSigPref = s.digSig !== undefined ? s.digSig : true;
     // Tariff override — legacy payloads (no tariffOverride) → auto
@@ -1535,7 +1719,7 @@ class QuoteUI {
     <div style="font-size:13px;color:var(--gray);margin-bottom:12px">${ContentManager.getInlineText('upgrades-intro', 'upgrades-subtitle') || 'ניתן לבחור שדרוגים — המחיר יתעדכן בהתאם:'}</div>
     <div id="upgrades-list">
       ${allUpgrades.map(e => `
-      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-batt-first="${d.battFirstPrice || 8900}" data-batt-extra="${d.battExtraPrice || 6500}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:0.5">
+      <div class="upgrade-toggle-row" data-upgrade-id="${e.id}" data-upgrade-price="${e.price}" data-calc-type="${e.calcType || 'fixed'}" data-inverter="${d.inv || ''}" data-batt-first="${d.battFirstPrice || ''}" data-batt-extra="${d.battExtraPrice || ''}" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);opacity:0.5">
         <div style="display:flex;align-items:center;gap:10px;flex:1">
           <label class="toggle-switch" style="position:relative;width:44px;height:24px;flex-shrink:0">
             <input type="checkbox" data-upgrade-toggle="${e.id}" onchange="window._quoteUI._onUpgradeToggle()" style="opacity:0;width:0;height:0">
@@ -1784,13 +1968,18 @@ class QuoteUI {
       const calcType = row.dataset.calcType;
       const slider = row.querySelectorAll('.toggle-switch span');
 
-      // Recalculate battery price based on quantity
+      // Recalculate battery price based on quantity — through the SAME resolver the portal and the
+      // Worker use. The unit prices come from the rendered quote's own snapshot (data-batt-*).
       if (calcType === 'batteries') {
         const qtySelect = row.querySelector('[data-batt-qty]');
         const qty = parseInt(qtySelect?.value) || 2;
-        const battFirst = parseFloat(row.dataset.battFirst) || 8900;
-        const battExtra = parseFloat(row.dataset.battExtra) || 6500;
-        price = battFirst + (qty - 1) * battExtra;
+        const numOf = v => (Number.isFinite(parseFloat(v)) ? parseFloat(v) : undefined);
+        price = UpgradePricing.resolvePrice({ calcType: 'batteries' }, {
+          inverter: row.dataset.inverter || '',
+          batteryQuantity: qty,
+          batteryFirstPrice: numOf(row.dataset.battFirst),
+          batteryAdditionalPrice: numOf(row.dataset.battExtra),
+        }).price;
         row.dataset.upgradePrice = price;
         const priceDisplay = row.querySelector('.upgrade-price-display');
         if (priceDisplay) priceDisplay.textContent = '₪' + fmt(price);
