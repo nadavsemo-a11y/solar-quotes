@@ -156,6 +156,17 @@ input[type="file"] { display: none; }
 .toast.error { background: var(--red); color: #fff; }
 
 /* ── Expandable Fields Row ── */
+.table-card + .table-card { margin-top: 22px; }
+.group-count { margin-inline-start: auto; background: rgba(255,255,255,.18); border-radius: 99px;
+  padding: 2px 10px; font-size: 13px; font-weight: 700; }
+.ref-list { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.ref-item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ref-label { min-width: 190px; font-size: 13px; font-weight: 600; color: var(--gray); }
+.ref-files { display: flex; flex-wrap: wrap; gap: 6px; }
+.ref-dl { white-space: nowrap; }
+.ref-text { font-size: 14px; font-weight: 600; word-break: break-word; }
+.ref-missing { font-size: 13px; font-weight: 700; color: var(--sun); }
+@media (max-width: 700px) { .ref-label { min-width: 0; width: 100%; } }
 .fields-row td { padding: 0 !important; border-bottom: 1px solid var(--border); }
 .fields-content {
   padding: 14px 20px; background: var(--light);
@@ -276,6 +287,28 @@ function render() {
     return;
   }
 
+  // One table per task TYPE. A supplier who does two different jobs — e.g. the
+  // regulatory agent who both files the PV application and later orders the
+  // utility inspection — is doing two unrelated things at two different points
+  // in a project, and they need different columns anyway (the submission has a
+  // required deliverable; the inspection has reference documents and a date
+  // that drives its status). Mixing them in one grid forces a reader to check
+  // the task name on every row. Insertion order is preserved, so a supplier
+  // with a single task type sees exactly what it saw before: one table.
+  const groups = [];
+  const byName = new Map();
+  for (const t of tasks) {
+    let g = byName.get(t.taskName);
+    if (!g) { g = { name: t.taskName, tasks: [] }; byName.set(t.taskName, g); groups.push(g); }
+    g.tasks.push(t);
+  }
+  el.innerHTML = groups.map(g => renderGroup(g.name, g.tasks, groups.length > 1)).join('');
+}
+
+// Render one task type as a self-contained card. Column set is computed from
+// THIS group only, so an empty column never appears just because some other
+// task type needs it.
+function renderGroup(groupName, tasks, showName) {
   const needsFile = tasks.some(t => t.taskRules?.requireFile);
   const hasWorkOrder = tasks.some(t => t.workOrderUrl);
   const hasNeedsPrice = tasks.some(t => t.needsPrice);
@@ -338,12 +371,14 @@ function render() {
       }
     }
 
+    // Full-width sub-rows (serials, reference documents) span every column.
+    const colSpan = 5 + (hasDesignFiles ? 1 : 0) + (needsFile ? 1 : 0) + ((hasWorkOrder || hasNeedsPrice) ? 1 : 0) + 1;
+
     // Serial numbers row
     let fieldsRow = '';
     if (rules.serialNumbers) {
       if (!fieldValues[t.ref]) fieldValues[t.ref] = {};
       if (!fieldValues[t.ref]._serials) fieldValues[t.ref]._serials = [''];
-      const colSpan = 5 + (hasDesignFiles ? 1 : 0) + (needsFile ? 1 : 0) + ((hasWorkOrder || hasNeedsPrice) ? 1 : 0) + 1;
       fieldsRow = `<tr class="fields-row" id="fields-${t.ref}"><td colspan="${colSpan}">
         <div class="fields-content">
           <div class="field-label">${esc(rules.serialLabel || 'מספרים סיריאליים')} <span style="color:var(--red)">*</span></div>
@@ -354,6 +389,33 @@ function render() {
             </div>
           </div>
           <button class="btn-add-serial" onclick="addSerial('${t.ref}')">+ הוסף ממיר</button>
+        </div>
+      </td></tr>`;
+    }
+
+    // Reference documents row — upstream artifacts this task CONSUMES.
+    // Read-only by design: they are produced by other subcontractors on
+    // sibling tasks. A missing one is shown, never hidden, and never blocks
+    // completion — chasing it is SEMO's job, not the vendor's.
+    let refsRow = '';
+    if (t.references && t.references.length) {
+      const items = t.references.map(r => {
+        const label = `<span class="ref-label">${esc(r.label)}</span>`;
+        if (r.missing) {
+          return `<div class="ref-item">${label}<span class="ref-missing">&#9888; חסר</span></div>`;
+        }
+        if (r.type === 'file') {
+          const links = (r.files || []).map(f =>
+            `<a class="btn-doc ref-dl" href="${esc(f.downloadUrl)}">&#11015; ${esc(f.name)}</a>`
+          ).join('');
+          return `<div class="ref-item">${label}<span class="ref-files">${links}</span></div>`;
+        }
+        return `<div class="ref-item">${label}<span class="ref-text">${esc(r.text)}</span></div>`;
+      }).join('');
+      refsRow = `<tr class="fields-row" id="refs-${t.ref}"><td colspan="${colSpan}">
+        <div class="fields-content">
+          <div class="field-label">מסמכי עזר</div>
+          <div class="ref-list">${items}</div>
         </div>
       </td></tr>`;
     }
@@ -371,11 +433,14 @@ function render() {
         <button class="btn-done-sm ${canComplete(t) ? 'ready' : 'disabled'}" id="btn-${t.ref}"
           onclick="handleDone('${t.ref}')" ${canComplete(t) ? '' : 'disabled'}>&#10003; בוצע</button>
       </td>
-    </tr>${fieldsRow}`;
+    </tr>${fieldsRow}${refsRow}`;
   }).join('');
 
-  el.innerHTML = `<div class="table-card">
-    <div class="table-card-header"><div class="icon">&#9889;</div> הזמנות פתוחות</div>
+  const header = showName ? esc(groupName) : 'הזמנות פתוחות';
+  return `<div class="table-card">
+    <div class="table-card-header"><div class="icon">&#9889;</div> ${header}
+      <span class="group-count">${tasks.length}</span>
+    </div>
     <table><thead><tr>${cols}</tr></thead><tbody>${rows}</tbody></table>
   </div>`;
 }
@@ -586,7 +651,11 @@ async function updateDate(ref, date) {
   try {
     const res = await fetch(`${API}/v/api/date`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: TOKEN, taskRef: ref, date }) });
     const data = await res.json();
-    showToast(data.success ? 'תאריך עודכן' : 'שגיאה: ' + data.error, data.success ? 'success' : 'error');
+    if (!data.success) { showToast('שגיאה: ' + data.error, 'error'); return; }
+    // For task types configured with dateAdvancesStatus (the IEC-inspection
+    // task), entering the date is also what moves the task forward. The server
+    // reports the resulting status so the vendor sees that it took effect.
+    showToast(data.status ? `תאריך עודכן — הסטטוס עודכן ל"${data.status}"` : 'תאריך עודכן', 'success');
   } catch (e) { showToast('שגיאה: ' + e.message, 'error'); }
 }
 
