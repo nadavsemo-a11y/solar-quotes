@@ -6,81 +6,112 @@
 <title>SEMO AGS — פורטל ספק</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+/* A.G.S design tokens (claude.ai/design 527204cc) applied as a DARK surface.
+   Black is a core brand colour and the system ships --bg-inverse/--fg-on-dark
+   for exactly this, so "dark" here is the brand's own inverse, not a new palette.
+
+   Brand rules honoured: three core colours (black / white / mint), mint used as
+   a SINGLE accent rather than a default, hard geometry (radii 0-8px, 2px
+   borders, the signature 4px 4px 0 offset shadow), flat fills — no gradients,
+   no emoji. Semantic status colours come from the solar palette.
+
+   Variable names are the portal's originals so every existing rule keeps
+   working; only their values changed. */
 :root {
-  --sun: #F4A200; --sun-light: #FFD166;
-  --sky: #0A1628; --sky-mid: #112240; --sky-light: #1D3461;
-  --green: #2ECC71; --green-dark: #1a9e52; --red: #e74c3c;
-  --text: #1a1a2e; --gray: #6B7280; --gray-light: #9CA3AF;
-  --light: #F7F9FC; --white: #ffffff; --border: #E2E8F0;
-  --radius: 16px; --radius-sm: 10px;
-  --shadow: 0 2px 20px rgba(0,0,0,0.07);
+  /* core brand */
+  --ags-black: #0A0A0A; --ags-white: #FFFFFF;
+  --ags-mint: #9CF5C4; --ags-mint-deep: #5FE0A0;
+  /* neutrals */
+  --ink-800: #1A1A1A; --ink-700: #2B2B2B; --ink-600: #4A4A4A;
+  --ink-400: #9A9A9A; --ink-300: #C4C4C4;
+
+  /* the portal's own names, repointed */
+  --sun: var(--ags-mint);            /* THE single accent for this view */
+  --sun-light: var(--ags-mint-deep);
+  --accent: var(--ags-mint);
+  --sky: #0A0A0A; --sky-mid: #1A1A1A; --sky-light: #2B2B2B;
+  --green: #2EB872; --green-dark: #2EB872; --red: #D43A2F; --warn: #E89923;
+  --text: #FFFFFF; --gray: #9A9A9A; --gray-light: #4A4A4A;
+  --light: #0A0A0A; --white: #1A1A1A; --border: #2B2B2B;
+  --radius: 8px; --radius-sm: 4px;   /* hard geometry: never 16px */
+  --shadow: none;                     /* flat-first */
+  --shadow-hard: 4px 4px 0 var(--ags-mint);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Assistant', 'Heebo', sans-serif; background: var(--light); color: var(--text); min-height: 100vh; }
+body { font-family: 'Heebo', 'Helvetica Neue', system-ui, sans-serif; background: var(--light); color: var(--text); min-height: 100vh; }
+
+/* Form controls do not inherit a dark surface on their own — without this they
+   render as white boxes punched into the theme. */
+input[type="date"], input[type="text"], input[type="number"], select, textarea {
+  background: #12141c; color: var(--text); border: 1px solid var(--border);
+  color-scheme: dark;   /* makes the native date picker dark too */
+}
+input::placeholder, textarea::placeholder { color: var(--gray-light); }
 button { font-family: inherit; cursor: pointer; border: none; }
 
 /* ── Header ── */
 .header {
-  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-mid) 60%, var(--sky-light) 100%);
+  background: var(--ags-black); border-bottom: 2px solid var(--border);
   padding: 20px 28px; display: flex; align-items: center; justify-content: space-between;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  box-shadow: none;
 }
 .logo { display: flex; align-items: center; gap: 14px; color: white; }
-.logo img { height: 38px; filter: brightness(0) invert(1); }
+.logo img { height: 38px; }
 .logo-title { font-size: 13px; font-weight: 600; opacity: 0.7; }
 .logo-name { font-size: 20px; font-weight: 900; color: var(--sun); }
 .header-badge {
   background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-  color: white; padding: 6px 16px; border-radius: 50px; font-size: 13px; font-weight: 600;
+  color: white; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
 }
 
 /* ── Main ── */
 .main { max-width: 900px; margin: 0 auto; padding: 28px 20px; }
 .page-title { text-align: center; margin-bottom: 28px; }
-.page-title h1 { font-size: 26px; font-weight: 900; color: var(--sky); }
+.page-title h1 { font-size: 26px; font-weight: 900; color: var(--text); }
 .page-title h1 span { color: var(--sun); }
 .page-title p { font-size: 14px; color: var(--gray); margin-top: 4px; }
 
 /* ── Table ── */
 .table-card {
-  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--white); border: 2px solid var(--border); border-radius: var(--radius);
   box-shadow: var(--shadow); overflow: hidden;
 }
 .table-card-header {
-  background: linear-gradient(135deg, var(--sky), var(--sky-mid));
+  background: var(--ags-black); border-bottom: 2px solid var(--border);
   padding: 14px 24px; color: white; font-size: 15px; font-weight: 700;
   display: flex; align-items: center; gap: 10px;
 }
 .table-card-header .icon {
-  width: 28px; height: 28px; background: rgba(255,255,255,0.15); border-radius: 7px;
+  width: 28px; height: 28px; background: rgba(255,255,255,0.15); border-radius: 4px;
   display: flex; align-items: center; justify-content: center; font-size: 14px;
 }
 table { width: 100%; border-collapse: collapse; }
 thead th {
-  padding: 12px 16px; font-size: 12px; font-weight: 700; color: var(--sky-mid);
+  padding: 12px 16px; font-size: 12px; font-weight: 700; color: var(--gray);
   text-transform: uppercase; letter-spacing: 0.5px; text-align: right;
   border-bottom: 2px solid var(--border); background: var(--light);
 }
 tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
 tbody tr:last-child { border-bottom: none; }
-tbody tr:hover { background: rgba(244,162,0,0.03); }
+tbody tr:hover { background: rgba(255,255,255,0.035); }
 tbody td { padding: 14px 16px; font-size: 14px; vertical-align: middle; }
 tbody tr.highlight-row { animation: rowHighlight 5s ease-out; }
 @keyframes rowHighlight {
-  0% { background: rgba(244,162,0,0.25); }
-  70% { background: rgba(244,162,0,0.12); }
+  0% { background: rgba(156,245,196,0.20); }
+  70% { background: rgba(156,245,196,0.08); }
   100% { background: transparent; }
 }
 
 .td-project { font-weight: 700; }
 .td-task { color: var(--gray); font-size: 13px; }
 .td-address { font-size: 13px; color: var(--gray); }
-.td-phone a { color: var(--sky-mid); text-decoration: none; font-size: 13px; }
+.td-phone a { color: var(--ags-white); text-decoration: underline;
+  text-decoration-thickness: 1.5px; text-underline-offset: 3px; font-size: 13px; }
 .td-phone a:hover { text-decoration: underline; }
 .td-date input {
-  padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border);
+  padding: 5px 8px; border-radius: 4px; border: 1px solid var(--border);
   background: var(--light); color: var(--text); font-family: inherit;
   font-size: 13px; direction: ltr; width: 130px;
 }
@@ -88,15 +119,15 @@ tbody tr.highlight-row { animation: rowHighlight 5s ease-out; }
 
 /* ── File ── */
 .file-btn {
-  padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;
   transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px;
 }
 .file-btn.upload {
   background: var(--light); border: 1px solid var(--border); color: var(--gray);
 }
 .file-btn.upload:hover { border-color: var(--sun); color: var(--sun); }
-.file-btn.done { background: rgba(46,204,113,0.1); color: var(--green-dark); border: 1px solid rgba(46,204,113,0.3); cursor: default; }
-.file-btn.uploading { background: var(--light); color: var(--sky-mid); border: 1px solid var(--border); cursor: wait; }
+.file-btn.done { background: rgba(46,204,113,0.12); color: var(--green); border: 1px solid rgba(46,204,113,0.35); cursor: default; }
+.file-btn.uploading { background: var(--light); color: var(--gray); border: 1px solid var(--border); cursor: wait; }
 input[type="file"] { display: none; }
 
 /* ── Action Buttons ── */
@@ -105,19 +136,19 @@ input[type="file"] { display: none; }
   transition: all 0.2s;
 }
 .btn-done-sm.ready {
-  background: linear-gradient(135deg, var(--green), var(--green-dark));
-  color: #fff; box-shadow: 0 2px 8px rgba(46,204,113,0.3);
+  background: var(--ags-mint); color: var(--ags-black);
+  color: var(--ags-black); box-shadow: none;
 }
-.btn-done-sm.ready:hover { box-shadow: 0 4px 16px rgba(46,204,113,0.5); }
+.btn-done-sm.ready:hover { box-shadow: var(--shadow-hard); }
 .btn-done-sm.disabled {
   background: var(--light); color: var(--gray-light); border: 1px solid var(--border); cursor: not-allowed;
 }
 .btn-doc {
-  padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
-  background: rgba(79,142,247,0.1); color: #4f8ef7; border: 1px solid rgba(79,142,247,0.3);
+  padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;
+  background: transparent; color: var(--ags-white); border: 2px solid var(--border);
   text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
 }
-.btn-doc:hover { background: rgba(79,142,247,0.2); }
+.btn-doc:hover { border-color: var(--ags-mint); color: var(--ags-mint); }
 
 /* ── Undo Bar ── */
 .undo-bar {
@@ -128,7 +159,7 @@ input[type="file"] { display: none; }
 .undo-countdown { color: var(--sun); font-weight: 800; font-size: 16px; direction: ltr; }
 .undo-cancel {
   background: rgba(255,255,255,0.15); color: white; border: none;
-  padding: 3px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: inherit;
+  padding: 3px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; font-family: inherit;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -138,7 +169,7 @@ input[type="file"] { display: none; }
 
 .empty-state { text-align: center; padding: 60px 20px; }
 .empty-icon { font-size: 64px; margin-bottom: 16px; }
-.empty-title { font-size: 22px; font-weight: 900; color: var(--sky); margin-bottom: 8px; }
+.empty-title { font-size: 22px; font-weight: 900; color: var(--text); margin-bottom: 8px; }
 .empty-text { font-size: 15px; color: var(--gray); }
 
 .loading { text-align: center; padding: 60px 20px; }
@@ -164,15 +195,16 @@ input[type="file"] { display: none; }
 .ref-label { min-width: 190px; font-size: 13px; font-weight: 600; color: var(--gray); }
 .ref-files { display: flex; flex-wrap: wrap; gap: 6px; }
 .ref-dl { white-space: nowrap; }
-.ref-text { font-size: 14px; font-weight: 600; word-break: break-word; }
-.ref-missing { font-size: 13px; font-weight: 700; color: var(--sun); }
+.ref-text { font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px; font-weight: 500; word-break: break-word; direction: ltr; }
+.ref-missing { font-size: 13px; font-weight: 700; color: var(--warn); }
 @media (max-width: 700px) { .ref-label { min-width: 0; width: 100%; } }
 .fields-row td { padding: 0 !important; border-bottom: 1px solid var(--border); }
 .fields-content {
   padding: 14px 20px; background: var(--light);
 }
 .fields-content .field-label {
-  font-size: 11px; font-weight: 700; color: var(--sky-mid); text-transform: uppercase;
+  font-size: 11px; font-weight: 700; color: var(--gray); text-transform: uppercase;
   letter-spacing: 0.5px; margin-bottom: 8px;
 }
 .serial-list { display: flex; flex-direction: column; gap: 8px; }
@@ -189,7 +221,7 @@ input[type="file"] { display: none; }
   background: var(--white); color: var(--text); font-size: 14px; font-family: inherit;
   direction: ltr; letter-spacing: 1px;
 }
-.serial-input:focus { outline: none; border-color: var(--sun); box-shadow: 0 0 0 3px rgba(244,162,0,0.1); }
+.serial-input:focus { outline: none; border-color: var(--ags-mint); box-shadow: none; }
 .serial-remove {
   width: 26px; height: 26px; border-radius: 50%; background: rgba(231,76,60,0.08);
   color: var(--red); border: 1px solid rgba(231,76,60,0.2); font-size: 16px;
@@ -198,19 +230,19 @@ input[type="file"] { display: none; }
 .serial-remove:hover { background: rgba(231,76,60,0.15); }
 .btn-add-serial {
   margin-top: 8px; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700;
-  background: rgba(79,142,247,0.08); color: #4f8ef7; border: 1px solid rgba(79,142,247,0.25);
+  background: transparent; color: var(--ags-white); border: 2px solid var(--border);
   display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
 }
-.btn-add-serial:hover { background: rgba(79,142,247,0.15); }
+.btn-add-serial:hover { border-color: var(--ags-mint); color: var(--ags-mint); }
 
 .footer { text-align: center; padding: 20px; font-size: 12px; color: var(--gray-light); }
 
 @media (max-width: 700px) {
   table, thead, tbody, th, td, tr { display: block; }
   thead { display: none; }
-  tbody tr { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; padding: 14px; background: var(--white); }
+  tbody tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; padding: 14px; background: var(--white); }
   tbody td { padding: 4px 0; border: none; display: flex; justify-content: space-between; align-items: center; }
-  tbody td::before { content: attr(data-label); font-size: 11px; font-weight: 700; color: var(--sky-mid); text-transform: uppercase; }
+  tbody td::before { content: attr(data-label); font-size: 11px; font-weight: 700; color: var(--gray); text-transform: uppercase; }
   .td-actions { justify-content: flex-end; gap: 8px; margin-top: 8px; }
 }
 </style>
@@ -219,7 +251,7 @@ input[type="file"] { display: none; }
 
 <header class="header">
   <div class="logo">
-    <img src="ags-logo.png" alt="SEMO AGS">
+    <img src="ags-logo-white.png" alt="A.G.S">
     <div>
       <div class="logo-title">פורטל ספק</div>
       <div class="logo-name" id="vendorName">—</div>
@@ -283,7 +315,7 @@ async function loadTasks() {
 function render() {
   const el = document.getElementById('content');
   if (tasks.length === 0) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">&#9728;&#65039;</div><div class="empty-title">אין הזמנות פתוחות</div><div class="empty-text">כל הכבוד! אין כרגע הזמנות שדורשות טיפול.</div></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon"></div><div class="empty-title">אין הזמנות פתוחות</div><div class="empty-text">כל הכבוד! אין כרגע הזמנות שדורשות טיפול.</div></div>`;
     return;
   }
 
@@ -330,7 +362,7 @@ function renderGroup(groupName, tasks, showName) {
     if (hasDesignFiles) {
       if (t.designFiles?.length > 0) {
         const links = t.designFiles.map(f =>
-          `<a class="btn-doc" href="${esc(f.url)}" target="_blank" style="margin-bottom:3px;">&#128196; ${esc(f.name)}</a>`
+          `<a class="btn-doc" href="${esc(f.url)}" target="_blank" style="margin-bottom:3px;">${esc(f.name)}</a>`
         ).join('');
         designTd = `<td data-label="מפרט התקנה"><div style="display:flex;flex-direction:column;gap:3px;">${links}</div></td>`;
       } else {
@@ -343,7 +375,7 @@ function renderGroup(groupName, tasks, showName) {
       if (!rules.requireFile) {
         fileTd = `<td data-label="קובץ">—</td>`;
       } else if (t.hasFile) {
-        fileTd = `<td data-label="קובץ"><span class="file-btn done">&#10003; צורף</span></td>`;
+        fileTd = `<td data-label="קובץ"><span class="file-btn done">צורף</span></td>`;
       } else {
         fileTd = `<td data-label="קובץ" id="file-cell-${t.ref}">
           <button class="file-btn upload" onclick="document.getElementById('file-${t.ref}').click()">${esc(rules.fileLabel || '&#128206; צרף')}</button>
@@ -364,8 +396,8 @@ function renderGroup(groupName, tasks, showName) {
       } else if (t.workOrderUrl) {
         const woSigned = t.workOrderSigned || false;
         woTd = woSigned
-          ? `<td data-label="הזמנת עבודה"><span class="file-btn done">&#10003; נחתם</span></td>`
-          : `<td data-label="הזמנת עבודה"><a class="btn-doc" href="${esc(t.workOrderUrl)}" target="_blank" onclick="markWoOpened('${t.ref}')">&#9997; חתום</a></td>`;
+          ? `<td data-label="הזמנת עבודה"><span class="file-btn done">נחתם</span></td>`
+          : `<td data-label="הזמנת עבודה"><a class="btn-doc" href="${esc(t.workOrderUrl)}" target="_blank" onclick="markWoOpened('${t.ref}')">חתום</a></td>`;
       } else {
         woTd = `<td data-label="הזמנת עבודה">—</td>`;
       }
@@ -402,11 +434,11 @@ function renderGroup(groupName, tasks, showName) {
       const items = t.references.map(r => {
         const label = `<span class="ref-label">${esc(r.label)}</span>`;
         if (r.missing) {
-          return `<div class="ref-item">${label}<span class="ref-missing">&#9888; חסר</span></div>`;
+          return `<div class="ref-item">${label}<span class="ref-missing">חסר</span></div>`;
         }
         if (r.type === 'file') {
           const links = (r.files || []).map(f =>
-            `<a class="btn-doc ref-dl" href="${esc(f.downloadUrl)}">&#11015; ${esc(f.name)}</a>`
+            `<a class="btn-doc ref-dl" href="${esc(f.downloadUrl)}">${esc(f.name)}</a>`
           ).join('');
           return `<div class="ref-item">${label}<span class="ref-files">${links}</span></div>`;
         }
@@ -431,14 +463,14 @@ function renderGroup(groupName, tasks, showName) {
       ${woTd}
       <td data-label="פעולה" class="td-actions" id="action-${t.ref}">
         <button class="btn-done-sm ${canComplete(t) ? 'ready' : 'disabled'}" id="btn-${t.ref}"
-          onclick="handleDone('${t.ref}')" ${canComplete(t) ? '' : 'disabled'}>&#10003; בוצע</button>
+          onclick="handleDone('${t.ref}')" ${canComplete(t) ? '' : 'disabled'}>בוצע</button>
       </td>
     </tr>${fieldsRow}${refsRow}`;
   }).join('');
 
   const header = showName ? esc(groupName) : 'הזמנות פתוחות';
   return `<div class="table-card">
-    <div class="table-card-header"><div class="icon">&#9889;</div> ${header}
+    <div class="table-card-header">${header}
       <span class="group-count">${tasks.length}</span>
     </div>
     <table><thead><tr>${cols}</tr></thead><tbody>${rows}</tbody></table>
@@ -481,7 +513,7 @@ function markWoOpened(ref) {
     if (IS_DEMO) {
       woSignedRefs.add(ref);
       const cell = document.querySelector(`#row-${ref} .btn-doc`)?.closest('td');
-      if (cell) cell.innerHTML = `<span class="file-btn done">&#10003; נחתם</span>`;
+      if (cell) cell.innerHTML = `<span class="file-btn done">נחתם</span>`;
       updateDoneButton(ref);
       showToast('הזמנת עבודה נחתמה (דמו)', 'success');
     } else {
@@ -492,7 +524,7 @@ function markWoOpened(ref) {
         if (data.signed) {
           woSignedRefs.add(ref);
           const cell = document.querySelector(`#row-${ref} .btn-doc`)?.closest('td');
-          if (cell) cell.innerHTML = `<span class="file-btn done">&#10003; נחתם</span>`;
+          if (cell) cell.innerHTML = `<span class="file-btn done">נחתם</span>`;
           updateDoneButton(ref);
           showToast('הזמנת עבודה נחתמה', 'success');
         }
@@ -556,7 +588,7 @@ async function onFileSelect(ref, input) {
 
   if (IS_DEMO) {
     uploadedFiles[ref] = { name: file.name, uploaded: true };
-    cell.innerHTML = `<span class="file-btn done">&#10003; ${esc(file.name)}</span>`;
+    cell.innerHTML = `<span class="file-btn done">${esc(file.name)}</span>`;
     showToast('קובץ הועלה (דמו)', 'success'); updateDoneButton(ref); return;
   }
   try {
@@ -565,7 +597,7 @@ async function onFileSelect(ref, input) {
     const data = await res.json();
     if (data.success) {
       uploadedFiles[ref] = { name: file.name, uploaded: true };
-      cell.innerHTML = `<span class="file-btn done">&#10003; ${esc(file.name)}</span>`;
+      cell.innerHTML = `<span class="file-btn done">${esc(file.name)}</span>`;
       showToast('קובץ הועלה', 'success');
     } else throw new Error(data.error);
   } catch (e) {
@@ -611,7 +643,7 @@ function handleDone(ref) {
   document.getElementById(`undo-${ref}`).onclick = () => {
     cancelled = true; clearTimeout(to); clearInterval(iv);
     row.classList.remove('completing');
-    cell.innerHTML = `<button class="btn-done-sm ${canComplete(t)?'ready':'disabled'}" id="btn-${ref}" onclick="handleDone('${ref}')" ${canComplete(t)?'':'disabled'}>&#10003; בוצע</button>`;
+    cell.innerHTML = `<button class="btn-done-sm ${canComplete(t)?'ready':'disabled'}" id="btn-${ref}" onclick="handleDone('${ref}')" ${canComplete(t)?'':'disabled'}>בוצע</button>`;
     showToast('בוטל', 'success');
   };
 }
@@ -636,7 +668,7 @@ async function executeDone(ref, t) {
   } catch (e) {
     const row = document.getElementById(`row-${ref}`); row.classList.remove('completing');
     const cell = document.getElementById(`action-${ref}`);
-    cell.innerHTML = `<button class="btn-done-sm ready" id="btn-${ref}" onclick="handleDone('${ref}')">&#10003; בוצע</button>`;
+    cell.innerHTML = `<button class="btn-done-sm ready" id="btn-${ref}" onclick="handleDone('${ref}')">בוצע</button>`;
     showToast('שגיאה: ' + e.message, 'error');
   }
 }
@@ -659,7 +691,7 @@ async function updateDate(ref, date) {
   } catch (e) { showToast('שגיאה: ' + e.message, 'error'); }
 }
 
-function showError(msg) { document.getElementById('content').innerHTML = `<div class="empty-state"><div class="empty-icon">&#9888;&#65039;</div><div class="empty-title">שגיאה</div><div class="empty-text">${esc(msg)}</div></div>`; }
+function showError(msg) { document.getElementById('content').innerHTML = `<div class="empty-state"><div class="empty-icon"></div><div class="empty-title">שגיאה</div><div class="empty-text">${esc(msg)}</div></div>`; }
 function esc(s) { const el = document.createElement('span'); el.textContent = s || ''; return el.innerHTML; }
 function showToast(msg, type='success') { const el = document.getElementById('toast'); el.textContent = msg; el.className = `toast ${type} visible`; clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('visible'), 3000); }
 </script>
