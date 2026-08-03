@@ -20,7 +20,9 @@ class QuoteUI {
 
   constructor() {
     // ── מופעי שירותים ────────────────────────────────────────────────────
-    this.storage   = new StorageService('https://s-a.gs');
+    // Production origin. `window.__SEMO_API_BASE__` overrides it for local dev, where the static
+    // portal and the Worker run on different ports — the same override shared/catalog-client.js uses.
+    this.storage   = new StorageService((typeof window !== 'undefined' && window.__SEMO_API_BASE__) || 'https://s-a.gs');
     this.signature = new SignatureService('sigCanvas');
 
     // ── state ────────────────────────────────────────────────────────────
@@ -147,7 +149,16 @@ class QuoteUI {
     // price book (shared/upgrade-pricing.js) is their only source.
     this._applyNewQuoteInputDefaults();
     this._initInverterSelect();
+    // The extras UI is built from the SERVER catalog, so it is rendered again once the async load
+    // finishes. The first (empty) render keeps the DOM consistent for the listeners bound below.
     this._renderExtrasUI();
+    this._loadCatalog().then(() => {
+      this._renderExtrasUI();
+      this._renderCatalogState();
+      this._updatePreview();
+      // A quote being duplicated cannot be rebased until the catalog is known.
+      if (this._pendingRebase) { const s = this._pendingRebase; this._pendingRebase = null; this._rebaseOntoCatalog(s); }
+    });
     this._initCitySearch();
     // Tariff override listeners must register BEFORE the generic input listener
     // so that _tariffState is up-to-date when _updatePreview runs.
@@ -160,7 +171,7 @@ class QuoteUI {
     this._tryLoadFromUrl();
   }
 
-  /** Dynamically build extras checkboxes from config (localStorage / defaults) */
+  /** Dynamically build the extras checkboxes from the central catalog (see _getExtrasConfig). */
   _renderExtrasUI() {
     const container = document.getElementById('extras-dynamic-container');
     if (!container) return;
@@ -394,17 +405,84 @@ class QuoteUI {
   }
 
   /**
-   * Returns the extras catalog — the shared code catalog (shared/upgrade-pricing.js) reconciled
-   * with the seller's own category/label/price edits from `semo-extras-config` (extras-manager.html).
-   * mergeCatalog owns the reconciliation rule: STRUCTURE is code-owned, LABEL/PRICE config-owned.
+   * The extras catalog for AUTHORING, projected from the central published version loaded in
+   * init(). Shape is `{ upgrades, potential }` because that is what _renderExtrasUI and
+   * UpgradePricing.flattenCatalog have always consumed.
    */
   _getExtrasConfig() {
-    let saved = null;
+    // The catalog comes from the SERVER (shared/catalog-client.js), loaded once in init().
+    // There is deliberately no localStorage fallback: a stale browser catalog is exactly what let a
+    // seller price a quote against items the customer's document would never show. If the catalog
+    // is not loaded, callers get an empty catalog and _validateNewQuote() blocks issuance.
+    if (!this._catalog) return { upgrades: [], potential: [] };
+    const cfg = { upgrades: [], potential: [] };
+    for (const i of this._catalog.items) {
+      if (i.active === false) continue;                     // archived: not offered on a new quote
+      (i.category === 'potential' ? cfg.potential : cfg.upgrades).push({
+        id: i.id, label: i.label, defaultPrice: i.defaultPrice,
+        calcType: i.calcType, legacy: !!i.legacy, customerToggleable: i.customerToggleable,
+      });
+    }
+    return cfg;
+  }
+
+  /**
+   * Load the authoritative catalog before the extras UI is built. Failure is VISIBLE and BLOCKING:
+   * `_catalogError` disables quote issuance rather than letting the seller author against nothing.
+   */
+  async _loadCatalog() {
+    this._catalog = null;
+    this._catalogError = null;
     try {
-      const raw = localStorage.getItem('semo-extras-config');
-      if (raw) saved = JSON.parse(raw);
-    } catch (e) { /* unreadable config → pure defaults */ }
-    return UpgradePricing.mergeCatalog(saved);
+      if (!CatalogClient.hasSession()) { this._catalogError = 'no_session'; return; }
+      this._catalog = await CatalogClient.loadCurrent();
+    } catch (e) {
+      this._catalogError = e.status === 401 ? 'no_session' : (e.code || 'catalog_unavailable');
+    }
+  }
+
+  /** The banner that tells the seller why they cannot issue a quote, and offers the sign-in. */
+  _renderCatalogState() {
+    const el = document.getElementById('catalog-state');
+    if (!el) return;
+    if (this._catalog) {
+      el.innerHTML = `<span style="color:#16a34a">✓ קטלוג ${this._catalog.versionId}</span>
+        <button type="button" onclick="_quoteUI.signOutCatalog()" style="margin-right:10px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit">התנתק</button>`;
+      el.style.background = '#f0fdf4';
+      return;
+    }
+    const msg = this._catalogError === 'no_session'
+      ? 'נדרשת הזדהות כדי לטעון את קטלוג השדרוגים'
+      : 'קטלוג השדרוגים אינו זמין — לא ניתן להפיק הצעה';
+    el.innerHTML = `<span style="color:#b91c1c">⚠ ${msg}</span>
+      <button type="button" onclick="_quoteUI.signInCatalog()" style="margin-right:10px;padding:3px 10px;border:none;border-radius:6px;background:#16a34a;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">הזדהות</button>`;
+    el.style.background = '#fef2f2';
+  }
+
+  /** Seller sign-in. The passphrase is exchanged for a short-lived token held in sessionStorage. */
+  async signInCatalog() {
+    const pass = prompt('סיסמת מוכר:');
+    if (!pass) return;
+    try {
+      await CatalogClient.login(pass);
+      await this._loadCatalog();
+      this._renderExtrasUI();
+      this._renderCatalogState();
+      this._updatePreview();
+      EmailService?.showToast?.('הקטלוג נטען בהצלחה');
+    } catch (e) {
+      EmailService?.showToast?.(e.status === 401 ? 'סיסמה שגויה' : 'טעינת הקטלוג נכשלה', true);
+      this._catalogError = e.status === 401 ? 'no_session' : 'catalog_unavailable';
+      this._renderCatalogState();
+    }
+  }
+
+  signOutCatalog() {
+    CatalogClient.logout();
+    this._catalog = null;
+    this._catalogError = 'no_session';
+    this._renderExtrasUI();
+    this._renderCatalogState();
   }
 
   /**
@@ -641,6 +719,27 @@ class QuoteUI {
    */
   _validateNewQuote() {
     this._clearAllFieldErrors();
+
+    // BLOCKING: a quote may not be issued without the authoritative catalog. Issuing one anyway is
+    // how a seller-authored upgrade used to end up priced in the portal and absent from the
+    // customer's document — the defect this whole path exists to remove.
+    if (!this._catalog) {
+      this._renderCatalogState();
+      EmailService?.showToast?.(this._catalogError === 'no_session'
+        ? 'נדרשת הזדהות לקטלוג לפני הפקת הצעה'
+        : 'קטלוג השדרוגים אינו זמין — לא ניתן להפיק הצעה', true);
+      document.getElementById('catalog-state')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+
+    // A duplicated quote carrying sold items the current catalog no longer has must be reviewed,
+    // not silently issued without them.
+    if (this._rebaseReview && this._rebaseReview.length) {
+      EmailService?.showToast?.('יש לטפל בפריטים שלא הועברו מההצעה המקורית לפני ההפקה', true);
+      document.getElementById('rebase-notice')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+
     const result = QuoteValidation.validateNewQuote({
       roofArea: document.getElementById('roofArea')?.value,
       inverter: this._selectedInverter(),
@@ -1282,6 +1381,95 @@ class QuoteUI {
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // DUPLICATE → REBASE ONTO THE CURRENT CATALOG
+  //
+  // Three distinct operations, kept distinct on purpose:
+  //   RENDER    an existing quote  → its own snapshot, untouched (the customer-facing viewer).
+  //   REOPEN    an existing quote  → same, read-only review.
+  //   DUPLICATE an existing quote  → a NEW DRAFT authored against the CURRENT catalog. That is what
+  //                                  this does. The source quote is never mutated.
+  //
+  // Rebasing is deterministic and never guesses:
+  //   • ids present in both       → selection and any per-quote price are carried over
+  //   • new in the current catalog→ offered at today's default, unselected
+  //   • in the source but gone    → surfaced for REVIEW, never silently dropped and never remapped
+  //     onto a different id (which is how a "similar" upgrade would quietly change what was sold)
+  // ══════════════════════════════════════════════════════════════════════
+
+  /**
+   * Rebase a duplicated quote's extras onto the current catalog.
+   * `state` is the SOURCE quote's state (schema 1 or 2). Returns nothing; it drives the DOM and
+   * reports unmatched items to the seller.
+   */
+  _rebaseOntoCatalog(state) {
+    if (!this._catalog) { this._pendingRebase = state; return; }
+
+    // Schema 2 carries labels in its own snapshot; schema 1 has only `extras` ids and no labels.
+    const snap = state.pricingSnapshot;
+    const sourceItems = snap && Array.isArray(snap.items)
+      ? snap.items.map(i => ({ id: i.id, label: i.label, checked: i.checked, price: i.amount, calcType: i.calcType }))
+      : Object.entries(UpgradePricing.migrateExtrasSelections(state) || state.extras || {})
+          .map(([id, v]) => ({ id, label: null, checked: !!(v && v.checked), price: (v && v.price) || '' }));
+
+    const known = new Map(this._catalog.items.map(i => [i.id, i]));
+    const carried = [], unmatched = [];
+
+    for (const src of sourceItems) {
+      const cur = known.get(src.id);
+      if (!cur || cur.active === false) {
+        if (src.checked) unmatched.push(src);   // only a SOLD item is worth stopping the seller for
+        continue;
+      }
+      carried.push(src);
+      const chk = document.getElementById('chk-' + src.id);
+      if (chk) chk.checked = !!src.checked;
+      // A computed item (batteries/premium) re-derives from the form; only fixed prices carry over.
+      const priceEl = document.getElementById('price-' + src.id);
+      if (priceEl && src.price !== '' && src.price != null && (!cur.calcType || cur.calcType === 'fixed')) {
+        priceEl.value = src.price;
+      }
+    }
+
+    // Items the current catalog has that the source never saw start unselected, so duplicating a
+    // quote can never silently add a line item the seller did not choose.
+    for (const item of this._catalog.items) {
+      if (item.active === false) continue;
+      if (sourceItems.some(s => s.id === item.id)) continue;
+      const chk = document.getElementById('chk-' + item.id);
+      if (chk) chk.checked = false;
+    }
+
+    this._rebaseReview = unmatched;
+    this._renderRebaseNotice(unmatched);
+    this._updatePreview();
+  }
+
+  /**
+   * Tell the seller, in the UI, exactly which sold items could not be carried over. A legacy quote
+   * whose custom upgrade only ever existed in a browser has no recoverable label — the truncated
+   * slug inside the id is shown as-is and explicitly NOT presented as the item's name, because
+   * inventing a customer-visible label from a slug is how wrong text reaches a legal document.
+   */
+  _renderRebaseNotice(unmatched) {
+    const el = document.getElementById('rebase-notice');
+    if (!el) return;
+    if (!unmatched || !unmatched.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    const rows = unmatched.map(u => {
+      const shown = u.label ? this._escapeHtml(u.label) : `<code>${this._escapeHtml(u.id)}</code> (השם המקורי אינו קיים בשרת)`;
+      const price = u.price ? ` — ₪${this._escapeHtml(String(u.price))}` : '';
+      return `<li>${shown}${price}</li>`;
+    }).join('');
+    el.innerHTML = `<div style="font-weight:700;margin-bottom:6px">⚠ פריטים מההצעה המקורית שאינם בקטלוג הנוכחי</div>
+      <div style="font-size:12px;margin-bottom:8px">הם <b>לא</b> הועברו להצעה החדשה. הוסף אותם לקטלוג במנהל השדרוגים, או המשך בלעדיהם.</div>
+      <ul style="margin:0;padding-inline-start:18px;font-size:12px">${rows}</ul>`;
+    el.style.display = 'block';
+  }
+
+  _escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   /**
    * Backward compat: converts old hardcoded state (exEv, exMonitor...) to the dynamic extras
    * format. The rule itself lives in shared/upgrade-pricing.js so the Worker migrates identically.
@@ -1309,6 +1497,10 @@ class QuoteUI {
       // Which pricing SHAPE produced this quote. The prices themselves are snapshotted in the
       // fields below (battFP/battEP/premP/usdRate/extras[].price) — this only records the schema.
       pricingSchema: UpgradePricing.PRICING_SCHEMA_VERSION,
+      // The catalog version this quote was AUTHORED against. Its presence is what makes POST /q/save
+      // price the quote server-side and store an immutable pricing snapshot (schema 2). The server
+      // rejects a stale version with 409 rather than silently rebasing the seller's commercial terms.
+      catalogVersionId: this._catalog ? this._catalog.versionId : undefined,
       battFP: get('battFirstPrice'), battEP: get('battExtraPrice'),
       premP: get('premiumPanelPrice'), usdRate: get('usdRate'),
       meterP: get('meterPanelPrice'),
@@ -1357,9 +1549,13 @@ class QuoteUI {
     radio('roof', s.roof);
     radio('planRadio', s.plan);
     this._restoreInverter(s);
-    // extras — dynamic restore (with backward compat for old format)
+    // extras — restore, then REBASE onto the current catalog. _restoreExtrasState only replays the
+    // saved selections onto whatever checkboxes exist; _rebaseOntoCatalog is what decides which of
+    // them the current catalog still offers and surfaces the ones it does not. (If the catalog is
+    // still loading, the rebase is queued and runs when init()'s load resolves.)
     this._restoreExtrasState(this._migrateOldExtrasState(s));
     this._noticeWithdrawnUpgrades(this._migrateOldExtrasState(s));
+    this._rebaseOntoCatalog(s);
     // Store digital signature preference for client mode
     this._digitalSigPref = s.digSig !== undefined ? s.digSig : true;
     // Tariff override — legacy payloads (no tariffOverride) → auto
