@@ -76,7 +76,18 @@ class StorageService {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ data: encoded }),
     });
-    if (!resp.ok) throw new Error(`שגיאת שרת ${resp.status}`);
+    if (!resp.ok) {
+      // The server prices schema-2 quotes itself and refuses rather than guessing. Its structured
+      // errors carry the reason, and the seller can act on all of them — a generic "server error"
+      // would send them back to the portal with no idea what to change.
+      let body = null;
+      try { body = await resp.json(); } catch { /* non-JSON error page */ }
+      const err = new Error((body && (body.detail || body.error)) || `שגיאת שרת ${resp.status}`);
+      err.status = resp.status;
+      err.code = (body && (body.code || body.error)) || null;
+      err.currentVersionId = (body && body.currentVersionId) || null;
+      throw err;
+    }
     const json = await resp.json();
     return json.url;
   }
