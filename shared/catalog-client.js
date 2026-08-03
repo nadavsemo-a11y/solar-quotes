@@ -12,10 +12,9 @@
  * omitted it. The catalog is now server-published and versioned; this module is the only way a
  * browser reaches it, so the session handling and the failure semantics exist in exactly one place.
  *
- * AUTH
- * A seller exchanges the shared passphrase ONCE for a short-lived HMAC session token (the portal is
- * a public static page, so it can hold no secret of its own). The token lives in sessionStorage and
- * dies with the tab.
+ * NO LOGIN
+ * There is no passphrase. Catalog reads are open and writes are limited to the known seller
+ * surfaces by the Worker (an Origin check — a speed bump, not a lock; see worker.js).
  *
  * FAILURE SEMANTICS — deliberate
  * There is NO fallback to a local catalog. If the catalog cannot be loaded or verified, callers are
@@ -26,29 +25,23 @@
 'use strict';
 
 const CatalogClient = (() => {
-  const TOKEN_KEY = 'semo-catalog-session';
   const LEGACY_LOCAL_KEY = 'semo-extras-config';   // read ONLY by the one-time import in the manager
 
   let _current = null;      // { versionId, digest, items, seq, n }
 
+  /**
+   * The Worker origin. NOT same-origin: the portal is served from nadavsemo-a11y.github.io while
+   * the Worker is s-a.gs, so a relative URL hits GitHub Pages and 404s. `window.__SEMO_API_BASE__`
+   * overrides it for local dev.
+   */
   function _base() {
-    // Same-origin in production (s-a.gs serves both the page and /q/*). An explicit override exists
-    // for local dev, where the static page and the Worker are on different ports.
-    return (typeof window !== 'undefined' && window.__SEMO_API_BASE__) || '';
+    return (typeof window !== 'undefined' && window.__SEMO_API_BASE__) || 'https://s-a.gs';
   }
-
-  function getToken() {
-    try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
-  }
-  function setToken(t) {
-    try { t ? sessionStorage.setItem(TOKEN_KEY, t) : sessionStorage.removeItem(TOKEN_KEY); } catch { /* private mode */ }
-  }
-  function hasSession() { return !!getToken(); }
 
   async function _req(path, opts = {}) {
     const res = await fetch(_base() + path, {
       ...opts,
-      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}), ...(getToken() ? { Authorization: 'Bearer ' + getToken() } : {}) },
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
     });
     let body = null;
     try { body = await res.json(); } catch { /* non-JSON error page */ }
@@ -57,21 +50,10 @@ const CatalogClient = (() => {
       err.status = res.status;
       err.code = (body && (body.code || body.error)) || 'http_error';
       err.body = body;
-      if (res.status === 401) setToken('');   // a dead token must not linger
       throw err;
     }
     return body;
   }
-
-  /** Exchange the seller passphrase for a session. Throws with status 401 on a wrong passphrase. */
-  async function login(passphrase) {
-    setToken('');
-    const r = await _req('/q/catalog/session', { method: 'POST', body: JSON.stringify({ passphrase }) });
-    setToken(r.token);
-    return r;
-  }
-
-  function logout() { setToken(''); _current = null; }
 
   /** The authoritative current catalog. Cached per page load; `force` re-reads it. */
   async function loadCurrent(force = false) {
@@ -166,8 +148,7 @@ const CatalogClient = (() => {
   }
 
   return {
-    TOKEN_KEY, LEGACY_LOCAL_KEY,
-    hasSession, getToken, login, logout,
+    LEGACY_LOCAL_KEY,
     loadCurrent, loadVersion, mintId, publish,
     toDraftItems, toPublishItems,
     readLegacyLocalCatalog, diffLegacyAgainst, clearLegacyLocalCatalog,
