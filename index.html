@@ -1560,7 +1560,14 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
         </div>
         <div class="divider"></div>
 
-        <!-- DYNAMIC EXTRAS — built from localStorage config by quote-ui.js -->
+        <!-- Catalog session state. The extras catalog is served by the Worker (/q/catalog/*), not by
+             this browser: quote-ui.js blocks issuance while it is unavailable. -->
+        <div id="catalog-state" style="padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:12px;background:#fef2f2"></div>
+
+        <!-- Items a duplicated quote could not carry onto the current catalog. Never silently dropped. -->
+        <div id="rebase-notice" style="display:none;padding:10px 12px;border:1.5px solid #f59e0b;background:#fffbeb;border-radius:8px;margin-bottom:12px;color:#92400e"></div>
+
+        <!-- DYNAMIC EXTRAS — built by quote-ui.js from the central catalog (/q/catalog/current) -->
         <div id="extras-dynamic-container"></div>
       </div>
     </div>
@@ -1810,6 +1817,8 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
      upgrade-pricing and quote-validation read it. -->
 <script src="shared/inverter-catalog.js"></script>
 <script src="shared/upgrade-pricing.js"></script>
+<!-- The ONLY way a browser reaches the central extras catalog. No localStorage fallback by design. -->
+<script src="shared/catalog-client.js"></script>
 <script src="shared/quote-validation.js"></script>
 <script src="quote-engine.js"></script>
 <script src="url-shortener.js"></script>
