@@ -104,73 +104,122 @@ h1 { text-align: center; color: #0A1628; margin-bottom: 6px; }
 
 <div class="actions">
   <span class="count-badge" id="countBadge"></span>
+  <span class="count-badge" id="versionBadge" style="background:#ecfdf5;color:#065f46"></span>
+  <button class="btn btn-secondary" id="btnImport" onclick="importLegacy()" style="display:none">ייבוא קטלוג מקומי ישן</button>
   <button class="btn btn-secondary" onclick="resetToDefaults()">אפס לברירת מחדל</button>
-  <button class="btn btn-primary" onclick="saveConfig()">שמור הגדרות</button>
+  <button class="btn btn-primary" onclick="publishConfig()">פרסם גרסה חדשה</button>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<script src="shared/inverter-catalog.js"></script>
+<script src="shared/upgrade-pricing.js"></script>
+<script src="shared/catalog-client.js"></script>
 <script>
-// ═══════ DEFAULT CONFIG ═══════
-const DEFAULT_CONFIG = {
-  upgrades: [
-    { id: 'hybrid-inv', label: 'שדרוג לממיר היברידי', defaultPrice: 8900, calcType: 'fixed' },
-    { id: 'batteries', label: 'מצברי אגירה (בטריות)', defaultPrice: 0, calcType: 'batteries', note: 'מינימום 2 בטריות. ראשונה 8,900₪, כל נוספת 6,500₪' },
-    { id: 'premium', label: 'שדרוג לפאנל פרמיום שחור', defaultPrice: 0, calcType: 'premium', note: '100$ לקילו-וואט DC × שער דולר' },
-    { id: 'solaredge', label: 'תוספת ממיר SolarEdge', defaultPrice: 0, calcType: 'solaredge', note: '270₪ × מספר פאנלים' },
-    { id: 'ev', label: 'עמדת טעינה לרכב חשמלי', defaultPrice: 4500 },
-    { id: 'monitoring', label: 'ניטור ובקרה מרחוק (שנתי)', defaultPrice: 1500 },
-  ],
-  potential: [
-    { id: 'drilling', label: 'קידוח ומעבר קיר בטון / בלוק', defaultPrice: 500 },
-    { id: 'wifi', label: 'התקנת מגביר טווח אלחוטי (WiFi Extender)', defaultPrice: 450 },
-    { id: 'support', label: 'קריאת שירות לשינויים בהגדרות האינטרנט', defaultPrice: 450 },
-    { id: 'inspector', label: 'ביקור חשמלאי בודק לפני ההתקנה', defaultPrice: 850 },
-  ]
-};
+// The catalog is NOT defined here. It is published by the Worker and read over /q/catalog/*.
+// This page edits labels, prices, categories and order; it never owns the list, and it must never
+// be the place a pricing rule is written — `calcType` is code-owned and the server ignores any
+// strategy a browser submits.
 
 let config = { upgrades: [], potential: [] };
 let dragItem = null;
 
-// ═══════ LOAD / SAVE ═══════
-function loadConfig() {
-  try {
-    const saved = localStorage.getItem('semo-extras-config');
-    if (saved) {
-      config = JSON.parse(saved);
-      if (!config.upgrades) config.upgrades = [];
-      if (!config.potential) config.potential = [];
-      // Merge missing default items that don't exist in saved config
-      const allSavedIds = new Set([...config.upgrades.map(i=>i.id), ...config.potential.map(i=>i.id)]);
-      for (const item of DEFAULT_CONFIG.upgrades) {
-        if (!allSavedIds.has(item.id)) {
-          config.upgrades.push(JSON.parse(JSON.stringify(item)));
-        }
-      }
-      for (const item of DEFAULT_CONFIG.potential) {
-        if (!allSavedIds.has(item.id)) {
-          config.potential.push(JSON.parse(JSON.stringify(item)));
-        }
-      }
-    } else {
-      config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-    }
-  } catch (e) {
-    config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-  }
-  render();
-  autoSave();
+// ═══════ LOAD / PUBLISH ═══════
+// The catalog is SERVER-OWNED. This page edits a LOCAL DRAFT of the current published version and
+// publishes it as the next immutable version. It deliberately no longer reads or writes
+// localStorage['semo-extras-config'] — that per-browser catalog is exactly what made a
+// seller-authored upgrade invisible to the Worker, and therefore to the customer's document.
+// The legacy key is touched only by the one-time importLegacy() below.
+
+let baseVersionId = null;   // the version this draft descends from — publishing from a stale one 409s
+
+async function requireSession() {
+  if (CatalogClient.hasSession()) return true;
+  const pass = prompt('סיסמת מוכר:');
+  if (!pass) return false;
+  try { await CatalogClient.login(pass); return true; }
+  catch (e) { alert(e.status === 401 ? 'סיסמה שגויה' : ('התחברות נכשלה: ' + e.message)); return false; }
 }
 
-function saveConfig() {
-  localStorage.setItem('semo-extras-config', JSON.stringify(config));
-  showToast('ההגדרות נשמרו בהצלחה');
+async function loadConfig() {
+  if (!(await requireSession())) { document.getElementById('versionBadge').textContent = 'לא מחובר'; return; }
+  try {
+    const cur = await CatalogClient.loadCurrent(true);
+    baseVersionId = cur.versionId;
+    // flat server items → the {upgrades, potential} shape this page has always rendered
+    config = { upgrades: [], potential: [] };
+    for (const i of CatalogClient.toDraftItems(cur)) {
+      (i.category === 'potential' ? config.potential : config.upgrades).push(i);
+    }
+    document.getElementById('versionBadge').textContent = cur.versionId;
+    document.getElementById('btnImport').style.display = CatalogClient.readLegacyLocalCatalog() ? '' : 'none';
+    render();
+  } catch (e) {
+    document.getElementById('versionBadge').textContent = 'טעינה נכשלה';
+    alert('טעינת הקטלוג נכשלה: ' + e.message);
+  }
+}
+
+/** Publish the draft as the next immutable version. Edits are local until this is pressed. */
+async function publishConfig() {
+  if (!(await requireSession())) return;
+  const items = CatalogClient.toPublishItems([...config.upgrades, ...config.potential]);
+  try {
+    const r = await CatalogClient.publish(baseVersionId, items);
+    baseVersionId = r.versionId;
+    document.getElementById('versionBadge').textContent = r.versionId;
+    showToast('פורסמה גרסה ' + r.versionId);
+    await loadConfig();
+  } catch (e) {
+    if (e.status === 409) {
+      alert('הקטלוג עודכן על ידי משתמש אחר בינתיים (' + (e.body && e.body.currentVersionId) + ').\nהעריכות שלך לא נשמרו. הדף ייטען מחדש כדי שתוכל לבצע אותן על הגרסה העדכנית.');
+      await loadConfig();
+    } else {
+      alert('הפרסום נכשל: ' + e.message + (e.code ? ' [' + e.code + ']' : ''));
+    }
+  }
 }
 
 function resetToDefaults() {
-  config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  if (!confirm('לאפס את הטיוטה לקטלוג הברירת-מחדל של הקוד? הפעולה אינה מפרסמת עד ללחיצה על "פרסם".')) return;
+  const d = UpgradePricing.getDefaultCatalog();
+  config = {
+    upgrades:  (d.upgrades  || []).map(i => ({ ...i, category: 'upgrade',   active: true, customerToggleable: true })),
+    potential: (d.potential || []).map(i => ({ ...i, category: 'potential', active: true, customerToggleable: false })),
+  };
   render();
-  saveConfig();
+}
+
+/**
+ * ONE-TIME migration of a browser-local catalog into the server.
+ * Shows the exact diff first: an import must never be a silent merge, and a custom item whose only
+ * record is one browser is precisely the data this whole change exists to stop losing.
+ */
+async function importLegacy() {
+  if (!(await requireSession())) return;
+  const legacy = CatalogClient.readLegacyLocalCatalog();
+  if (!legacy) { alert('לא נמצא קטלוג מקומי ישן בדפדפן הזה.'); return; }
+  const cur = await CatalogClient.loadCurrent(true);
+  const d = CatalogClient.diffLegacyAgainst(cur, legacy);
+  const fmt = (a) => a.length ? a.map(i => '  • ' + (i.label || i.to.label)).join('\n') : '  (אין)';
+  if (!confirm('ייבוא הקטלוג המקומי אל השרת:\n\nפריטים חדשים:\n' + fmt(d.added) +
+               '\n\nפריטים שישונו:\n' + fmt(d.changed) +
+               '\n\nללא שינוי: ' + d.unchanged.length + '\n\nלפרסם גרסה חדשה עם השינויים האלה?')) return;
+
+  const merged = new Map(CatalogClient.toDraftItems(cur).map(i => [i.id, i]));
+  for (const l of legacy) {
+    const existing = merged.get(l.id);
+    merged.set(l.id, existing ? { ...existing, label: l.label, defaultPrice: l.defaultPrice } : { ...l, customerToggleable: l.category === 'upgrade' });
+  }
+  try {
+    const r = await CatalogClient.publish(cur.versionId, CatalogClient.toPublishItems([...merged.values()]), 'one-time import of a browser-local catalog');
+    CatalogClient.clearLegacyLocalCatalog();
+    document.getElementById('btnImport').style.display = 'none';
+    showToast('הייבוא הושלם — גרסה ' + r.versionId);
+    await loadConfig();
+  } catch (e) {
+    alert('הייבוא נכשל ולא פורסם דבר: ' + e.message + (e.code ? ' [' + e.code + ']' : ''));
+  }
 }
 
 // ═══════ RENDER ═══════
@@ -249,33 +298,31 @@ function deleteItem(category, index) {
   }
 }
 
-function addItem(category) {
+async function addItem(category) {
+  const labelInput = document.getElementById('new-' + category + '-label');
+  const priceInput = document.getElementById('new-' + category + '-price');
+  const label = (labelInput && labelInput.value || '').trim();
+  const price = parseInt(priceInput && priceInput.value) || 0;
+  if (!label) { labelInput && labelInput.focus(); alert('נא להזין שם פריט'); return; }
+  if (!(await requireSession())) return;
   try {
-    const labelInput = document.getElementById('new-' + category + '-label');
-    const priceInput = document.getElementById('new-' + category + '-price');
-    if (!labelInput) { alert('שגיאה: שדה "new-' + category + '-label" לא נמצא'); return; }
-    const label = labelInput.value.trim();
-    const price = parseInt(priceInput?.value) || 0;
-
-    if (!label) { labelInput.focus(); alert('נא להזין שם פריט'); return; }
-
-    const id = label.replace(/[^א-תa-zA-Z0-9]/g, '-').replace(/-+/g, '-').substring(0, 20) + '-' + Date.now().toString(36);
-
-    config[category].push({ id, label, defaultPrice: price });
-    labelInput.value = '';
-    if (priceInput) priceInput.value = '';
+    // The SERVER mints the id from the catalog's monotonic counter. The browser no longer invents
+    // ids from Date.now(), which could collide between two sellers adding the same label.
+    const id = await CatalogClient.mintId(label);
+    config[category].push({
+      id, label, defaultPrice: price,
+      category: category === 'upgrades' ? 'upgrade' : 'potential',
+      active: true, customerToggleable: category === 'upgrades',
+    });
+    labelInput.value = ''; if (priceInput) priceInput.value = '';
     render();
-    autoSave();
-    showToast('הפריט "' + label + '" נוסף בהצלחה');
-  } catch (err) {
-    alert('שגיאה בהוספת פריט: ' + err.message);
-    console.error('addItem error:', err);
-  }
+    showToast('נוסף "' + label + '" — לחץ "פרסם גרסה חדשה" כדי להחיל');
+  } catch (e) { alert('הוספת הפריט נכשלה: ' + e.message); }
 }
 
-function autoSave() {
-  localStorage.setItem('semo-extras-config', JSON.stringify(config));
-}
+// Edits are a LOCAL DRAFT until publishConfig(). There is no autosave: a catalog version is
+// immutable and auditable, so writing one per keystroke would be wrong.
+function autoSave() { document.getElementById('versionBadge').textContent = (baseVersionId || '') + ' • טיוטה לא מפורסמת'; }
 
 // ═══════ DRAG & DROP ═══════
 ['upgrades', 'potential'].forEach(cat => {
