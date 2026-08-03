@@ -54,7 +54,8 @@ const UpgradePricing = (() => {
   };
 
   // ── the upgrade catalog ─────────────────────────────────────────────────────────────────────
-  // `calcType` is the pricing strategy and is CODE-OWNED (see mergeCatalog). `label`/`defaultPrice`
+  // `calcType` is the pricing strategy and is CODE-OWNED (shared/extras-catalog.js re-derives it on
+  // every published version, so a client can never pin one). `label`/`defaultPrice`
   // are CONFIG-OWNED — the extras manager may change them.
   // `inverterPriceKey` opts an item into the per-inverter price book.
   // `legacy: true` = resolvable for historical quotes, never offered on a new one.
@@ -122,53 +123,6 @@ const UpgradePricing = (() => {
       batteryFirst: book.batteryFirst,
       batteryAdditional: book.batteryAdditional,
     };
-  }
-
-  /**
-   * mergeCatalog(savedConfig)
-   * Reconciles a stored extras config (e.g. the extras manager's `semo-extras-config`) with the
-   * code catalog. The rule is deliberate and one-directional:
-   *   STRUCTURE  (calcType / inverterPriceKey / legacy) is CODE-owned — always taken from here,
-   *              so an old stored config cannot pin an item to a stale pricing strategy.
-   *   PRESENTATION + PRICE (label / defaultPrice / note) is CONFIG-owned — the manager wins.
-   * Items the manager added that this catalog does not know are preserved untouched.
-   * Default items missing from the stored config are appended (this is how a new upgrade ships).
-   */
-  function mergeCatalog(savedConfig) {
-    const saved = savedConfig && typeof savedConfig === 'object' ? savedConfig : {};
-    const out = { upgrades: [], potential: [], schemaVersion: PRICING_SCHEMA_VERSION };
-
-    const defaultsById = {};
-    for (const cat of ['upgrades', 'potential']) {
-      for (const item of DEFAULT_CATALOG[cat]) defaultsById[item.id] = { item, cat };
-    }
-
-    const seen = new Set();
-    for (const cat of ['upgrades', 'potential']) {
-      const list = Array.isArray(saved[cat]) ? saved[cat] : [];
-      for (const item of list) {
-        if (!item || !item.id || seen.has(item.id)) continue;
-        seen.add(item.id);
-        const def = defaultsById[item.id];
-        if (!def) { out[cat].push({ ...item }); continue; } // manager-authored custom item
-        const merged = { ...item };
-        // structure is code-owned
-        if (def.item.calcType) merged.calcType = def.item.calcType; else delete merged.calcType;
-        if (def.item.inverterPriceKey) merged.inverterPriceKey = def.item.inverterPriceKey; else delete merged.inverterPriceKey;
-        if (def.item.legacy) merged.legacy = true; else delete merged.legacy;
-        if (merged.label == null) merged.label = def.item.label;
-        if (merged.defaultPrice == null) merged.defaultPrice = def.item.defaultPrice;
-        out[cat].push(merged);
-      }
-    }
-
-    // append defaults the stored config never saw, in catalog order, into their own category
-    for (const cat of ['upgrades', 'potential']) {
-      for (const item of DEFAULT_CATALOG[cat]) {
-        if (!seen.has(item.id)) { out[cat].push({ ...item }); seen.add(item.id); }
-      }
-    }
-    return out;
   }
 
   /**
@@ -306,7 +260,6 @@ const UpgradePricing = (() => {
   return {
     PRICING_SCHEMA_VERSION,
     getDefaultCatalog,
-    mergeCatalog,
     migrateExtrasSelections,
     flattenCatalog,
     legacyUpgradeIds,
