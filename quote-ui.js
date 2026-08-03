@@ -429,60 +429,39 @@ class QuoteUI {
   /**
    * Load the authoritative catalog before the extras UI is built. Failure is VISIBLE and BLOCKING:
    * `_catalogError` disables quote issuance rather than letting the seller author against nothing.
+   * There is no login — see shared/catalog-client.js.
    */
   async _loadCatalog() {
     this._catalog = null;
     this._catalogError = null;
     try {
-      if (!CatalogClient.hasSession()) { this._catalogError = 'no_session'; return; }
       this._catalog = await CatalogClient.loadCurrent();
     } catch (e) {
-      this._catalogError = e.status === 401 ? 'no_session' : (e.code || 'catalog_unavailable');
+      this._catalogError = e.code || 'catalog_unavailable';
     }
   }
 
-  /** The banner that tells the seller why they cannot issue a quote, and offers the sign-in. */
+  /** Shows which catalog version this quote is being authored against, or why it is missing. */
   _renderCatalogState() {
     const el = document.getElementById('catalog-state');
     if (!el) return;
     if (this._catalog) {
-      el.innerHTML = `<span style="color:#16a34a">✓ קטלוג ${this._catalog.versionId}</span>
-        <button type="button" onclick="_quoteUI.signOutCatalog()" style="margin-right:10px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:11px;cursor:pointer;font-family:inherit">התנתק</button>`;
+      el.innerHTML = `<span style="color:#16a34a">✓ קטלוג ${this._escapeHtml(this._catalog.versionId)}</span>`;
       el.style.background = '#f0fdf4';
       return;
     }
-    const msg = this._catalogError === 'no_session'
-      ? 'נדרשת הזדהות כדי לטעון את קטלוג השדרוגים'
-      : 'קטלוג השדרוגים אינו זמין — לא ניתן להפיק הצעה';
-    el.innerHTML = `<span style="color:#b91c1c">⚠ ${msg}</span>
-      <button type="button" onclick="_quoteUI.signInCatalog()" style="margin-right:10px;padding:3px 10px;border:none;border-radius:6px;background:#16a34a;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">הזדהות</button>`;
+    el.innerHTML = `<span style="color:#b91c1c">⚠ קטלוג השדרוגים אינו זמין — לא ניתן להפיק הצעה</span>
+      <button type="button" onclick="_quoteUI.reloadCatalog()" style="margin-right:10px;padding:3px 10px;border:none;border-radius:6px;background:#16a34a;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">נסה שוב</button>`;
     el.style.background = '#fef2f2';
   }
 
-  /** Seller sign-in. The passphrase is exchanged for a short-lived token held in sessionStorage. */
-  async signInCatalog() {
-    const pass = prompt('סיסמת מוכר:');
-    if (!pass) return;
-    try {
-      await CatalogClient.login(pass);
-      await this._loadCatalog();
-      this._renderExtrasUI();
-      this._renderCatalogState();
-      this._updatePreview();
-      EmailService?.showToast?.('הקטלוג נטען בהצלחה');
-    } catch (e) {
-      EmailService?.showToast?.(e.status === 401 ? 'סיסמה שגויה' : 'טעינת הקטלוג נכשלה', true);
-      this._catalogError = e.status === 401 ? 'no_session' : 'catalog_unavailable';
-      this._renderCatalogState();
-    }
-  }
-
-  signOutCatalog() {
-    CatalogClient.logout();
-    this._catalog = null;
-    this._catalogError = 'no_session';
+  /** Retry after a transient network failure. */
+  async reloadCatalog() {
+    await this._loadCatalog();
     this._renderExtrasUI();
     this._renderCatalogState();
+    this._updatePreview();
+    if (this._catalog) EmailService?.showToast?.('הקטלוג נטען');
   }
 
   /**
@@ -725,9 +704,7 @@ class QuoteUI {
     // customer's document — the defect this whole path exists to remove.
     if (!this._catalog) {
       this._renderCatalogState();
-      EmailService?.showToast?.(this._catalogError === 'no_session'
-        ? 'נדרשת הזדהות לקטלוג לפני הפקת הצעה'
-        : 'קטלוג השדרוגים אינו זמין — לא ניתן להפיק הצעה', true);
+      EmailService?.showToast?.('קטלוג השדרוגים אינו זמין — לא ניתן להפיק הצעה', true);
       document.getElementById('catalog-state')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return false;
     }
