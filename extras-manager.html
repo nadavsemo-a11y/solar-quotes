@@ -133,16 +133,7 @@ let dragItem = null;
 
 let baseVersionId = null;   // the version this draft descends from — publishing from a stale one 409s
 
-async function requireSession() {
-  if (CatalogClient.hasSession()) return true;
-  const pass = prompt('סיסמת מוכר:');
-  if (!pass) return false;
-  try { await CatalogClient.login(pass); return true; }
-  catch (e) { alert(e.status === 401 ? 'סיסמה שגויה' : ('התחברות נכשלה: ' + e.message)); return false; }
-}
-
 async function loadConfig() {
-  if (!(await requireSession())) { document.getElementById('versionBadge').textContent = 'לא מחובר'; return; }
   try {
     const cur = await CatalogClient.loadCurrent(true);
     baseVersionId = cur.versionId;
@@ -162,7 +153,6 @@ async function loadConfig() {
 
 /** Publish the draft as the next immutable version. Edits are local until this is pressed. */
 async function publishConfig() {
-  if (!(await requireSession())) return;
   const items = CatalogClient.toPublishItems([...config.upgrades, ...config.potential]);
   try {
     const r = await CatalogClient.publish(baseVersionId, items);
@@ -196,7 +186,6 @@ function resetToDefaults() {
  * record is one browser is precisely the data this whole change exists to stop losing.
  */
 async function importLegacy() {
-  if (!(await requireSession())) return;
   const legacy = CatalogClient.readLegacyLocalCatalog();
   if (!legacy) { alert('לא נמצא קטלוג מקומי ישן בדפדפן הזה.'); return; }
   const cur = await CatalogClient.loadCurrent(true);
@@ -304,7 +293,6 @@ async function addItem(category) {
   const label = (labelInput && labelInput.value || '').trim();
   const price = parseInt(priceInput && priceInput.value) || 0;
   if (!label) { labelInput && labelInput.focus(); alert('נא להזין שם פריט'); return; }
-  if (!(await requireSession())) return;
   try {
     // The SERVER mints the id from the catalog's monotonic counter. The browser no longer invents
     // ids from Date.now(), which could collide between two sellers adding the same label.
