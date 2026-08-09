@@ -217,6 +217,34 @@
     font-weight: 500;
   }
 
+  /* Survey notes — numbered site-survey remarks on the signed document.
+     Font size fixed at 11px by product requirement. */
+  .notes-section { padding: 0 40px 28px; }
+  .notes-title {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--ink-500);
+    margin-bottom: 10px;
+  }
+  .notes-block {
+    background: var(--ink-50);
+    border: 1.5px solid var(--ink-200);
+    border-right: 3px solid var(--ags-mint-deep);
+    border-radius: var(--r-md);
+    padding: 16px 20px;
+  }
+  .notes-block ol {
+    margin: 0;
+    padding-right: 18px;
+    font-size: 11px;
+    line-height: 1.8;
+    color: var(--ink-700);
+  }
+  .notes-block ol li { margin-bottom: 6px; }
+  .notes-block ol li:last-child { margin-bottom: 0; }
+
   /* Signature section */
   .signature-section {
     padding: 32px 40px 40px;
@@ -396,6 +424,7 @@
     .stat { border-inline-start: 0; }
     .stat:first-child { border-bottom: 1.5px solid var(--ink-200); }
     .image-section { padding: 0 20px 24px; }
+    .notes-section { padding: 0 20px 20px; }
     .signature-section { padding: 24px 20px 32px; }
     .sig-grid { grid-template-columns: 1fr; }
     .footer { padding: 22px 20px; }
@@ -424,6 +453,7 @@
     .specs-grid { gap: 10px; }
     .spec-card { padding: 12px 16px; }
     .image-section { padding: 0 40px 18px; }
+    .notes-section { padding: 0 40px 14px; page-break-inside: avoid; }
 
     /* Keep the design image whole AND on page 1: cap height so the
        title+specs+image block fits within the A4 printable area (277mm). */
@@ -478,6 +508,9 @@
 
   <!-- Design Image -->
   <div class="image-section" id="imageSection"></div>
+
+  <!-- Survey Notes (numbered, shown only when the project has saved notes) -->
+  <div class="notes-section" id="notesSection" style="display:none"></div>
 
   <!-- Signature Section -->
   <div class="signature-section" id="signatureSection">
@@ -624,6 +657,17 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
     imgSection.innerHTML = `
       <div class="image-title">תמונת הדמייה — מבט על</div>
       <div class="no-image">תמונת הדמייה לא זמינה</div>`;
+  }
+
+  // ── Survey notes (numbered site-survey remarks, 11px, bodies only) ──
+  const notesEl = document.getElementById('notesSection');
+  const surveyNotes = Array.isArray(specData.surveyNotes) ? specData.surveyNotes.filter(n => typeof n === 'string' && n.trim()) : [];
+  if (surveyNotes.length) {
+    const escN = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    notesEl.innerHTML = `
+      <div class="notes-title">הערות</div>
+      <div class="notes-block"><ol>${surveyNotes.map(n => `<li>${escN(n)}</li>`).join('')}</ol></div>`;
+    notesEl.style.display = '';
   }
 
   // ── Render terms ──
