@@ -1448,6 +1448,14 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
       <div id="hubspotResults" style="max-height:200px;overflow-y:auto"></div>
     </div>
 
+    <!-- Deep-link prefill failure (portal opened from SEMO Scheduling with ?hubspotId=…).
+         Visible and persistent by design: a silent failure would let the seller fill the quote by
+         hand and mint a SECOND HubSpot contact for a customer who already has one. Cleared the
+         moment a contact is actually selected (see selectHubspotContact). -->
+    <div id="hsDeepLinkWarning" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:13px;font-weight:700;color:#92400e">
+      ⚠ לא הצלחנו לטעון את הלקוח מ-HubSpot. יש לבחור את הלקוח ידנית לפני שמירת ההצעה.
+    </div>
+
     <!-- Client details — shared component (shared/client-details.js); same element IDs quote-ui.js reads. -->
     <div id="clientDetailsMount"></div>
 
@@ -1979,6 +1987,10 @@ async function loadFromQuoteUrl() {
 var _hsTimer = null;
 var _hsContactId = null;
 
+// Same override quote-ui.js and shared/catalog-client.js use, so the picker and the deep link
+// also work against a local Worker. The Worker injects the production value when it serves /portal.
+var HS_API_BASE = (typeof window !== 'undefined' && window.__SEMO_API_BASE__) || 'https://s-a.gs';
+
 function openHubspotSearch() {
   document.getElementById('hubspotSearchBox').style.display = 'block';
   document.getElementById('hubspotQuery').focus();
@@ -1995,7 +2007,7 @@ function searchHubspot(q) {
   if (q.length < 2) { document.getElementById('hubspotResults').innerHTML = ''; return; }
   _hsTimer = setTimeout(async function() {
     try {
-      var res = await fetch('https://s-a.gs/q/hubspot/search?q=' + encodeURIComponent(q));
+      var res = await fetch(HS_API_BASE + '/q/hubspot/search?q=' + encodeURIComponent(q));
       var data = await res.json();
       var box = document.getElementById('hubspotResults');
       if (!data.results || data.results.length === 0) {
@@ -2018,9 +2030,11 @@ function searchHubspot(q) {
   }, 300);
 }
 
+// THE single authority for mapping a HubSpot contact onto the quote form. Both the picker and the
+// deep link go through it, so there is one field mapping and one place that records the contact id
+// the save-time /q/hubspot/sync will PATCH.
 function selectHubspotContact(c) {
   _hsContactId = c.id;
-  var parts = (c.name || '').split(' ');
   document.getElementById('clientName').value = c.name || '';
   document.getElementById('clientPhone').value = (c.phone || '').replace('+972', '0');
   if (c.email) document.getElementById('clientEmail').value = c.email;
@@ -2030,8 +2044,46 @@ function selectHubspotContact(c) {
     if (_quoteUI) _quoteUI._selectCity(c.city);
   }
   closeHubspotSearch();
+  showDeepLinkWarning(false);   // a contact IS selected now — whatever failed earlier is moot
   if (typeof EmailService !== 'undefined') EmailService.showToast('✅ פרטי לקוח נטענו מ-HubSpot');
 }
+
+// ── HubSpot deep link — the portal opened from SEMO Scheduling: /portal?hubspotId=… ──
+//
+// ONLY the HubSpot contact id travels in the URL; no customer PII. The id is the one identity the
+// two systems share (email/phone/name matching is unsafe against real SEMO data), and carrying it
+// into _hsContactId is exactly what makes the saved quote UPDATE that contact instead of minting
+// a duplicate.
+//
+// Waits on window.quoteUIReady (quote-ui.js) rather than on listener order: the fill calls
+// _quoteUI._selectCity, and two independent DOMContentLoaded listeners have no order between them.
+
+function showDeepLinkWarning(show) {
+  var el = document.getElementById('hsDeepLinkWarning');
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+async function prefillFromDeepLink() {
+  var id = new URLSearchParams(location.search).get('hubspotId');
+  if (!id) return;
+  // The id format is validated by the endpoint — one authority for the rule, not two.
+  var ui = await window.quoteUIReady;
+  try {
+    if (!ui) throw new Error('quote UI failed to initialise');
+    var res = await fetch(HS_API_BASE + '/q/hubspot/search?id=' + encodeURIComponent(id));
+    var data = res.ok ? await res.json().catch(function () { return null; }) : null;
+    var contact = data && data.results && data.results[0];
+    if (!contact) throw new Error('contact ' + id + ' not loaded (HTTP ' + res.status + ')');
+    selectHubspotContact(contact);
+  } catch (e) {
+    // Nothing was populated, so no half-filled customer is left behind — but the seller must be
+    // told, or they will type the customer in by hand and create a duplicate contact.
+    console.warn('[deep-link] HubSpot prefill failed:', e && e.message);
+    showDeepLinkWarning(true);
+  }
+}
+
+prefillFromDeepLink();
 
 // ══════════════════════════════════════════════════════════════════════
 // CONTENT EDITOR — in-portal
