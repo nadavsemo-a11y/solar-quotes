@@ -1515,8 +1515,11 @@ class QuoteUI {
     set('clientEmail', s.email);
     // Store email for client-side use (e.g. post-sign)
     this._clientEmail = s.email || '';
-    // Restore HubSpot contact ID so duplicate-quote preserves the existing CRM link
-    if (s.hsId) window._hsContactId = s.hsId;
+    // Restore the HubSpot contact id so duplicate-quote preserves the existing CRM link.
+    // ALWAYS assigned, never only-when-present: this call has just replaced every customer field
+    // with the loaded quote's customer, so a leftover id from a previously selected contact would
+    // make the save PATCH that OTHER contact with this customer's name, phone and address.
+    window._hsContactId = s.hsId || null;
     if (s.city) this._selectCity(s.city);
     const radio = (name, val) => {
       if (!val) return;
@@ -2228,15 +2231,34 @@ class QuoteUI {
 
 // ── Global helpers (לשימוש מ-HTML inline handlers) ─────────────────────
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // Set today's date as default
-  const dateEl = document.getElementById('quoteDate');
-  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+// THE readiness boundary of the portal's quote UI. Anything that must run only after _quoteUI
+// exists and is initialised waits on this promise instead of guessing at listener order — two
+// independent DOMContentLoaded listeners have no defined order between them, and the HubSpot
+// deep-link prefill (index.html) calls _quoteUI._selectCity.
+//
+// Created at script-eval time, so a waiter registered anywhere later still sees it. It RESOLVES
+// with the initialised QuoteUI, or with null when initialisation failed — it never rejects,
+// because most page loads have no waiter and an unhandled rejection would be noise.
+let _settleQuoteUIReady;
+window.quoteUIReady = new Promise((resolve) => { _settleQuoteUIReady = resolve; });
 
-  window._quoteUI = new QuoteUI();
-  // No explicit URL — loadTemplate picks v1/v2 based on window.__TEMPLATE_VERSION__.
-  await _quoteUI.loadTemplate();
-  _quoteUI.init();
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Set today's date as default
+    const dateEl = document.getElementById('quoteDate');
+    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+
+    window._quoteUI = new QuoteUI();
+    // No explicit URL — loadTemplate picks v1/v2 based on window.__TEMPLATE_VERSION__.
+    await _quoteUI.loadTemplate();
+    _quoteUI.init();
+    _settleQuoteUIReady(window._quoteUI);
+  } catch (e) {
+    // A waiter must learn that the UI is unusable rather than hang forever; the failure itself
+    // still surfaces in the console.
+    _settleQuoteUIReady(null);
+    throw e;
+  }
 
   // Fetch current USD/ILS rate
   try {
