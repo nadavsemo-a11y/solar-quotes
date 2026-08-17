@@ -363,15 +363,20 @@ class QuoteUI {
     const premiumPanel = parseFloat(get('premiumPanelPrice')) || 0;
     const usdRate      = parseFloat(get('usdRate')) || inputDefaults.usdRate;
 
+    // Single-line customer fields are trimmed and whitespace-collapsed here, at the ONE point they
+    // enter the quote. A stray double space is invisible in the input but would be frozen into the
+    // signed snapshot and PATCHed into HubSpot. The note keeps its line breaks — they are content.
+    const line = id => get(id).trim().replace(/\s+/g, ' ');
+
     return {
       // לקוח
-      name:    get('clientName'),
-      phone:   get('clientPhone'),
-      address: get('clientAddress'),
-      cid:     get('clientID'),
+      name:    line('clientName'),
+      phone:   line('clientPhone'),
+      address: line('clientAddress'),
+      cid:     line('clientID'),
       date:    get('quoteDate'),
       note:    get('customNote'),
-      city:    this.selectedCity || get('citySearch'),
+      city:    this.selectedCity || line('citySearch'),
 
       // מערכת
       kw:       dcKW,
@@ -1659,7 +1664,7 @@ class QuoteUI {
 
     const dateStr     = vals.date ? new Date(vals.date).toLocaleDateString('he-IL') : '';
     const profit      = Math.round(p.totalInc - d.price);
-    const fullAddress = `${d.city}${vals.address ? ', ' + vals.address : ''}`;
+    const fullAddress = ClientLocation.formatClientLocation({ city: d.city, address: vals.address });
     const systemTypeLabel = d.acKW > 15 ? 'מערכת סולארית מסחרית' : 'מערכת סולארית ביתית';
 
     const meterInc    = d.needsMeter ? `<div class="inc-item"><div class="inc-check">✓</div><div class="inc-text">לוח מונה ייצור</div></div>` : '';
