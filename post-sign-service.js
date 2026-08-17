@@ -81,29 +81,11 @@ class PostSignService {
     }
   }
 
-  static async _notifyCompany(docType, docId, signature, emailData) {
-    try {
-      const resp = await fetch(`${PostSignService.WORKER_URL}/q/email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'signNotify',
-          companyEmail: PostSignService.COMPANY_EMAIL,
-          docType, docId,
-          signerName: signature.name,
-          signerId:   signature.idNum,
-          refID:      signature.refID,
-          dateStr:    signature.dateStr,
-          ipAddr:     signature.ipAddr,
-          clientName: emailData.clientName || '',
-          docUrl:     emailData.docUrl     || '',
-        }),
-      });
-      return await resp.json();
-    } catch (err) {
-      return { ok: false, error: err.message };
-    }
-  }
+  // `_notifyCompany` was removed on 2026-08-16 together with the `signNotify` action it called.
+  // It had been dead since post-sign mail moved server-side: `process()` never invoked it, and the
+  // public /q/email proxy stopped accepting the action long before. `_confirmClient` below is dead
+  // for the same reason and is kept only because `signConfirm` still exists; it is a deletion
+  // candidate, not a supported path.
 
   static async _confirmClient(docType, signature, emailData) {
     try {
