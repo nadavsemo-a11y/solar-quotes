@@ -28,6 +28,13 @@ const _C = {
   lbl: 'display:block;font-size:13px;font-weight:700;margin:0 0 5px;color:#1A1A1A',
 };
 
+// A street + number, generously bounded. The longest real Israeli street names run to about 30
+// characters and a full "street, number, apartment, floor" line to about 60; 120 leaves room for any
+// address a seller legitimately types while stopping a pasted paragraph from reaching the customer
+// document and HubSpot. The bound is applied at ENTRY only — no renderer ever truncates, because a
+// signed document must show exactly the value that was signed.
+const _ADDRESS_MAX = 120;
+
 function _formHTML() {
   return `
   <div class="ags-cd" style="background:#fff;border:1.5px solid #E4E4E4;border-radius:14px;overflow:hidden">
@@ -43,7 +50,7 @@ function _formHTML() {
         <input id="citySearch" type="text" autocomplete="off" placeholder="הקלד שם ישוב..." style="${_C.inp}">
         <ul id="cityDropdown" style="display:none;position:absolute;top:100%;right:0;left:0;list-style:none;margin:3px 0 0;padding:0;background:#fff;border:1.5px solid #9CF5C4;border-radius:8px;max-height:200px;overflow-y:auto;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.12)"></ul>
       </div>
-      <div><label style="${_C.lbl}">כתובת (רחוב + מספר)</label><input id="clientAddress" type="text" placeholder="רחוב ומספר" style="${_C.inp}"></div>
+      <div><label style="${_C.lbl}">כתובת (רחוב + מספר)</label><input id="clientAddress" type="text" maxlength="${_ADDRESS_MAX}" placeholder="רחוב ומספר" style="${_C.inp}"></div>
       <div><label style="${_C.lbl}">תאריך הצעה</label><input id="quoteDate" type="date" dir="ltr" style="${_C.inp}"></div>
       <div><label style="${_C.lbl}">ת.ז. לקוח (לחתימה)</label><input id="clientID" type="text" inputmode="numeric" dir="ltr" placeholder="000000000" style="${_C.inp}"></div>
       <div><label style="${_C.lbl}">הערה אישית לגוף ההצעה</label><textarea id="customNote" rows="2" placeholder="הוסף הערה שתופיע בהצעה..." style="${_C.inp};resize:vertical"></textarea></div>
@@ -93,8 +100,12 @@ function renderClientDetails(container, opts) {
 
 function getClientDetailsValues(container) {
   const v = (id) => { const el = _byId(container, id); return el ? (el.value || '').trim() : ''; };
-  return { name: v('clientName'), phone: v('clientPhone'), email: v('clientEmail'),
-    city: v('citySearch'), address: v('clientAddress'), date: v('quoteDate'), cid: v('clientID'), note: v('customNote') };
+  // Single-line identity fields are whitespace-normalized on the way out: a stray double space typed
+  // into an address is invisible on screen but becomes a permanent difference between the CRM record,
+  // the web quote and the PDF. The free-text NOTE keeps its formatting — its line breaks are content.
+  const line = (id) => v(id).replace(/\s+/g, ' ');
+  return { name: line('clientName'), phone: line('clientPhone'), email: line('clientEmail'),
+    city: line('citySearch'), address: line('clientAddress'), date: v('quoteDate'), cid: line('clientID'), note: v('customNote') };
 }
 
 function setClientDetailsValues(container, c) {
