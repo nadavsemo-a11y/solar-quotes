@@ -1855,6 +1855,7 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
 <!-- Shared client-details component — render BEFORE quote-ui.js so its DOMContentLoaded init finds the
      fields. wireAutocomplete:false → quote-ui.js keeps its own city autocomplete + selectedCity logic. -->
 <script src="shared/israel-cities.js"></script>
+<script src="shared/client-location.js"></script>
 <script src="shared/client-details.js"></script>
 <script>try{ClientDetails.renderClientDetails(document.getElementById('clientDetailsMount'),{wireAutocomplete:false});}catch(e){console.error('client-details render failed',e);}</script>
 <script src="quote-ui.js"></script>
@@ -2318,7 +2319,7 @@ function ceResetDefaults() {
 </script>
 
 <!-- Unified Version Display -->
-<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.02.09.00</div>
+<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.02.10.00</div>
 
 </body>
 </html>
