@@ -26,7 +26,14 @@
  * them cannot silently restyle a legal record. See solar-quote/solar-pdf-map.js.
  *
  * PURITY: no DOM, no I/O, no time/rand. Does not mutate its input.
+ *
+ * IIFE-wrapped so its top-level names don't collide with sibling modules loaded as plain
+ * <script>s in one global scope (the portals load several shared modules together). Without it,
+ * `const api` here and `const api` in solar-quote/solar-content-blocks.js are a duplicate lexical
+ * declaration: the browser discards THIS ENTIRE SCRIPT before a line of it runs, so
+ * globalThis.ClientLocation is never assigned and the quote page throws on render.
  */
+(function () {
 'use strict';
 
 // Values a field carries when it means "nothing here": the contract's em-dash placeholder and the
@@ -65,3 +72,4 @@ function formatLegacyPdfLocation(customer) {
 const api = { formatClientLocation, formatLegacyPdfLocation, normalizePart, SEPARATOR, LEGACY_SEPARATOR };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.ClientLocation = api;
+})();
