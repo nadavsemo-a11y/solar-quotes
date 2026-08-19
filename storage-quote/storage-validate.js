@@ -79,8 +79,11 @@ function validateStorageState(state, opts) {
   // ── customer (name required only at save/sign; provisional during extraction) ──
   const c = s.customer || {};
   if (requireCustomer && !isNonEmptyStr(c.name)) errors.push('customer.name required');
-  // phone/address/city/date/note are optional but must be strings if present
-  for (const k of ['phone', 'address', 'city', 'date', 'note']) {
+  // phone/address/city/date/note are optional but must be strings if present.
+  // hubspotId is the CRM identity carried by the portal (never typed); it is optional — a quote
+  // authored without pulling a contact simply has none — but a non-string id must fail loudly
+  // rather than reach /q/hubspot/sync and PATCH something unintended.
+  for (const k of ['phone', 'address', 'city', 'date', 'note', 'hubspotId']) {
     if (c[k] != null && typeof c[k] !== 'string') errors.push(`customer.${k} must be a string`);
   }
 
