@@ -191,6 +191,10 @@ function canonicalStorageKnobs(/* state */) {
  * storage quote. Pure + browser-safe (the storage portal calls this directly; the adapter
  * delegates here so there is ONE source). Storage wording only — no solar "DC power".
  * ctx = { quoteId, quoteUrl }.
+ *
+ * `hubspotId` is emitted at the TOP LEVEL, not inside `customer`: /q/hubspot/sync reads it off the
+ * request body itself and never looks inside `customer`, so an id nested there is silently ignored
+ * and every quote mints a duplicate contact. With it, the endpoint PATCHes the existing contact.
  */
 function buildStorageHubspotSyncPayload(state, ctx) {
   const s = state || {}; const c = s.customer || {}; const p = s.project || {}; const cap = s.capex || {};
@@ -203,6 +207,7 @@ function buildStorageHubspotSyncPayload(state, ctx) {
   const noteBody = `הצעת מחיר — מערכת אגירה מסחרית — ${name}<br>${metricLabel}: ${metricValue}<br>עלות פרויקט: ${fmtILS(cap.totalProjectCost)}<br>לינק: <a href="${quoteUrl}" target="_blank">${quoteUrl}</a>`;
   return {
     quoteType: 'storage', quoteId: x.quoteId || '', quoteUrl,
+    hubspotId: c.hubspotId || null,
     customer: { name, phone: c.phone || '', email: c.email || '', address: c.address || '', city: c.city || '' },
     headlineMetricLabel: metricLabel, headlineMetricValue: metricValue,
     noteBody, taskTitle: `מעקב הצעת אגירה — ${name}`, taskBody: noteBody,
