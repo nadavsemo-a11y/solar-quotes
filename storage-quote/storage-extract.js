@@ -46,6 +46,9 @@ const V = (typeof module !== 'undefined' && module.exports)
   ? require('./storage-validate.js') : globalThis.StorageValidate;
 const P = (typeof module !== 'undefined' && module.exports)
   ? require('./storage-public.js') : globalThis.StoragePublic;
+// Canonical chart series (compact hourly/daily reduction of the 8,760-row dispatch sheet).
+const CS = (typeof module !== 'undefined' && module.exports)
+  ? require('./storage-chart-series.js') : globalThis.StorageChartSeries;
 
 // ── number parsing — tolerant of "1,108,600", "₪1,108,600", "517.00 ILS", "100 kWp", "17.2%" ──
 function num(v) {
@@ -602,6 +605,20 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
       feedInTariff: Number.isFinite(feedInTariff) ? feedInTariff : null,
       normalizedDischargeKwhPerKw: Number.isFinite(normalizedDischargeKwhPerKw) ? normalizedDischargeKwhPerKw : null,
     },
+    // Compact canonical chart series. The dispatch sheet itself is never stored — only one
+    // representative day at hourly resolution plus one aggregate per calendar day, which is what
+    // the charts are drawn from. Null when the workbook cannot supply it; the affected charts are
+    // then simply absent rather than drawn from substitute data.
+    chartSeries: (function () {
+      try {
+        const cs = CS.buildChartSeries({ sheets, storageKwh });
+        (cs.warnings || []).forEach(w => warnings.push(w));
+        return cs.ok ? cs.series : null;
+      } catch (e) {
+        warnings.push(`chart series derivation failed (${e.message}) — the daily charts are omitted`);
+        return null;
+      }
+    })(),
     capex: { totalProjectCost, pvCost, storageCost, balanceOfPlantCost, otherVisibleItems: [] },
     metrics: { npv, irr, paybackYears, profitabilityIndex: Number.isFinite(profitabilityIndex) ? profitabilityIndex : null },
     arrays20y: { revenuesBaseline: revBaseline, revenuesOptimized: revOptimized, lowVoltageBonus: lvBonus, operationalProfit, cfads, freeCashFlow, cumulativeCashFlow },
