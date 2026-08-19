@@ -150,6 +150,15 @@ function buildStorageSignedSnapshot(state /* , knobs ignored */) {
       freeCashFlow: a.freeCashFlow.map(round),
       cumulativeCashFlow: a.cumulativeCashFlow.map(round),
     },
+    // The charts the customer signed, bound by content hash. Only { id, hash } is carried: the
+    // artifacts themselves are frozen in the signed body HTML and in the signed-time pdfData, both
+    // of which are self-contained, so the snapshot pins WHICH chart bytes were agreed to without
+    // duplicating tens of kilobytes into every signature record. Sorted for determinism.
+    // Empty for quotes authored before chart artifacts existed.
+    chartArtifacts: (Array.isArray(s.chartArtifacts) ? s.chartArtifacts : [])
+      .filter(x => x && typeof x.id === 'string' && typeof x.hash === 'string')
+      .map(x => ({ id: x.id, hash: x.hash }))
+      .sort((p, q) => (p.id < q.id ? -1 : p.id > q.id ? 1 : 0)),
     financing: fin, // canonical default assumptions (the customer simulator does NOT affect this)
     // Payment schedule the customer signs: the per-quote (negotiated) config resolved to whole-shekel
     // amounts, or the default schedule for legacy states with none. Resolved ONCE here (single source);
