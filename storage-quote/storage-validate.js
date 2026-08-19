@@ -29,7 +29,7 @@ const PM = (typeof module !== 'undefined' && module.exports)
   : (typeof globalThis !== 'undefined' ? globalThis.StoragePaymentMilestones : undefined);
 
 const STORAGE_QUOTE_SCHEMA_VERSION = 1;
-const STORAGE_SNAPSHOT_VERSION = 1;
+const STORAGE_SNAPSHOT_VERSION = 2;   // v2 binds the chart artifacts by content hash
 // The project horizon (year-array length) is PER-QUOTE, not fixed: enSights workbooks run anywhere
 // from ~17 to ~25 operating years. We no longer assume 20 — we only require that ALL year arrays
 // share one length N and that N is within a sane range. YEARS stays as the nominal reference.
@@ -116,8 +116,10 @@ function validateStorageState(state, opts) {
     }
   }
 
-  // ── summaryCharts (optional): the Summary-sheet charts as compressed image data-URIs. Bounded so
-  //    a quote can't bloat KV / the frozen HTML without limit. Each must be a safe image data-URI. ──
+  // ── summaryCharts (LEGACY, optional): pre-artifact quotes stored the Summary-sheet charts as
+  //    compressed image data-URIs, captioned by array position. New quotes carry `chartArtifacts`
+  //    instead; this block exists solely so a quote authored before that change still validates.
+  //    Do not extend it — see chart-artifacts.js for the current model. ──
   const sc = s.summaryCharts;
   if (sc != null) {
     if (!Array.isArray(sc)) errors.push('summaryCharts must be an array or null');
@@ -134,6 +136,66 @@ function validateStorageState(state, opts) {
         if (ch && ch.caption != null && typeof ch.caption !== 'string') errors.push(`summaryCharts[${i}].caption must be a string`);
       });
       if (total > 6000000) errors.push('summaryCharts total size exceeds 6MB');
+    }
+  }
+
+  // ── chartSeries (optional): the compact canonical series the SVG charts are drawn from. ──
+  const cser = s.chartSeries;
+  if (cser != null) {
+    if (typeof cser !== 'object' || Array.isArray(cser)) errors.push('chartSeries must be an object or null');
+    else {
+      const hourlyFields = ['hours', 'solarKwh', 'storageKwh', 'socPct', 'gridImportKwh', 'gridExportKwh'];
+      const anyHourly = hourlyFields.some(f => cser[f] != null);
+      if (anyHourly) {
+        if (typeof cser.representativeDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(cser.representativeDay))
+          errors.push('chartSeries.representativeDay must be a YYYY-MM-DD string when hourly series are present');
+        for (const f of hourlyFields) {
+          const a = cser[f];
+          if (!Array.isArray(a) || a.length !== 24 || !a.every(isFiniteNum))
+            errors.push(`chartSeries.${f} must be 24 finite numbers`);
+        }
+      }
+      for (const f of ['dailyCycles', 'dailyMaxChargeKw', 'dailyMaxDischargeKw']) {
+        const a = cser[f];
+        if (a == null) continue;
+        if (!Array.isArray(a) || a.length < 1 || a.length > 400 || !a.every(isFiniteNum))
+          errors.push(`chartSeries.${f} must be 1–400 finite numbers`);
+      }
+    }
+  }
+
+  // ── chartArtifacts (optional): the persisted, hashed chart artifacts. The SAME strings are shown
+  //    by the web page and embedded in the PDF, so they are bounded and safety-checked here. ──
+  const arts = s.chartArtifacts;
+  if (arts != null) {
+    if (!Array.isArray(arts)) errors.push('chartArtifacts must be an array or null');
+    else if (arts.length > 16) errors.push('chartArtifacts must have at most 16 items');
+    else {
+      let total = 0;
+      const seen = new Set();
+      arts.forEach((a, i) => {
+        if (!a || typeof a !== 'object') { errors.push(`chartArtifacts[${i}] must be an object`); return; }
+        if (typeof a.id !== 'string' || !a.id) errors.push(`chartArtifacts[${i}].id must be a non-empty string`);
+        else if (seen.has(a.id)) errors.push(`chartArtifacts[${i}].id "${a.id}" is duplicated`);
+        else seen.add(a.id);
+        if (typeof a.hash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(a.hash))
+          errors.push(`chartArtifacts[${i}].hash must be "sha256:<64 hex>"`);
+        if (a.kind === 'svg') {
+          if (typeof a.svg !== 'string' || a.svg.indexOf('<svg') !== 0)
+            errors.push(`chartArtifacts[${i}].svg must be an SVG string`);
+          else if (/(<script|xlink:href\s*=\s*"(?!#)|href\s*=\s*"https?:|url\(\s*['"]?https?:|@import)/i.test(a.svg))
+            errors.push(`chartArtifacts[${i}].svg must not reference anything external`);
+          else total += a.svg.length;
+        } else if (a.kind === 'ensights-raster') {
+          if (typeof a.dataUri !== 'string' || !/^data:image\/(png|webp|jpe?g);base64,[A-Za-z0-9+/=]+$/.test(a.dataUri))
+            errors.push(`chartArtifacts[${i}].dataUri must be a safe image data-URI`);
+          else if (a.dataUri.length > 1500000) errors.push(`chartArtifacts[${i}].dataUri exceeds 1.5MB`);
+          else total += a.dataUri.length;
+        } else {
+          errors.push(`chartArtifacts[${i}].kind must be "svg" or "ensights-raster"`);
+        }
+      });
+      if (total > 4000000) errors.push('chartArtifacts total size exceeds 4MB');
     }
   }
 
