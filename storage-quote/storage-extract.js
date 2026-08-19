@@ -38,6 +38,9 @@ const ROUND_TOL = 2;          // ILS tolerance for CapEx cross-check (workbook r
 const MATCH_MIN = 0.6;        // minimum confidence to ACCEPT a fuzzy field/sheet/row resolution
 const MATCH_STRONG = 0.85;    // at/above this = confident; below = surfaced as a "verify" warning
 const HORIZON_MIN = 5, HORIZON_MAX = 40;
+const KWP_TOL = 0.5;          // kWp tolerance — the Summary sheet prints whole kWp, the cost line is exact
+const KWH_TOL = 1;            // kWh tolerance for the Summary-vs-cost storage capacity cross-check
+const KPI_BAND_SCAN_ROWS = 40, KPI_BAND_LOOKAHEAD = 3; // Summary KPI band search window
 
 const V = (typeof module !== 'undefined' && module.exports)
   ? require('./storage-validate.js') : globalThis.StorageValidate;
@@ -115,9 +118,15 @@ function kvEntries(rows) {
   return out;
 }
 // Resolve one KV field. Returns { cells, key, score } (key null if nothing clears MATCH_MIN).
-function kvFind(entries, aliases) {
+// `deny` (optional) is a list of canonical labels this field must never resolve to; candidates
+// matching one exactly are skipped before scoring, so a denied label cannot outrank a real one.
+function kvFind(entries, aliases, deny) {
+  const denied = deny && deny.length ? new Set(deny.map(canon)) : null;
   let best = null, bestS = 0;
-  for (const e of entries) { const s = sim(e.key, aliases); if (s > bestS) { bestS = s; best = e; } if (bestS === 1) break; }
+  for (const e of entries) {
+    if (denied && denied.has(canon(e.key))) continue;
+    const s = sim(e.key, aliases); if (s > bestS) { bestS = s; best = e; } if (bestS === 1) break;
+  }
   return bestS >= MATCH_MIN ? { cells: best.cells, key: best.key, score: bestS } : { cells: [], key: null, score: bestS };
 }
 
@@ -150,6 +159,37 @@ function rowFind(rows, rowAliases, blockAliases) {
   }
   if (best && bestS >= MATCH_MIN) return { values: best.slice(1).map(num), label: bestLabel, block: blockLabel, score: bestS };
   return null;
+}
+
+// ── Summary-sheet KPI band reader. The Summary sheet lays its headline figures out as a LABEL row
+//    ("ADDITIONAL PV", "BATTERY CAPACITY") with the value in the cell DIRECTLY BELOW, in the same
+//    column — not as key→value rows, so kvEntries cannot see them. This is the ONLY place the
+//    workbook prints the sizes the optimizer actually chose (see the auto-optimize note in
+//    extractStorageState), so it has to be read.
+//    Returns { value, raw, label, row, col } — value NaN when the KPI is absent or "N/A".
+function readKpiBand(rows, aliases, unitRe) {
+  const empty = { value: NaN, raw: null, label: null, row: -1, col: -1 };
+  if (!Array.isArray(rows)) return empty;
+  const scan = Math.min(rows.length, KPI_BAND_SCAN_ROWS);
+  for (let i = 0; i < scan; i++) {
+    const r = rows[i]; if (!Array.isArray(r)) continue;
+    for (let c = 0; c < r.length; c++) {
+      if (typeof r[c] !== 'string' || !r[c].trim()) continue;
+      if (sim(r[c], aliases) < MATCH_STRONG) continue;
+      // The value sits in one of the next few rows (a spacer row is possible).
+      for (let k = 1; k <= KPI_BAND_LOOKAHEAD && i + k < rows.length; k++) {
+        const rv = rows[i + k]; if (!Array.isArray(rv)) continue;
+        const cell = rv[c];
+        if (cell == null || cell === '') continue;
+        const raw = String(cell).replace(/\s+/g, ' ').trim();
+        // Unit guard: older workbooks print BATTERY CAPACITY as "54 kW, 4 hours" (power, not
+        // energy). Without this the reader would silently return kW where kWh is expected.
+        const value = (unitRe && !unitRe.test(raw)) ? NaN : num(raw);
+        return { value, raw, label: r[c].trim(), row: i, col: c };
+      }
+    }
+  }
+  return empty;
 }
 
 // Count contiguous year columns on a sheet's "Period" header row = the project horizon N.
@@ -195,8 +235,12 @@ function computeGridAggregates(rows) {
 const REQUEST_FIELDS = {
   displayCurrency:    ['display currency', 'currency'],
   useCase:            ['use case', 'program', 'tariff program'],
-  pvKw:               ['additional dc capacity', 'additional pv capacity', 'dc capacity added', 'pv capacity added', 'pv capacity', 'additional solar capacity'],
+  // PV capacity comes in TWO distinct flavours and they must never be confused (see the
+  // auto-optimize note in extractStorageState): what the deal BUYS vs what already stands on site.
+  additionalPvKw:     ['additional dc capacity', 'additional pv capacity', 'dc capacity added', 'pv capacity added', 'additional solar capacity'],
+  existingPvKw:       ['dc capacity', 'pv capacity', 'existing dc capacity', 'existing pv capacity'],
   storageKw:          ['power rating', 'storage power rating', 'bess power rating', 'storage power', 'battery power'],
+  storageDurationH:   ['duration', 'storage duration', 'discharge duration'],
   acKw:               ['ac capacity', 'ac power rating', 'ac power', 'inverter ac capacity'],
   batteryCost:        ['battery cost', 'storage cost per kwh', 'battery cost per kwh', 'cell cost'],
   pvCostPerKwp:       ['pv cost per kwp', 'pv cost', 'solar cost per kwp', 'pv capex per kwp'],
@@ -220,6 +264,21 @@ const METRICS_FIELDS = {
   profitabilityIndex: ['profitability index', 'pi'],
   periodsAnalyzed:    ['periods analyzed', 'operating period', 'project lifetime', 'analysis period', 'project horizon'],
 };
+// DENY LIST — labels a field must NEVER resolve to, matched on exact canonical equality. Fuzzy
+// matching alone cannot separate these: "Max Additional DC Capacity" (the optimizer's SEARCH
+// CEILING, not its answer) scores 0.85 against the additionalPvKw aliases and would win outright,
+// and "DC Capacity" (the EXISTING array) scores 0.75 and wins whenever no additional row exists.
+// Both are plausible-looking wrong numbers, which is exactly what this extractor must not emit.
+const FIELD_DENY = {
+  additionalPvKw: ['dc capacity', 'ac capacity', 'max additional dc capacity', 'maximum additional dc capacity', 'max additional pv capacity'],
+  existingPvKw:   ['additional dc capacity', 'max additional dc capacity', 'maximum additional dc capacity', 'additional ac capacity', 'cabinet capacity'],
+};
+// Summary-sheet KPI band: the ONLY place the optimizer's chosen sizes are printed.
+// unit — a regex the raw cell must match, guarding against a same-labelled cell in other units.
+const SUMMARY_KPIS = {
+  additionalPvKw:  { aliases: ['additional pv', 'additional solar', 'additional pv capacity', 'additional dc capacity'], unit: /kwp/i },
+  storageKwh:      { aliases: ['battery capacity', 'storage capacity', 'battery energy capacity'], unit: /kwh/i },
+};
 const ARRAY_SPECS = {
   // [stateField]: { sheet:'rev'|'cf', block:[…]|null, row:[…] }
   revenuesBaseline:   { sheet: 'rev', block: ['baseline revenues without storage', 'baseline revenues', 'baseline'], row: ['total', 'total revenues', 'revenue total'] },
@@ -235,6 +294,10 @@ const SHEET_ALIASES = {
   metrics:  ['metrics', 'results', 'summary metrics', 'financial metrics', 'kpis'],
   revenues: ['revenues', 'revenue analysis', 'revenue'],
   cashflow: ['cash flow debt service', 'cash flow & debt service', 'cash flow', 'cashflow', 'debt service'],
+};
+// Resolved when present, never asserted — pre-2026 workbooks ship without it and must keep working.
+const OPTIONAL_SHEET_ALIASES = {
+  summary: ['summary', 'project summary', 'executive summary', 'overview'],
 };
 
 /**
@@ -261,6 +324,13 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   }
   if (errors.length) return { ok: false, state: null, report: { kpis: {}, assertions, errors, warnings, resolution } };
 
+  // Optional sheets: resolved when present, never asserted (older workbooks lack them).
+  for (const key of Object.keys(OPTIONAL_SHEET_ALIASES)) {
+    const r = resolveSheet(sheets, OPTIONAL_SHEET_ALIASES[key]);
+    SH[key] = r.name ? sheets[r.name] : null;
+    resolution.push({ kind: 'sheet', field: key, matched: r.name, confidence: +r.score.toFixed(2), optional: true });
+  }
+
   const reqKV = kvEntries(SH.request);
   const metKV = kvEntries(SH.metrics);
 
@@ -269,7 +339,7 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   // kvInfo also reports WHICH label matched (null = the workbook has no such row) — callers that
   // must distinguish "absent" from "present but unparsable" use it.
   function kvInfo(entries, sheetKey, fieldKey, aliases, parse) {
-    const r = kvFind(entries, aliases);
+    const r = kvFind(entries, aliases, FIELD_DENY[fieldKey]);
     const raw = parse === 'num'
       ? r.cells.find(c => Number.isFinite(num(c)))
       : r.cells.find(c => c != null && c !== '');
@@ -280,6 +350,13 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   }
   function kv(entries, sheetKey, fieldKey, aliases, parse) {
     return kvInfo(entries, sheetKey, fieldKey, aliases, parse).value;
+  }
+  // Summary KPI band resolver, with the same diagnostics as kv().
+  function summaryKpi(fieldKey) {
+    const spec = SUMMARY_KPIS[fieldKey];
+    const r = readKpiBand(SH.summary, spec.aliases, spec.unit);
+    resolution.push({ kind: 'kpi', field: fieldKey, sheet: 'summary', matched: r.label, raw: r.raw, confidence: r.label ? 1 : 0 });
+    return r;
   }
 
   // ── currency (ignore the stale "USD thousands" subtitle enSights sometimes prints) ──
@@ -292,8 +369,14 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
   A('use case is 800-hour low voltage', /800/.test(uc) && /low voltage/.test(uc), `Use Case = "${useCaseRaw}"`);
 
   // ── project / inputs ──
-  const pvKw = kv(reqKV, 'request', 'pvKw', REQUEST_FIELDS.pvKw, 'num');
-  const storageKw = kv(reqKV, 'request', 'storageKw', REQUEST_FIELDS.storageKw, 'num');
+  // AUTO-OPTIMIZE. When the workbook runs with "Auto-optimize Solar/Storage = Yes", the Request
+  // sheet holds only the SEED the operator typed — enSights omits the "Additional DC Capacity" row
+  // entirely (or prints "Max Additional DC Capacity", the optimizer's search ceiling) and leaves
+  // "Power Rating"/"Cabinet Capacity" describing ONE cabinet. The sizes the optimizer actually
+  // chose are printed on the Summary sheet KPI band and nowhere else. So Request is the seed,
+  // Summary is the answer, and Metrics (cost ÷ rate) is the independent arbiter between them.
+  const requestPowerRatingKw = kv(reqKV, 'request', 'storageKw', REQUEST_FIELDS.storageKw, 'num');
+  const storageDurationH = kv(reqKV, 'request', 'storageDurationH', REQUEST_FIELDS.storageDurationH, 'num');
   const acKw = kv(reqKV, 'request', 'acKw', REQUEST_FIELDS.acKw, 'num'); // AC interconnection capacity (displayed as "הספק AC")
   const batteryCost = kv(reqKV, 'request', 'batteryCost', REQUEST_FIELDS.batteryCost, 'num');
   const pvCostPerKwp = kv(reqKV, 'request', 'pvCostPerKwp', REQUEST_FIELDS.pvCostPerKwp, 'num');
@@ -332,6 +415,46 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
     warnings.push(`no PV cost line in Metrics — derived from the CapEx residual (₪${Math.round(pvCost)}); treated as a storage-only project when 0`);
   }
   const storageKwh = (Number.isFinite(storageCost) && batteryCost > 0) ? Math.round(storageCost / batteryCost) : NaN;
+  const hasPvPurchase = Number.isFinite(pvCost) && pvCost > ROUND_TOL;
+  const summaryStorageKpi = summaryKpi('storageKwh');
+
+  // ── PV capacity (resolved AFTER capex — which flavour is wanted depends on whether PV is bought)
+  //    • PV is bought  → the ADDITIONAL kWp: Summary KPI first, Request "Additional DC Capacity"
+  //      as the fallback. Cross-checked below against pvCost ÷ pvCostPerKwp.
+  //    • storage-only  → the site's EXISTING array, which the document labels as such
+  //      ("מערכת סולארית קיימת"). Nothing is purchased, so there is no cost identity to check.
+  const summaryPvKpi = summaryKpi('additionalPvKw');
+  const requestAdditionalPvKw = kv(reqKV, 'request', 'additionalPvKw', REQUEST_FIELDS.additionalPvKw, 'num');
+  const additionalPvKw = Number.isFinite(summaryPvKpi.value) ? summaryPvKpi.value : requestAdditionalPvKw;
+  if (Number.isFinite(summaryPvKpi.value) && Number.isFinite(requestAdditionalPvKw)
+      && Math.abs(summaryPvKpi.value - requestAdditionalPvKw) > KWP_TOL) {
+    warnings.push(`Summary reports ${summaryPvKpi.value} kWp additional PV but Request says ${requestAdditionalPvKw} kWp — using the Summary figure (the optimizer's result)`);
+  }
+  const existingPvKw = kv(reqKV, 'request', 'existingPvKw', REQUEST_FIELDS.existingPvKw, 'num');
+  const pvKw = hasPvPurchase ? additionalPvKw
+    : (Number.isFinite(existingPvKw) ? existingPvKw : additionalPvKw);
+
+  // ── storage power. "Power Rating" is per-CABINET whenever the optimizer sized the bank, so it is
+  //    only trustworthy once scaled by the cabinet count. Preference order:
+  //      1. cabinets × Power Rating  — keeps the manufacturer's nameplate exact
+  //      2. capacity ÷ duration      — when the bank is not a whole number of catalogued cabinets
+  //      3. Power Rating as-is       — nothing else resolved; the assertion below is then skipped
+  const cabinetCount = (Number.isFinite(cabinetKwh) && cabinetKwh > 0 && Number.isFinite(storageKwh))
+    ? storageKwh / cabinetKwh : NaN;
+  const wholeCabinets = Number.isFinite(cabinetCount) && Math.abs(cabinetCount - Math.round(cabinetCount)) < 0.02
+    ? Math.round(cabinetCount) : NaN;
+  const durationKw = (Number.isFinite(storageKwh) && storageDurationH > 0) ? storageKwh / storageDurationH : NaN;
+  const storageKw = (Number.isFinite(wholeCabinets) && wholeCabinets > 0 && Number.isFinite(requestPowerRatingKw))
+    ? requestPowerRatingKw * wholeCabinets
+    // The duration quotient carries the workbook's rounding (943 kWh / 6.5 h = 145.08 kW); when it
+    // lands on the Request's nameplate the bank was never scaled, so keep the clean nameplate.
+    : (Number.isFinite(durationKw)
+        ? (Number.isFinite(requestPowerRatingKw) && Math.abs(durationKw - requestPowerRatingKw) <= Math.max(1, durationKw * 0.05)
+            ? requestPowerRatingKw : Math.round(durationKw * 10) / 10)
+        : requestPowerRatingKw);
+  if (Number.isFinite(storageKw) && Number.isFinite(requestPowerRatingKw) && storageKw !== requestPowerRatingKw) {
+    warnings.push(`storage power scaled from the Request seed ${requestPowerRatingKw} kW to ${Math.round(storageKw)} kW for the ${storageKwh} kWh bank the workbook actually prices`);
+  }
 
   // ── metrics ──
   const npv = kv(metKV, 'metrics', 'npv', METRICS_FIELDS.npv, 'num');
@@ -392,20 +515,40 @@ function extractStorageState({ sheets, workbookHash, extractedAt, customer }) {
 
   // ── assertions: structure + ALGEBRAIC GUARDRAILS (these catch any mis-resolved cell) ──
   A('Total Project Cost present', Number.isFinite(totalProjectCost) && totalProjectCost > 0, String(totalProjectCost));
-  // PV cost identity. Only meaningful when PV is actually bought in this deal (pvCost > 0) — a
-  // storage-only retrofit has pvCost 0 while the workbook still reports the existing array's kWp.
-  A('PV cost = additional kWp × cost/kWp',
-    Math.abs(pvCost || 0) < 1 ? true : Math.abs(pvKw * pvCostPerKwp - pvCost) < 1,
-    `${pvKw}×${pvCostPerKwp} vs ${pvCost}`);
-  // Guardrail for the derived (residual) PV cost: it must be either 0 (storage-only) or exactly the
-  // kWp × cost/kWp product (the PV line was merely labelled differently). Anything else means a
-  // mis-resolved cost cell, which the capex-sum identity below can no longer catch.
+  // PV capacity identity — the guardrail that separates the deal's ADDITIONAL kWp from the site's
+  // existing array or the optimizer's search ceiling. Two independent sources must agree: the
+  // stated capacity (Summary KPI / Request) and the one implied by the Metrics cost line ÷ rate.
+  // Compared in kWp rather than shekels because the workbook prints whole kWp while the cost line
+  // is exact (51 kWp displayed for a 51.2 kWp array) — the tolerance absorbs that display rounding
+  // and nothing more, so a 300-vs-375 mix-up still fails loudly.
+  // Skipped for a storage-only retrofit (pvCost 0): nothing is bought, so there is no identity.
+  const pvKwFromCost = (hasPvPurchase && pvCostPerKwp > 0) ? pvCost / pvCostPerKwp : NaN;
+  A('additional kWp agrees with the PV cost line',
+    !hasPvPurchase ? true
+      : (Number.isFinite(pvKwFromCost) && Number.isFinite(additionalPvKw)
+         && Math.abs(pvKwFromCost - additionalPvKw) <= Math.max(KWP_TOL, pvKwFromCost * 0.01)),
+    `${additionalPvKw} kWp stated vs ${Number.isFinite(pvKwFromCost) ? Math.round(pvKwFromCost * 100) / 100 : NaN} kWp implied by ${pvCost}/${pvCostPerKwp}`);
+  // Guardrail for the derived (residual) PV cost: a negative residual means a mis-resolved cost
+  // cell, which the capex-sum identity below can no longer catch. A positive residual is a real PV
+  // line under a different label and is validated by the kWp identity above.
   if (pvCostDerived) {
-    A('derived PV cost is 0 or matches kWp × cost/kWp',
-      pvCost >= 0 && (pvCost < 1 || Math.abs(pvKw * pvCostPerKwp - pvCost) < 1),
-      `residual ${pvCostResidual} vs ${pvKw}×${pvCostPerKwp}`);
+    A('derived PV cost is non-negative', pvCost >= 0, `residual ${pvCostResidual}`);
   }
   A('storage cost = kWh × battery cost', Math.abs(storageKwh * batteryCost - storageCost) < batteryCost, `${storageKwh}×${batteryCost} vs ${storageCost}`);
+  // Independent confirmation of the cost-derived capacity against the figure the Summary prints.
+  if (Number.isFinite(summaryStorageKpi.value)) {
+    A('storage capacity matches the Summary sheet',
+      Math.abs(summaryStorageKpi.value - storageKwh) <= Math.max(KWH_TOL, summaryStorageKpi.value * 0.01),
+      `Summary ${summaryStorageKpi.value} kWh vs ${storageKwh} kWh from ${storageCost}/${batteryCost}`);
+  }
+  // Storage power vs capacity. Catches a per-cabinet Power Rating left paired with a multi-cabinet
+  // bank (e.g. 130 kW against 1,305 kWh — a ten-hour battery that does not exist).
+  if (storageDurationH > 0 && Number.isFinite(storageKwh)) {
+    const expectedKw = storageKwh / storageDurationH;
+    A('storage power is consistent with capacity and duration',
+      Number.isFinite(storageKw) && Math.abs(storageKw - expectedKw) <= Math.max(1, expectedKw * 0.05),
+      `${storageKw} kW vs ${Math.round(expectedKw * 10) / 10} kW (${storageKwh} kWh / ${storageDurationH}h)`);
+  }
   A('capex components sum to total', Math.abs(pvCost + storageCost + balanceOfPlantCost - totalProjectCost) <= ROUND_TOL, `${pvCost}+${storageCost}+${balanceOfPlantCost} vs ${totalProjectCost}`);
   A('project horizon detected', horizon >= HORIZON_MIN && horizon <= HORIZON_MAX, `Revenues=${horizonRev}, CashFlow=${horizonCf}`);
   A('Revenues and Cash Flow horizons agree', horizonRev > 0 && horizonRev === horizonCf, `${horizonRev} vs ${horizonCf}`);
@@ -501,8 +644,9 @@ function parseWorkbook(XLSX, data /* ArrayBuffer|Buffer */) {
 const api = {
   EXTRACTOR_VERSION, extractStorageState, parseWorkbook,
   // matching primitives (exported for tests / reuse)
-  num, canon, sim, resolveSheet, kvEntries, kvFind, rowFind, countPeriodYears,
-  REQUEST_FIELDS, METRICS_FIELDS, ARRAY_SPECS, SHEET_ALIASES,
+  num, canon, sim, resolveSheet, kvEntries, kvFind, rowFind, readKpiBand, countPeriodYears,
+  REQUEST_FIELDS, METRICS_FIELDS, ARRAY_SPECS, SHEET_ALIASES, OPTIONAL_SHEET_ALIASES,
+  SUMMARY_KPIS, FIELD_DENY,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.StorageExtract = api;
