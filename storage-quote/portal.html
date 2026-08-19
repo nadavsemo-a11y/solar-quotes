@@ -141,9 +141,12 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 <script src="./storage-payment-milestones.js"></script>
 <script src="./storage-validate.js"></script>
 <script src="./storage-public.js"></script>
+<script src="./storage-chart-series.js"></script>
 <script src="./storage-extract.js"></script>
-<script src="../shared/summary-charts.js"></script>
-<script src="./summary-charts-browser.js"></script>
+<script src="../shared/chart-catalog.js"></script>
+<script src="../shared/semo-chart-svg.js"></script>
+<script src="../shared/chart-artifacts.js"></script>
+<script src="./storage-chart-images.js"></script>
 <script src="./storage-milestones-editor.js"></script>
 <script>
 const WORKER='https://s-a.gs';
@@ -218,13 +221,19 @@ async function onFile(file){if(!file)return;
     showReport(res);
     if(res.ok){
       currentState=res.state;drop.className='drop ok';drop.innerHTML='✓ קובץ נטען ואומת — '+file.name;msg.textContent='';
-      // Extract + compress the Summary-sheet charts (best-effort; never blocks the quote).
+      // Render the chart ARTIFACTS once, here. Everything downstream — the customer page, the PDF,
+      // the signed copy — embeds these exact strings, so there is one rendering and it cannot drift.
+      // Best-effort: a chart failure must never block issuing a quote.
       try{
-        msg.textContent='מחלץ גרפים מלשונית Summary…';
-        const charts=await SummaryChartsBrowser.extract(buf);
-        currentState.summaryCharts=charts;
-        msg.textContent=charts.length?('✓ '+charts.length+' גרפים נוספו להצעה'):'';
-      }catch(e){currentState.summaryCharts=[];msg.textContent='';}
+        msg.textContent='מייצר גרפים…';
+        const summaryRows=(sheets[Object.keys(sheets).find(n=>/summary/i.test(n))]||[]);
+        // Only the two IRR sweeps are retained as enSights rasters — their sweep data is not
+        // exported by the workbook, so they are the one thing we cannot honestly redraw.
+        const retained=await StorageChartImages.extractRetainedCharts(buf,summaryRows);
+        currentState.chartArtifacts=await ChartArtifacts.buildChartArtifacts(currentState,retained);
+        const n=currentState.chartArtifacts.length;
+        msg.textContent=n?('✓ '+n+' גרפים נוספו להצעה'):'';
+      }catch(e){currentState.chartArtifacts=[];msg.textContent='';}
       mountMilestones();
     }
     else{currentState=null;mountMilestones();drop.className='drop bad';msg.textContent='האימות נכשל — ראו פירוט למטה';}
