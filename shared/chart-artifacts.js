@@ -148,7 +148,10 @@ function renderChartSection(artifacts) {
   const figs = list.map(art => {
     const body = art.kind === 'svg'
       ? `<div class="sc-art" data-chart-id="${esc(art.id)}">${art.svg}</div>`
-      : `<img class="sc-art" data-chart-id="${esc(art.id)}" src="${esc(art.dataUri)}" alt="${esc(art.title)}" loading="lazy">`;
+      // No loading="lazy": the source is a data URI, so there is no request to defer — it only
+      // collapses the figure to zero height until it is scrolled into view, which misrenders the
+      // document on first paint and on print/export.
+      : `<img class="sc-art" data-chart-id="${esc(art.id)}" src="${esc(art.dataUri)}" alt="${esc(art.title)}" decoding="sync">`;
     return `<figure class="sc-fig" data-chart="${esc(art.id)}" data-chart-hash="${esc(art.hash)}">
       ${body}
       <figcaption class="sc-cap"><strong>${esc(art.title)}</strong>${art.caption ? ' — ' + esc(art.caption) : ''}</figcaption>
