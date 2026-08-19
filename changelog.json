@@ -1,5 +1,27 @@
 [
   {
+    "version": "1.02.10.03",
+    "date": "2026-08-19",
+    "type": "fix",
+    "title": "חוברות enSights עם אופטימיזציה אוטומטית — ההצעה נחסמה, ועכשיו נקראת נכון",
+    "changes": [
+      "חוברת שרצה עם Auto-optimize Solar/Storage לא הפיקה הצעה כלל: הבדיקה נכשלה על \"PV cost = additional kWp × cost/kWp\" (300×1850 מול 693,750)",
+      "הסיבה: כשהאופטימיזציה דולקת, גיליון Request מכיל רק את הזרע שהוקלד — enSights לא כותב בו את שורת Additional DC Capacity, והתוצאה שנבחרה מודפסת רק ברצועת ה-KPI בגיליון Summary",
+      "האקסטרקטור לא קרא את Summary בכלל, ולכן נפל אחורה על DC Capacity — המערכת הקיימת באתר (300 kWp) במקום ההרחבה שנרכשת (375 kWp)",
+      "מעכשיו Summary הוא המקור לגודל העסקה, Request הוא גיבוי, ושורת העלות ב-Metrics היא הבורר הבלתי תלוי בין השניים",
+      "נוספה רשימת פסילה: \"DC Capacity\" (המערכת הקיימת) ו-\"Max Additional DC Capacity\" (תקרת החיפוש של האופטימייזר) לא יכולות עוד להיבחר כגודל ההרחבה — שתיהן מספרים סבירים למראה ושגויים",
+      "הבדיקה האלגברית הושוותה בקילוואט במקום בשקלים, כדי לספוג עיגול תצוגה (51 kWp מוצג עבור מערך של 51.2 kWp) בלי לוותר על התפיסה של פער אמיתי",
+      "תוקן באג שקט נוסף: \"Power Rating\" מתאר ארון בודד כשהאופטימייזר קבע את גודל המערך. ההצעה הציגה 130 קילוואט מול 1,305 קוט\"ש — סוללה של עשר שעות שאינה קיימת. ההספק נגזר עכשיו ממספר הארונות (או מהקיבולת חלקי משך הפריקה)",
+      "נוספו שתי בדיקות הצלבה: קיבולת האגירה מגיליון Summary מול העלות חלקי מחיר לקוט\"ש, וההספק מול הקיבולת ומשך הפריקה",
+      "נבדק מול 52 חוברות enSights אמיתיות: 32 הופקו קודם, 37 מופקות עכשיו, אפס נסיגות; 23 חוברות שעברו גם קודם קיבלו תיקון להספק האגירה"
+    ],
+    "affected_modules": [
+      "storage-quote/storage-extract.js",
+      "tests/storage-extract.test.js"
+    ],
+    "author": "Claude"
+  },
+  {
     "version": "1.02.10.02",
     "date": "2026-08-19",
     "type": "fix",
@@ -42,10 +64,17 @@
       "נעילת גרסת תצוגה למסמכים חתומים: מעטפת החתימה מתעדת את פריסת ה-PDF שהמסמך הונפק בה, כך שהצעה שנחתמה בעבר ממשיכה להיות מוצגת בסדר הישן"
     ],
     "affected_modules": [
-      "shared/client-location.js", "shared/quote-header.js", "shared/client-details.js",
-      "viewer-render.js", "quote-ui.js", "index.html",
-      "solar-quote/solar-document-contract.js", "solar-quote/solar-pdf-map.js", "solar-quote/solar-web-render.js",
-      "worker.js", "@semo/pdf (solar-template.html, build-solar-html.js)"
+      "shared/client-location.js",
+      "shared/quote-header.js",
+      "shared/client-details.js",
+      "viewer-render.js",
+      "quote-ui.js",
+      "index.html",
+      "solar-quote/solar-document-contract.js",
+      "solar-quote/solar-pdf-map.js",
+      "solar-quote/solar-web-render.js",
+      "worker.js",
+      "@semo/pdf (solar-template.html, build-solar-html.js)"
     ],
     "author": "Claude"
   },
