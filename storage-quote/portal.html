@@ -150,9 +150,15 @@ const WORKER='https://s-a.gs';
 let currentState=null;
 
 // ── contact helpers (shared client-details component) ──
+// _hsContactId is the HubSpot contact identity of whoever is currently loaded in the form. It has
+// no input field — it is set by pickHub() and by loading an existing quote, exactly as the solar
+// portal does with its own _hsContactId. Carrying it into /q/hubspot/sync is the WHOLE duplicate
+// prevention: without it the endpoint has no identity to PATCH and creates a new contact for every
+// quote. Matching on email/phone/name instead is unusable against real SEMO data.
 const cdMount=document.getElementById('clientDetailsMount');
+let _hsContactId=null;
 ClientDetails.renderClientDetails(cdMount,{});
-function getContact(){return ClientDetails.getClientDetailsValues(cdMount);}
+function getContact(){return Object.assign(ClientDetails.getClientDetailsValues(cdMount),{hubspotId:_hsContactId||''});}
 function val(id){var el=document.getElementById(id);return el?(el.value||'').trim():'';}
 
 // ── payment-milestones editor (internal only; consumes the pure StoragePaymentMilestones domain) ──
@@ -173,7 +179,10 @@ function searchHub(q){clearTimeout(hubTimer);if((q||'').length<2){document.getEl
     const box=document.getElementById('hubResults');const list=j.results||j.contacts||j||[];
     box.innerHTML=(Array.isArray(list)?list:[]).map((c,i)=>{window['_hub'+i]=c;return '<div onclick="pickHub('+i+')">'+(c.name||c.firstname||'')+' '+(c.lastname||'')+' · '+(c.phone||'')+' · '+(c.email||'')+'</div>';}).join('');
   }catch(e){document.getElementById('hubResults').innerHTML='<div>שגיאת חיפוש</div>';}},250);}
-function pickHub(i){const c=window['_hub'+i]||{};ClientDetails.setClientDetailsValues(cdMount,{name:c.name||((c.firstname||'')+' '+(c.lastname||'')).trim(),phone:c.phone||'',email:c.email||'',address:c.address||'',city:c.city||''});toggleHub();}
+// THE single place a picked HubSpot contact reaches the form — and the single place the contact id
+// is recorded. Always assigns _hsContactId, so picking a contact that somehow carries no id clears
+// the previous one instead of leaving it pointed at the wrong person.
+function pickHub(i){const c=window['_hub'+i]||{};_hsContactId=c.id||null;ClientDetails.setClientDetailsValues(cdMount,{name:c.name||((c.firstname||'')+' '+(c.lastname||'')).trim(),phone:c.phone||'',email:c.email||'',address:c.address||'',city:c.city||''});toggleHub();}
 
 // ── duplicate (reuses trunk /q/data/:id) ──
 async function loadDup(){const raw=val('dupUrl');const m=raw.match(/\/q\/([A-Za-z0-9_-]+)/);const id=m?m[1]:raw;
@@ -186,7 +195,11 @@ async function loadDup(){const raw=val('dupUrl');const m=raw.match(/\/q\/([A-Za-
     const st=JSON.parse(decodeURIComponent(escape(atob(j.data))));
     if(st.type!=='storage'){msg.textContent='זו אינה הצעת אגירה';return;}
     currentState=st; // reuse extracted figures
-    ClientDetails.setClientDetailsValues(cdMount, ContactAdapters.contactFromStorageState(st));
+    const dupContact=ContactAdapters.contactFromStorageState(st);
+    // ALWAYS assigned: this replaces every customer field with the loaded quote's customer, so a
+    // leftover id from a contact picked earlier would make the save PATCH that other person.
+    _hsContactId=dupContact.hubspotId||null;
+    ClientDetails.setClientDetailsValues(cdMount, dupContact);
     showReport({ok:true,state:st,report:{kpis:kpisFromState(st),assertions:[],errors:[],warnings:[]}});
     mountMilestones();
     msg.textContent='שוכפל בהצלחה — עדכנו פרטים ושמרו';
