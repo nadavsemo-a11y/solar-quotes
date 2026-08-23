@@ -344,9 +344,21 @@ function renderGroup(groupName, tasks, showName) {
   const needsFile = tasks.some(t => t.taskRules?.requireFile);
   const hasWorkOrder = tasks.some(t => t.workOrderUrl);
   const hasNeedsPrice = tasks.some(t => t.needsPrice);
-  const hasDesignFiles = tasks.some(t => t.designFiles?.length > 0);
+  // The build plan rides on every task because it lives on the PARENT project,
+  // not on the task — so without an opt-out it surfaces for task types that
+  // have no use for it. Data AND config both have to want it.
+  const hasDesignFiles = tasks.some(
+    t => t.designFiles?.length > 0 && t.taskRules?.showDesignPlan !== false
+  );
+  // The planned date is not universal. On the IEC-inspection task it is the
+  // real inspection date the supplier books, and entering it advances the
+  // status; on the PV/IEC submission there is no date the agent reads or sets,
+  // so the column was an empty input inviting meaningless data. Config-driven
+  // like every other optional column — see showPlannedDate in the task rules.
+  const showsDate = tasks.some(t => t.taskRules?.showPlannedDate !== false);
 
-  let cols = `<th>פרויקט</th><th>הספק DC</th><th>כתובת</th><th>טלפון</th><th>תאריך מתוכנן</th>`;
+  let cols = `<th>פרויקט</th><th>הספק DC</th><th>כתובת</th><th>טלפון</th>`;
+  if (showsDate) cols += `<th>תאריך מתוכנן</th>`;
   if (hasDesignFiles) cols += `<th>מפרט התקנה</th>`;
   if (needsFile) cols += `<th>קובץ</th>`;
   if (hasWorkOrder || hasNeedsPrice) cols += `<th>הזמנת עבודה</th>`;
@@ -356,6 +368,10 @@ function renderGroup(groupName, tasks, showName) {
     if (t.hasFile) uploadedFiles[t.ref] = { name: 'קיים', uploaded: true };
     const dateVal = t.plannedDate ? t.plannedDate.split(' ')[0] : '';
     const rules = t.taskRules || {};
+
+    const dateTd = showsDate
+      ? `<td data-label="תאריך" class="td-date"><input type="date" value="${dateVal}" onchange="updateDate('${t.ref}', this.value)"></td>`
+      : '';
 
     // Design files column
     let designTd = '';
@@ -457,7 +473,7 @@ function renderGroup(groupName, tasks, showName) {
       <td data-label="הספק DC" class="td-task">${t.dcPower ? esc(t.dcPower) + ' kWp' : '—'}</td>
       <td data-label="כתובת" class="td-address">${esc(t.address || '—')}</td>
       <td data-label="טלפון" class="td-phone">${t.phone ? `<a href="tel:${esc(t.phone)}">${esc(t.phone)}</a>` : '—'}</td>
-      <td data-label="תאריך" class="td-date"><input type="date" value="${dateVal}" onchange="updateDate('${t.ref}', this.value)"></td>
+      ${dateTd}
       ${designTd}
       ${fileTd}
       ${woTd}
