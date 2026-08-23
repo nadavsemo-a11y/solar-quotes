@@ -342,8 +342,15 @@ function render() {
 // task type needs it.
 function renderGroup(groupName, tasks, showName) {
   const needsFile = tasks.some(t => t.taskRules?.requireFile);
-  const hasWorkOrder = tasks.some(t => t.workOrderUrl);
-  const hasNeedsPrice = tasks.some(t => t.needsPrice);
+  // The work order is the one PROCEDURAL step in an otherwise operational
+  // portal: enter a price, sign an order, and only then may the task be closed.
+  // A task type can switch it off so the portal is just "upload the document,
+  // update the status". The server still computes and sends workOrderUrl — this
+  // hides the step rather than dismantling it, so turning it back on is one
+  // config edit and every signature already collected keeps its meaning.
+  const showsWorkOrder = tasks.some(t => t.taskRules?.showWorkOrder !== false);
+  const hasWorkOrder = showsWorkOrder && tasks.some(t => t.workOrderUrl);
+  const hasNeedsPrice = showsWorkOrder && tasks.some(t => t.needsPrice);
   // The build plan rides on every task because it lives on the PARENT project,
   // not on the task — so without an opt-out it surfaces for task types that
   // have no use for it. Data AND config both have to want it.
@@ -420,7 +427,11 @@ function renderGroup(groupName, tasks, showName) {
     }
 
     // Full-width sub-rows (serials, reference documents) span every column.
-    const colSpan = 5 + (hasDesignFiles ? 1 : 0) + (needsFile ? 1 : 0) + ((hasWorkOrder || hasNeedsPrice) ? 1 : 0) + 1;
+    // Four columns are unconditional (project, DC, address, phone) and one more
+    // closes the row (the action). Everything between them is optional and must
+    // be counted the same way the header counts it — including the date, which
+    // stopped being fixed when task types gained showPlannedDate.
+    const colSpan = 4 + (showsDate ? 1 : 0) + (hasDesignFiles ? 1 : 0) + (needsFile ? 1 : 0) + ((hasWorkOrder || hasNeedsPrice) ? 1 : 0) + 1;
 
     // Serial numbers row
     let fieldsRow = '';
@@ -628,7 +639,10 @@ function canComplete(task) {
   const r = task.taskRules || {};
   if (r.requireFile && !uploadedFiles[task.ref]?.uploaded) return false;
   if (r.serialNumbers && getSerials(task.ref).length === 0) return false;
-  if (task.workOrderUrl && !task.workOrderSigned && !woSignedRefs.has(task.ref)) return false;
+  // Only gate completion on the work order when the work order is actually
+  // ON SCREEN. Hiding the column while still requiring a signature would leave
+  // a permanently dead "בוצע" button with nothing in the UI explaining why.
+  if (r.showWorkOrder !== false && task.workOrderUrl && !task.workOrderSigned && !woSignedRefs.has(task.ref)) return false;
   for (const f of (r.fields || [])) { if (f.required && !(fieldValues[task.ref] || {})[f.id]?.trim()) return false; }
   return true;
 }
