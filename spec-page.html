@@ -3,18 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>מפרט טכני — SEMO A.G.S</title>
+<title>מפרט טכני לביצוע — SEMO A.G.S</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  /* A.G.S Design System — black / white / mint, hard geometry, Heebo. */
+  /* ══════════════════════════════════════════════════════════════════════
+     A.G.S — "מפרט טכני לביצוע", paged-document layout.
+
+     This page IS the PDF. At signing time SignatureCapture serializes
+     document.documentElement.outerHTML — scripts stripped, inline handlers
+     stripped, form values frozen onto attributes — and semo-pdf prints that
+     snapshot through headless Chromium at A4 / 10mm margins.
+
+     Consequences that shape everything below:
+       · no custom elements and no shadow DOM: neither survives outerHTML
+       · no JS-driven layout: the scripts are gone by print time
+       · the running header/footer use the paged-shell technique: they are
+         position:fixed at print (so they sit on the page edge of EVERY
+         sheet, including the last), and <thead>/<tfoot> spacer bands that
+         Blink repeats reserve the room so body text never slides under
+         them. The bands are fixed lengths because nothing can measure
+         them at print time — the scripts are gone.
+       · the logo is an inline data: URI, because page.setContent() has no
+         base URL and a relative <img src> resolves against about:blank.
+     ══════════════════════════════════════════════════════════════════════ */
+
   :root {
     --ags-black: #0A0A0A;
     --ags-white: #FFFFFF;
     --ags-mint: #9CF5C4;
     --ags-mint-deep: #5FE0A0;
-    --ags-mint-soft: #D8FBE7;
     --ink-900: #0A0A0A;
     --ink-700: #2B2B2B;
     --ink-500: #6B6B6B;
@@ -27,189 +46,228 @@
     --font-sans: "Heebo", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
     --r-sm: 2px;
-    --r-md: 4px;
     --shadow-hard: 4px 4px 0 var(--ags-black);
     --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
     --dur: 120ms;
+    /* The design specifies a 0.6in page inset; semo-pdf prints at 10mm,
+       so the sheet supplies the balance. */
+    --doc-gutter: 5.2mm;
+    /* Print-only bands reserved for the running header/footer. Measured
+       from the rendered chrome (logo 30px + rule + breathing room) and
+       held as constants — see the note above on why nothing measures. */
+    --hdr-band: 15mm;
+    --ftr-band: 11mm;
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
     font-family: var(--font-sans);
-    background: var(--ink-50);
+    background: var(--ink-100);
     color: var(--ink-900);
-    min-height: 100vh;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
+  /* ── The sheet ───────────────────────────────────────────────────────── */
   .page {
     max-width: 800px;
     margin: 0 auto;
     background: var(--ags-white);
+    padding: 34px clamp(20px, 5vw, 46px) 40px;
     min-height: 100vh;
-    border-inline: 1.5px solid var(--ink-200);
   }
 
-  /* Header — pure black, white logo, mono mint eyebrow */
-  .header {
-    background: var(--ags-black);
-    padding: 26px 40px;
+  /* Single-cell frame: <thead>/<tfoot> carry the running header/footer and
+     Blink repeats them on every printed page; the document lives in the
+     one <tbody> cell. */
+  .doc-frame { width: 100%; border-collapse: collapse; }
+  .doc-frame > thead > tr > th,
+  .doc-frame > tbody > tr > td,
+  .doc-frame > tfoot > tr > td {
+    padding: 0;
+    text-align: right;
+    font-weight: inherit;
+  }
+
+  .run-hdr {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
-  }
-  .header-right { display: flex; align-items: center; gap: 16px; }
-  .header img.header-logo { height: 34px; }
-  .header-badge {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    color: var(--ags-mint);
-  }
-
-  /* Project Title — Heebo Black, mint dash eyebrow, hard black rule */
-  .title-section {
-    padding: 40px 40px 28px;
+    gap: 22px;
+    padding-bottom: 7px;
+    margin-bottom: 22px;
     border-bottom: 2px solid var(--ags-black);
   }
-  .project-label {
-    font-family: var(--font-mono);
+  .run-hdr img { height: 30px; width: auto; display: block; }
+  .run-hdr .hdr-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    line-height: 1.15;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .run-hdr .hdr-eyebrow {
     font-size: 11px;
     font-weight: 700;
-    color: var(--ink-500);
-    letter-spacing: 0.18em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .project-label::before {
-    content: "";
-    width: 20px;
-    height: 3px;
-    background: var(--ags-mint);
-    display: inline-block;
-  }
-  .project-name {
-    font-size: clamp(30px, 5vw, 44px);
-    font-weight: 900;
     color: var(--ags-black);
-    line-height: 1.05;
-    letter-spacing: -0.02em;
-    margin-bottom: 8px;
   }
-  .project-address { font-size: 15px; color: var(--ink-500); }
+  .run-hdr .hdr-ref {
+    font-size: 11.5px;
+    color: var(--ink-500);
+    font-variant-numeric: tabular-nums;
+  }
 
-  /* Section headings — mono uppercase, hard underline */
-  .specs-section { padding: 32px 40px; }
-  .specs-title, .image-title, .sig-title {
+  .run-ftr {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding-top: 6px;
+    margin-top: 26px;
+    border-top: 1.5px solid var(--ags-black);
+    font-size: 11.5px;
+    color: var(--ink-500);
+  }
+  .run-ftr .ftr-ref { font-variant-numeric: tabular-nums; }
+
+  /* ── Document typography ─────────────────────────────────────────────── */
+  .doc-title {
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    margin-bottom: 6px;
+    text-wrap: balance;
+  }
+
+  .doc-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 2px solid var(--ags-black);
+    padding-bottom: 5px;
+    margin-bottom: 12px;
+  }
+  .doc-meta .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-500);
+    white-space: nowrap;
+  }
+  .doc-meta .status {
+    font-size: 12px;
+    color: var(--ink-500);
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+  }
+
+  .doc-intro {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-700);
+    margin-bottom: 18px;
+    max-width: 52em;
+    text-wrap: pretty;
+  }
+
+  .sec-title {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+    padding-bottom: 5px;
+    border-bottom: 1.5px solid var(--ags-black);
+    break-after: avoid;
+  }
+
+  /* ── Tables ──────────────────────────────────────────────────────────── */
+  .kv, .grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    margin-bottom: 22px;
+  }
+  .kv tr, .grid-table tbody tr {
+    border-bottom: 1px solid var(--ink-200);
+    break-inside: avoid;
+  }
+  .kv th {
+    text-align: right;
+    padding-block: 6px;
+    padding-inline: 0 12px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--ink-500);
+    vertical-align: top;
+  }
+  .kv td {
+    text-align: right;
+    padding-block: 6px;
+    padding-inline: 0 20px;
+    font-weight: 700;
+    vertical-align: top;
+  }
+  .kv.pairs th { width: 19%; }
+  .kv.pairs td { width: 31%; }
+  .kv.single th { width: 22%; }
+  .kv td.num {
     font-family: var(--font-mono);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .grid-table thead th {
+    text-align: right;
+    padding-block: 5px;
+    padding-inline: 0 16px;
     font-size: 12px;
     font-weight: 700;
-    color: var(--ags-black);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin-bottom: 18px;
-    padding-bottom: 10px;
-    border-bottom: 1.5px solid var(--ink-200);
-  }
-
-  /* Hero stats (DC / AC) — bordered stat block, mono units, tabular nums */
-  .stat-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    border: 2px solid var(--ags-black);
-    border-radius: var(--r-md);
-    overflow: hidden;
-    margin-bottom: 16px;
-  }
-  .stat { padding: 22px 24px; border-inline-start: 1.5px solid var(--ink-200); }
-  .stat:first-child { border-inline-start: 0; }
-  .stat.accent { background: var(--ags-mint); }
-  .stat .lbl {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--ink-500);
-    margin-bottom: 8px;
+    border-bottom: 1.5px solid var(--ags-black);
   }
-  .stat.accent .lbl { color: var(--ink-700); }
-  .stat .num {
-    font-weight: 900;
-    font-size: 40px;
-    line-height: 1;
-    letter-spacing: -0.02em;
+  .grid-table td {
+    padding-block: 6px;
+    padding-inline: 0 16px;
+    vertical-align: top;
+    color: var(--ink-700);
+  }
+  .grid-table td.strong { font-weight: 700; color: var(--ink-900); }
+  .grid-table td.num {
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    color: var(--ags-black);
-  }
-  .stat .num .unit {
-    font-family: var(--font-mono);
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--ink-500);
-    margin-inline-start: 5px;
-    letter-spacing: 0.04em;
-  }
-  .stat.accent .num .unit { color: var(--ink-700); }
-
-  /* Spec cards — flat, hover lifts with the signature offset shadow */
-  .specs-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  .spec-card {
-    background: var(--ags-white);
-    border: 1.5px solid var(--ink-200);
-    border-radius: var(--r-md);
-    padding: 16px 18px;
-    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
-  }
-  .spec-card:hover {
-    transform: translate(-2px, -2px);
-    box-shadow: var(--shadow-hard);
-    border-color: var(--ags-black);
-  }
-  .spec-card.full { grid-column: 1 / -1; }
-  .spec-label {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-500);
-    margin-bottom: 6px;
-  }
-  .spec-value {
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--ags-black);
-    letter-spacing: -0.01em;
-  }
-  .spec-value small {
-    font-family: var(--font-mono);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--ink-500);
+    white-space: nowrap;
   }
 
-  /* Design image */
-  .image-section { padding: 0 40px 32px; }
-  .design-image {
-    width: 100%;
+  /* ── Figure ──────────────────────────────────────────────────────────── */
+  .doc-figure { margin-bottom: 22px; break-inside: avoid; }
+  .doc-figure img {
     display: block;
-    border: 1.5px solid var(--ink-200);
-    border-radius: var(--r-md);
+    width: 100%;
+    height: auto;
+    border: 1.5px solid var(--ags-black);
+  }
+  .doc-figure figcaption {
+    font-size: 12.5px;
+    color: var(--ink-500);
+    margin-top: 5px;
+    text-wrap: pretty;
   }
   .no-image {
-    background: var(--ink-50);
     border: 1.5px dashed var(--ink-300);
-    border-radius: var(--r-md);
+    background: var(--ink-50);
     padding: 44px;
     text-align: center;
     color: var(--ink-400);
@@ -217,60 +275,37 @@
     font-weight: 500;
   }
 
-  /* Survey notes — numbered site-survey remarks on the signed document.
-     Font size fixed at 11px by product requirement. */
-  .notes-section { padding: 0 40px 28px; }
-  .notes-title {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: var(--ink-500);
-    margin-bottom: 10px;
-  }
-  .notes-block {
-    background: var(--ink-50);
-    border: 1.5px solid var(--ink-200);
-    border-right: 3px solid var(--ags-mint-deep);
-    border-radius: var(--r-md);
-    padding: 16px 20px;
-  }
-  .notes-block ol {
-    margin: 0;
+  /* ── Ordered lists (survey notes, terms) ─────────────────────────────── */
+  .doc-list {
+    margin-bottom: 22px;
     padding-right: 18px;
-    font-size: 11px;
-    line-height: 1.8;
+    font-size: 15px;
+    line-height: 1.6;
     color: var(--ink-700);
   }
-  .notes-block ol li { margin-bottom: 6px; }
-  .notes-block ol li:last-child { margin-bottom: 0; }
-
-  /* Signature section */
-  .signature-section {
-    padding: 32px 40px 40px;
-    border-top: 1.5px solid var(--ink-200);
-    margin-top: 8px;
+  .doc-list li {
+    padding-block: 5px;
+    break-inside: avoid;
+    orphans: 3;
+    widows: 3;
+    text-wrap: pretty;
   }
+  .terms-list { font-size: 14px; line-height: 1.65; }
 
-  /* Terms block */
-  .terms-block {
-    background: var(--ink-50);
-    border: 1.5px solid var(--ink-200);
-    border-radius: var(--r-md);
-    padding: 22px;
-    margin-bottom: 24px;
-    font-size: 13.5px;
-    line-height: 1.85;
+  /* ── Signing area ────────────────────────────────────────────────────── */
+  .sig-lede {
+    font-size: 14.5px;
+    line-height: 1.65;
     color: var(--ink-700);
+    margin-bottom: 14px;
+    text-wrap: pretty;
   }
-  .terms-block p { margin-bottom: 12px; }
-  .terms-block p:last-child { margin-bottom: 0; }
 
   .sig-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 18px;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
   }
   .sig-field label {
     display: block;
@@ -282,7 +317,7 @@
   .sig-field input {
     width: 100%;
     border: 1.5px solid var(--ink-300);
-    border-radius: var(--r-md);
+    border-radius: var(--r-sm);
     padding: 11px 14px;
     font-family: var(--font-sans);
     font-size: 15px;
@@ -296,7 +331,7 @@
 
   .sig-canvas-wrap {
     border: 1.5px dashed var(--ink-300);
-    border-radius: var(--r-md);
+    border-radius: var(--r-sm);
     position: relative;
     height: 150px;
     display: flex;
@@ -318,11 +353,11 @@
   .btn-clear {
     background: var(--ags-white);
     border: 1.5px solid var(--ink-300);
-    border-radius: var(--r-md);
+    border-radius: var(--r-sm);
     padding: 8px 16px;
     font-family: var(--font-sans);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--ink-700);
     cursor: pointer;
     transition: all var(--dur) var(--ease);
@@ -347,12 +382,11 @@
     flex-shrink: 0;
   }
 
-  /* Primary CTA — mint fill, black border + text, signature offset shadow */
   .sig-btn {
     background: var(--ags-mint);
     color: var(--ags-black);
     border: 2px solid var(--ags-black);
-    border-radius: var(--r-md);
+    border-radius: var(--r-sm);
     padding: 15px 32px;
     font-family: var(--font-sans);
     font-size: 16px;
@@ -369,215 +403,246 @@
   .sig-error {
     color: var(--error);
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     margin-top: 12px;
     text-align: center;
     display: none;
   }
 
-  /* Signed state — mint-soft panel, black border, stroke check */
-  .signed-banner {
-    background: var(--ags-mint-soft);
-    border: 2px solid var(--ags-black);
-    border-radius: var(--r-md);
-    padding: 28px 24px;
-    text-align: center;
+  /* Signed state — kept in the document's monochrome register rather than
+     the old mint web banner. */
+  .signed-block { border: 2px solid var(--ags-black); padding: 20px 22px; break-inside: avoid; }
+  .signed-head {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-500);
+    margin-bottom: 8px;
   }
-  .signed-check {
-    width: 48px; height: 48px;
-    border-radius: 999px;
-    background: var(--ags-mint);
-    border: 2px solid var(--ags-black);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 14px;
+  .signed-title { font-size: 20px; font-weight: 900; letter-spacing: -0.01em; margin-bottom: 12px; }
+  .signed-info {
+    font-size: 13.5px;
+    line-height: 1.9;
+    color: var(--ink-700);
+    font-variant-numeric: tabular-nums;
   }
-  .signed-check svg { width: 26px; height: 26px; stroke: var(--ags-black); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  .signed-title { font-size: 20px; font-weight: 900; letter-spacing: -0.01em; color: var(--ags-black); margin-bottom: 10px; }
-  .signed-info { font-family: var(--font-mono); font-size: 13px; color: var(--ink-700); line-height: 1.9; }
-  .signed-sig-img { max-width: 200px; margin-top: 14px; mix-blend-mode: multiply; opacity: 0.85; }
+  .signed-info b { color: var(--ink-900); font-weight: 700; }
+  .signed-sig-img { max-width: 200px; margin-top: 12px; mix-blend-mode: multiply; }
 
   /* Progress */
   .progress-bar { display: none; margin-top: 16px; }
   .progress-bar.show { display: block; }
   .progress-text { font-family: var(--font-mono); font-size: 12px; color: var(--ink-500); text-align: center; margin-bottom: 8px; }
-  .progress-track { height: 4px; background: var(--ink-200); border-radius: 999px; overflow: hidden; }
-  .progress-fill { height: 100%; background: var(--ags-mint-deep); border-radius: 999px; transition: width 0.4s var(--ease); width: 0; }
+  .progress-track { height: 4px; background: var(--ink-200); overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--ags-black); transition: width 0.4s var(--ease); width: 0; }
 
-  /* Footer — black, company stamp + legal line */
-  .footer {
-    background: var(--ags-black);
-    padding: 28px 40px;
-    text-align: center;
-    color: rgba(255,255,255,0.55);
-    font-size: 12px;
-  }
-  .footer-stamp { height: 64px; margin-bottom: 14px; }
-  .footer-legal { font-family: var(--font-mono); letter-spacing: 0.04em; }
+  .doc-error { padding: 80px 20px; text-align: center; }
+  .doc-error h2 { font-size: 26px; font-weight: 900; margin-bottom: 8px; }
+  .doc-error p { color: var(--ink-500); }
 
   @media (max-width: 600px) {
-    .header { padding: 22px 20px; }
-    .title-section { padding: 28px 20px 22px; }
-    .project-name { font-size: 28px; }
-    .specs-section { padding: 24px 20px; }
-    .specs-grid { grid-template-columns: 1fr; }
-    .stat-row { grid-template-columns: 1fr; }
-    .stat { border-inline-start: 0; }
-    .stat:first-child { border-bottom: 1.5px solid var(--ink-200); }
-    .image-section { padding: 0 20px 24px; }
-    .notes-section { padding: 0 20px 20px; }
-    .signature-section { padding: 24px 20px 32px; }
+    .page { padding: 24px 18px 30px; }
+    .doc-title { font-size: 26px; }
+    .doc-meta { flex-direction: column; align-items: flex-start; gap: 2px; }
+    .doc-meta .status { text-align: right; }
+    .run-hdr { gap: 12px; }
+    .run-hdr .hdr-meta { white-space: normal; }
     .sig-grid { grid-template-columns: 1fr; }
-    .footer { padding: 22px 20px; }
+    .kv.pairs th, .kv.pairs td { width: auto; }
   }
 
+  /* ══ Print / PDF ═══════════════════════════════════════════════════════
+     semo-pdf prints A4 at 10mm margins; the sheet supplies the balance of
+     the design's 0.6in inset. No forced page breaks and no fixed
+     positioning — the thead/tfoot bands do the repeating.                */
   @media print {
-    /* ── Print / PDF layout (semo-pdf renders this via headless Chromium) ──
-       Goal: exactly 2 pages, design image guaranteed on page 1.
-       Root causes addressed (see PDF_LAYOUT_ROOT_CAUSE report):
-         1. unbreakable <img> pushed to p.2  → cap its height so it fits p.1
-         2. page-break-inside:avoid on huge section → removed (wasted a page)
-         3. min-height:100vh → reset (added phantom whitespace)
-         4. redundant live form chrome → hidden (data lives in injected block) */
-
-    /* Geometry: natural flow, no forced full-viewport height */
     html, body, .page { min-height: auto !important; }
     body { background: #fff; }
-    .page { border: none; max-width: none; }
+    .page { max-width: none; width: auto; padding: 0; }
 
-    /* Compact vertical rhythm so header+title+specs+image fit one A4 page */
-    .header { padding: 18px 40px; }
-    .title-section { padding: 24px 40px 18px; }
-    .specs-section { padding: 22px 40px; }
-    .stat { padding: 16px 24px; }
-    .stat .num { font-size: 32px; }
-    .specs-grid { gap: 10px; }
-    .spec-card { padding: 12px 16px; }
-    .image-section { padding: 0 40px 18px; }
-    .notes-section { padding: 0 40px 14px; page-break-inside: avoid; }
+    /* Running chrome: pinned to the page edge on every sheet, with the
+       repeating thead/tfoot bands reserving the room in flow. */
+    .hdr-space { height: var(--hdr-band); }
+    .ftr-space { height: var(--ftr-band); }
+    .run-hdr, .run-ftr {
+      position: fixed;
+      left: 0;
+      right: 0;
+      margin: 0;
+      background: var(--ags-white);
+    }
+    .run-hdr { top: 0; padding: 0 var(--doc-gutter) 7px; }
+    .run-ftr { bottom: 0; padding: 6px var(--doc-gutter) 0; }
+    .doc-frame > tbody > tr > td { padding: 0 var(--doc-gutter); }
 
-    /* Keep the design image whole AND on page 1: cap height so the
-       title+specs+image block fits within the A4 printable area (277mm). */
-    .design-image { max-height: 78mm; width: auto; max-width: 100%; display: block; }
+    /* Tighter vertical rhythm so the roof render lands with the specs it
+       belongs to rather than being pushed past a half-empty page. */
+    .doc-title { font-size: 28px; }
+    .doc-intro { font-size: 14px; margin-bottom: 14px; }
+    .kv, .grid-table, .doc-list, .doc-figure { margin-bottom: 16px; }
+    h1, h2, .sec-title { break-after: avoid; }
 
-    /* The signature SECTION is taller than a page — never force it whole
-       (that wasted an entire page). Let it flow; keep only small blocks whole. */
-    .signature-section { page-break-inside: auto; padding: 22px 40px 26px; }
-    .terms-block {
-      break-inside: avoid; page-break-inside: avoid;
-      font-size: 12px; line-height: 1.6; padding: 16px 18px; margin-bottom: 0;
+    /* Keep the roof render whole AND on the page that carries the specs it
+       illustrates. Measured: after the tables a sheet has ~336px of usable
+       flow left, and heading + caption + margins take ~54px — so the image
+       gets 66mm. Left at its full column width it would be ~99mm tall,
+       never fit, and strand a third of page 1 empty. If a longer address or
+       an extra spec row eats the slack the figure simply moves to the next
+       page, which is graceful. */
+    .doc-figure img {
+      max-height: 66mm;
+      width: auto;
+      max-width: 100%;
+      margin-inline: auto;
     }
 
-    /* Hide interactive-only chrome — redundant in the signed PDF. The signer's
-       details + signature image are rendered by the injected
-       #semo-signature-block. The drawn canvas can't serialize into outerHTML,
-       so it would otherwise print blank. */
-    .sig-grid, .sig-canvas-wrap, .sig-actions, .sig-agree,
-    .sig-btn, .sig-error, .progress-bar { display: none !important; }
+    /* Interactive-only chrome. The signer's details and signature image are
+       carried by #semo-signature-block, which semo-pdf injects; the drawn
+       canvas cannot serialize into outerHTML and would print blank. */
+    .no-print { display: none !important; }
 
-    /* Footer compact */
-    .footer { padding: 18px 40px; }
-    .footer-stamp { height: 52px; }
+    /* semo-pdf appends this after the frame table, so it sits outside the
+       repeating bands and the fixed chrome could overlap it. Keeping it
+       whole and padding it by both bands makes either landing safe: mid
+       page it reads as section separation, at a page top it clears the
+       header. */
+    #semo-signature-block {
+      break-inside: avoid;
+      padding: var(--hdr-band) var(--doc-gutter) calc(var(--ftr-band) + 4mm);
+      font-family: var(--font-sans) !important;
+    }
   }
 </style>
 </head>
 <body>
 
 <div class="page">
+<table class="doc-frame" role="presentation">
 
-  <!-- Header -->
-  <div class="header">
-    <div class="header-right">
-      <img class="header-logo" src="ags-logo-white.png" alt="A.G.S">
-    </div>
-    <div class="header-badge">מפרט טכני</div>
-  </div>
-
-  <!-- Project Title -->
-  <div class="title-section">
-    <div class="project-label">פרויקט סולארי</div>
-    <div class="project-name" id="projectName"></div>
-    <div class="project-address" id="projectAddress"></div>
-  </div>
-
-  <!-- Technical Specs -->
-  <div class="specs-section">
-    <div class="specs-title">מפרט טכני</div>
-    <div class="stat-row" id="statRow"></div>
-    <div class="specs-grid" id="specsGrid"></div>
-  </div>
-
-  <!-- Design Image -->
-  <div class="image-section" id="imageSection"></div>
-
-  <!-- Survey Notes (numbered, shown only when the project has saved notes) -->
-  <div class="notes-section" id="notesSection" style="display:none"></div>
-
-  <!-- Signature Section -->
-  <div class="signature-section" id="signatureSection">
-    <div class="sig-title">אישור לקוח</div>
-
-    <div class="terms-block" id="termsBlock"></div>
-
-    <div class="sig-grid">
-      <div class="sig-field">
-        <label>שם מלא</label>
-        <input type="text" id="sigName" placeholder="הכנס שם מלא">
-      </div>
-      <div class="sig-field">
-        <label>ת.ז.</label>
-        <input type="text" id="sigId" placeholder="מספר תעודת זהות" inputmode="numeric">
-      </div>
-      <div class="sig-field">
-        <label>אימייל</label>
-        <input type="email" id="sigEmail" placeholder="כתובת אימייל">
-      </div>
-      <div class="sig-field">
-        <label>תאריך</label>
-        <input type="text" id="sigDate" readonly>
+  <!-- Running header — the band repeats on every printed page and the
+       chrome inside it is pinned to the page edge -->
+  <thead><tr><th>
+    <div class="hdr-space">
+    <div class="run-hdr">
+      <img src="data:image/png;base64,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" alt="A.G.S">
+      <div class="hdr-meta">
+        <span class="hdr-eyebrow">Technical Spec · Pre-Order</span>
+        <span class="hdr-ref" id="hdrRef">מפרט טכני לביצוע</span>
       </div>
     </div>
-
-    <div class="sig-canvas-wrap" id="canvasWrap">
-      <span class="sig-placeholder" id="sigPlaceholder">חתום כאן עם העכבר או האצבע</span>
-      <canvas id="sigCanvas"></canvas>
     </div>
-    <div class="sig-actions">
-      <button class="btn-clear" onclick="clearSignature()">נקה חתימה</button>
+  </th></tr></thead>
+
+  <tbody><tr><td>
+    <div id="docBody">
+
+      <h1 class="doc-title">מפרט טכני לביצוע</h1>
+
+      <div class="doc-meta">
+        <span class="eyebrow">Pre-order specification</span>
+        <span class="status" id="docStatus"></span>
+      </div>
+
+      <p class="doc-intro">מסמך זה מרכז את המפרט הטכני של המערכת הסולארית כפי שתוכננה עבור הנכס: הספקי המערכת, גודל החיבור, מספר הפאנלים, דגמי הציוד שיסופקו ופריסת הפאנלים על הגג. אישור הלקוח על מסמך זה הוא התנאי להפקת הזמנת עבודה ולתחילת הביצוע.</p>
+
+      <h2 class="sec-title">פרטי הפרויקט</h2>
+      <table class="kv single"><tbody id="projectTable"></tbody></table>
+
+      <h2 class="sec-title">נתוני המערכת</h2>
+      <table class="kv pairs"><tbody id="systemTable"></tbody></table>
+
+      <section id="bomSection" hidden>
+        <h2 class="sec-title">פירוט רכיבים</h2>
+        <table class="grid-table">
+          <thead><tr>
+            <th>רכיב</th>
+            <th>דגם מדויק / יצרן</th>
+            <th style="white-space:nowrap">כמות</th>
+          </tr></thead>
+          <tbody id="bomTable"></tbody>
+        </table>
+      </section>
+
+      <section id="imageSection"></section>
+
+      <section id="notesSection" hidden>
+        <h2 class="sec-title">הערות מהסיור הטכני</h2>
+        <ol class="doc-list" id="notesList"></ol>
+      </section>
+
+      <h2 class="sec-title">אישור הלקוח לפני הזמנת עבודה</h2>
+      <div id="signatureSection">
+
+        <p class="sig-lede">בחתימתי על מסמך זה אני מאשר/ת את התנאים הבאים:</p>
+        <ol class="doc-list terms-list" id="termsBlock"></ol>
+
+        <div class="sig-grid no-print">
+          <div class="sig-field">
+            <label>שם מלא</label>
+            <input type="text" id="sigName" placeholder="הכנס שם מלא">
+          </div>
+          <div class="sig-field">
+            <label>ת.ז.</label>
+            <input type="text" id="sigId" placeholder="מספר תעודת זהות" inputmode="numeric">
+          </div>
+          <div class="sig-field">
+            <label>אימייל</label>
+            <input type="email" id="sigEmail" placeholder="כתובת אימייל">
+          </div>
+          <div class="sig-field">
+            <label>תאריך</label>
+            <input type="text" id="sigDate" readonly>
+          </div>
+        </div>
+
+        <div class="sig-canvas-wrap no-print" id="canvasWrap">
+          <span class="sig-placeholder" id="sigPlaceholder">חתום כאן עם העכבר או האצבע</span>
+          <canvas id="sigCanvas"></canvas>
+        </div>
+        <div class="sig-actions no-print">
+          <button class="btn-clear" onclick="clearSignature()">נקה חתימה</button>
+        </div>
+
+        <label class="sig-agree no-print">
+          <input type="checkbox" id="sigAgree">
+          <span>קראתי את התנאים לעיל ואני מאשר/ת את תוכן המפרט הטכני</span>
+        </label>
+
+        <button class="sig-btn no-print" id="sigBtn" onclick="submitSignature()">אישור וחתימה</button>
+        <div class="sig-error no-print" id="sigError"></div>
+
+        <div class="progress-bar no-print" id="progressBar">
+          <div class="progress-text" id="progressText">שומר חתימה...</div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+
+      </div>
     </div>
+  </td></tr></tbody>
 
-    <label class="sig-agree">
-      <input type="checkbox" id="sigAgree">
-      <span>קראתי את התנאים לעיל ואני מאשר/ת את תוכן המפרט הטכני</span>
-    </label>
-
-    <button class="sig-btn" id="sigBtn" onclick="submitSignature()">אישור וחתימה</button>
-    <div class="sig-error" id="sigError"></div>
-
-    <div class="progress-bar" id="progressBar">
-      <div class="progress-text" id="progressText">שומר חתימה...</div>
-      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <!-- Running footer — same band-plus-pinned-chrome arrangement -->
+  <tfoot><tr><td>
+    <div class="ftr-space">
+    <div class="run-ftr">
+      <span>סמו א.ג.ס בע&quot;מ · ח.פ. 515942282 · מערכות סולאריות</span>
+      <span class="ftr-ref" id="ftrRef">מפרט טכני לביצוע</span>
     </div>
-  </div>
+    </div>
+  </td></tr></tfoot>
 
-  <!-- Footer -->
-  <div class="footer">
-    <img class="footer-stamp" src="stamp-hebrew.gif" alt="חותמת סמו א.ג.ס" onerror="this.style.display='none'">
-    <div class="footer-legal">SEMO A.G.S — סמו א.ג.ס בע"מ · כל הזכויות שמורות</div>
-  </div>
-
+</table>
 </div>
 
-<!-- signature-service.js load removed — SignatureCapture imported via module below. -->
 <script src="post-sign-service.js"></script>
 <script type="module">
 import { SignatureCapture as SignatureService } from './signature/index.js';
 
 (function() {
-  const WORKER_URL = 'https://s-a.gs';
   const YARON_WORKER_URL = 'https://monday-yaron.monday-shimrit.workers.dev';
   const DOC_TYPE = 'spec';
 
-  // ── Terms Content (editable separately) ──
+  // ── Terms (edited independently of the layout) ──
   const SPEC_TERMS = [
     'אני מאשר/ת כי קיבלתי לעיוני מפרט טכני מלא של המערכת, לרבות הספקי המערכת (DC ו-AC), מספר הפאנלים, סוג הציוד ושרטוט פריסת הפאנלים על גג הנכס, וכי בדקתי ואישרתי את תכנון המערכת כפי שמוצג במסמך זה.',
     'ידוע לי כי ההספק הסופי של המערכת (DC) נקבע בהתאם לתכנון ולפריסה שאושרו על ידי במסמך זה, וכי הספק זה מהווה את הבסיס לחישוב עלות המערכת.',
@@ -586,106 +651,138 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
     'שינויים בפריסת הפאנלים לאחר החתימה יחויבו בתשלום נוסף בגין תכנון, תוספת ציוד ועבודה.',
   ];
 
-  // ── Load spec data ──
+  // Every value below originates in Monday, so it is escaped before it
+  // reaches innerHTML.
+  const esc = (v) => String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const has = (v) => v != null && String(v).trim() !== '';
+
+  // JetBrains Mono carries no Hebrew, so a mixed value like "3X25 A · תלת־פאזי"
+  // would render half mono and half fallback. Only set values that are purely
+  // Latin/numeric in the mono face.
+  const isNumeric = (v) => !/[֐-׿]/.test(String(v));
+
+  // he-IL gives "29.8.2026"; a document wants the padded form.
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const fmtDate = (d) => `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()}`;
+
   const specData = window.__SPEC_DATA__;
   if (!specData) {
-    document.querySelector('.page').innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:40px;">
-        <div>
-          <h2 style="font-family:'Heebo',sans-serif;font-weight:900;color:#0A0A0A;margin-bottom:8px;">המפרט לא נמצא</h2>
-          <p style="font-family:'Heebo',sans-serif;color:#6B6B6B;">ייתכן שהקישור שגוי או שהמפרט פג תוקפו.</p>
-        </div>
-      </div>`;
+    document.querySelector('.page').innerHTML =
+      '<div class="doc-error"><h2>המפרט לא נמצא</h2>' +
+      '<p>ייתכן שהקישור שגוי או שהמפרט פג תוקפו.</p></div>';
     return;
   }
 
-  // ── Extract doc ID from URL ──
   const docId = window.__SPEC_DOC_ID__ || location.pathname.split('/').pop() || '';
+  const docRef = docId ? docId.toUpperCase() : '';
+  const issuedAt = new Date();
+  const dateStr = fmtDate(issuedAt);
 
-  // ── Populate project info ──
-  document.getElementById('projectName').textContent = specData.projectName || '';
-  document.getElementById('projectAddress').textContent = specData.address || '';
-  document.title = `מפרט טכני — ${specData.projectName || ''} | SEMO A.G.S`;
+  document.title = 'מפרט טכני לביצוע — ' + (specData.projectName || '') + ' | SEMO A.G.S';
 
-  // ── Build specs ──
-  // Highlight metrics (DC/AC) render as a bordered stat block with mono units;
-  // the rest render as flat hover-lift cards.
-  const specs = [
-    { label: 'הספק DC', value: specData.kwp, unit: 'kWp', highlight: true },
-    { label: 'הספק AC', value: specData.acPower, unit: 'kW', highlight: true },
-    { label: 'גודל חיבור', value: specData.connectionSize },
-    { label: 'מספר פאנלים', value: specData.numModules },
-    { label: 'דגם פאנלים', value: specData.solarModule, full: true },
-    { label: 'דגם ממיר', value: specData.solarInverter, full: true },
-  ];
+  // ── Running header / footer references ──
+  const refLine = ['מפרט טכני לביצוע', docRef, dateStr].filter(Boolean).join(' · ');
+  document.getElementById('hdrRef').textContent = refLine;
+  document.getElementById('ftrRef').textContent =
+    ['מפרט טכני לביצוע', docRef].filter(Boolean).join(' · ');
 
-  const grid = document.getElementById('specsGrid');
-  const statRow = document.getElementById('statRow');
-  let statCount = 0;
-  specs.forEach(s => {
-    if (!s.value) return;
-    if (s.highlight) {
-      const stat = document.createElement('div');
-      stat.className = 'stat' + (statCount === 0 ? ' accent' : '');
-      statCount++;
-      const unitHtml = s.unit ? ` <span class="unit">${s.unit}</span>` : '';
-      stat.innerHTML = `
-        <div class="lbl">${s.label}</div>
-        <div class="num">${s.value}${unitHtml}</div>`;
-      statRow.appendChild(stat);
-    } else {
-      const card = document.createElement('div');
-      card.className = 'spec-card' + (s.full ? ' full' : '');
-      const unitHtml = s.unit ? ` <small>${s.unit}</small>` : '';
-      const fontSize = s.full ? ' style="font-size:16px;"' : '';
-      card.innerHTML = `
-        <div class="spec-label">${s.label}</div>
-        <div class="spec-value"${fontSize}>${s.value}${unitHtml}</div>`;
-      grid.appendChild(card);
-    }
-  });
-  if (statCount === 0) statRow.style.display = 'none';
+  const setStatus = (label) => {
+    document.getElementById('docStatus').textContent =
+      [label, 'הופק ' + dateStr].filter(Boolean).join(' · ');
+  };
+  setStatus('ממתין לאישור הלקוח');
 
-  // ── Design image ──
+  // ── פרטי הפרויקט ──
+  const projectRows = [
+    ['שם הלקוח', specData.projectName],
+    ['כתובת המתקן', specData.address],
+    ['מזהה מסמך', docRef],
+    ['תאריך הפקה', dateStr],
+  ].filter(([, v]) => has(v));
+
+  document.getElementById('projectTable').innerHTML = projectRows
+    .map(([k, v]) => '<tr><th>' + esc(k) + '</th><td>' + esc(v) + '</td></tr>')
+    .join('');
+
+  // ── נתוני המערכת — laid out as label/value pairs, two per row ──
+  const kwp = parseFloat(specData.kwp);
+  const acPower = parseFloat(specData.acPower);
+  const ratio = (Number.isFinite(kwp) && Number.isFinite(acPower) && acPower > 0)
+    ? (kwp / acPower).toFixed(2)
+    : null;
+
+  const systemCells = [
+    { k: 'הספק DC', v: has(specData.kwp) ? specData.kwp + ' kWp' : null },
+    { k: 'הספק AC', v: has(specData.acPower) ? specData.acPower + ' kW' : null },
+    { k: 'גודל חיבור', v: specData.connectionSize },
+    { k: 'מספר פאנלים', v: specData.numModules },
+    { k: 'יחס DC/AC', v: ratio },
+  ].filter((c) => has(c.v));
+
+  let systemHtml = '';
+  for (let i = 0; i < systemCells.length; i += 2) {
+    const pair = [systemCells[i], systemCells[i + 1]];
+    systemHtml += '<tr>' + pair.map((c) => c
+      ? '<th>' + esc(c.k) + '</th><td class="' + (isNumeric(c.v) ? 'num' : '') + '">' +
+        esc(c.v) + '</td>'
+      : '<th></th><td></td>').join('') + '</tr>';
+  }
+  document.getElementById('systemTable').innerHTML = systemHtml;
+
+  // ── פירוט רכיבים — the equipment actually recorded on the project ──
+  const bom = [
+    { name: 'פאנלים פוטו-וולטאיים', model: specData.solarModule, qty: specData.numModules },
+    { name: 'ממיר (אינוורטר)', model: specData.solarInverter, qty: has(specData.solarInverter) ? '1' : null },
+  ].filter((r) => has(r.model));
+
+  if (bom.length) {
+    document.getElementById('bomTable').innerHTML = bom
+      .map((r) => '<tr><td class="strong">' + esc(r.name) + '</td><td>' + esc(r.model) +
+        '</td><td class="num">' + (has(r.qty) ? esc(r.qty) : '—') + '</td></tr>')
+      .join('');
+    document.getElementById('bomSection').hidden = false;
+  }
+
+  // ── פריסת פאנלים ──
   const imgSection = document.getElementById('imageSection');
-  if (specData.designImageUrl) {
-    imgSection.innerHTML = `
-      <div class="image-title">תמונת הדמייה — מבט על</div>
-      <img class="design-image" src="${specData.designImageUrl}" alt="הדמיית מערכת סולארית"
-           onerror="this.outerHTML='<div class=\\'no-image\\'>תמונת ההדמייה לא זמינה</div>'">`;
-  } else {
-    imgSection.innerHTML = `
-      <div class="image-title">תמונת הדמייה — מבט על</div>
-      <div class="no-image">תמונת הדמייה לא זמינה</div>`;
-  }
+  imgSection.innerHTML =
+    '<h2 class="sec-title">פריסת פאנלים על הגג</h2>' +
+    (has(specData.designImageUrl)
+      ? '<figure class="doc-figure"><img src="' + esc(specData.designImageUrl) +
+        '" alt="הדמיית פריסת הפאנלים"><figcaption>איור 1 — הדמיית פריסת הפאנלים על הגג, מבט על. ' +
+        'הפריסה מהווה בסיס לתכנון הקונסטרוקציה ולביצוע.</figcaption></figure>'
+      : '<div class="doc-figure"><div class="no-image">תמונת הדמייה לא זמינה</div></div>');
 
-  // ── Survey notes (numbered site-survey remarks, 11px, bodies only) ──
-  const notesEl = document.getElementById('notesSection');
-  const surveyNotes = Array.isArray(specData.surveyNotes) ? specData.surveyNotes.filter(n => typeof n === 'string' && n.trim()) : [];
+  // ── הערות מהסיור הטכני ──
+  const surveyNotes = Array.isArray(specData.surveyNotes)
+    ? specData.surveyNotes.filter((n) => typeof n === 'string' && n.trim())
+    : [];
   if (surveyNotes.length) {
-    const escN = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    notesEl.innerHTML = `
-      <div class="notes-title">הערות</div>
-      <div class="notes-block"><ol>${surveyNotes.map(n => `<li>${escN(n)}</li>`).join('')}</ol></div>`;
-    notesEl.style.display = '';
+    document.getElementById('notesList').innerHTML =
+      surveyNotes.map((n) => '<li>' + esc(n) + '</li>').join('');
+    document.getElementById('notesSection').hidden = false;
   }
 
-  // ── Render terms ──
-  document.getElementById('termsBlock').innerHTML = SPEC_TERMS.map(p => `<p>${p}</p>`).join('');
+  // ── תנאים ──
+  document.getElementById('termsBlock').innerHTML =
+    SPEC_TERMS.map((p) => '<li>' + esc(p) + '</li>').join('');
 
-  // ── Set date ──
-  document.getElementById('sigDate').value = new Date().toLocaleDateString('he-IL');
+  // he-IL, not the padded document format: this value travels into the
+  // signature payload, the confirmation emails and Monday.
+  document.getElementById('sigDate').value = issuedAt.toLocaleDateString('he-IL');
 
-  // ── Init signature canvas ──
+  // ── Signature capture ──
   // includeDocumentHtml opt-in (15A.1): collect() attaches the page's final
   // outerHTML to the signature, which the Worker persists under html:${docId}
-  // for the new PDF pipeline (15A.2 / 15A.4).
+  // for the PDF pipeline (15A.2 / 15A.4).
   const sigService = new SignatureService('sigCanvas', {
     capture: { includeDocumentHtml: true },
   });
   sigService.init();
 
-  // Hide placeholder on first draw
   const canvas = document.getElementById('sigCanvas');
   canvas.addEventListener('mousedown', hidePlaceholder);
   canvas.addEventListener('touchstart', hidePlaceholder);
@@ -698,47 +795,44 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
     document.getElementById('sigPlaceholder').style.display = '';
   };
 
-  // ── Check if already signed ──
   if (window.__SIGNATURE_DATA__ && window.__SIGNATURE_DATA__.signed) {
     showSignedState(window.__SIGNATURE_DATA__);
     return;
   }
 
-  // Also check via API
-  PostSignService.checkSignature(docId).then(result => {
-    if (result.signed && result.docType === DOC_TYPE) {
-      showSignedState(result);
-    }
+  PostSignService.checkSignature(docId).then((result) => {
+    if (result.signed && result.docType === DOC_TYPE) showSignedState(result);
   });
 
   function showSignedState(sig) {
-    const section = document.getElementById('signatureSection');
-    let sigImgHtml = '';
-    if (sig.sigImg) {
-      sigImgHtml = `<img class="signed-sig-img" src="${sig.sigImg}" alt="חתימה">`;
-    }
-    section.innerHTML = `
-      <div class="signed-banner">
-        <div class="signed-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="signed-title">המפרט נחתם בהצלחה</div>
-        <div class="signed-info">
-          חותם: ${sig.signerName || ''}<br>
-          ת.ז.: ${sig.signerId || ''}<br>
-          תאריך: ${sig.dateStr || ''}<br>
-          ${sig.refID ? 'מזהה: ' + sig.refID : ''}
-        </div>
-        ${sigImgHtml}
-      </div>`;
+    setStatus('מאושר — נחתם דיגיטלית');
+    const rows = [
+      ['חותם', sig.signerName],
+      ['ת.ז.', sig.signerId],
+      ['תאריך', sig.dateStr],
+      ['מזהה חתימה', sig.refID],
+    ].filter(([, v]) => has(v));
+
+    document.getElementById('signatureSection').innerHTML =
+      '<div class="signed-block">' +
+      '<div class="signed-head">Signed · אישור דיגיטלי</div>' +
+      '<div class="signed-title">המפרט נחתם בהצלחה</div>' +
+      '<div class="signed-info">' +
+      rows.map(([k, v]) => '<b>' + esc(k) + ':</b> ' + esc(v)).join('<br>') +
+      '</div>' +
+      (has(sig.sigImg)
+        ? '<img class="signed-sig-img" src="' + esc(sig.sigImg) + '" alt="חתימה">'
+        : '') +
+      '</div>';
   }
 
-  // ── Submit signature ──
+  // ── Submit ──
   window.submitSignature = async function() {
     const btn = document.getElementById('sigBtn');
     const errorEl = document.getElementById('sigError');
     errorEl.style.display = 'none';
 
-    // Clear previous error states
-    document.querySelectorAll('.sig-field input.error').forEach(el => el.classList.remove('error'));
+    document.querySelectorAll('.sig-field input.error').forEach((el) => el.classList.remove('error'));
     document.getElementById('canvasWrap').classList.remove('error');
 
     const name = document.getElementById('sigName').value.trim();
@@ -747,7 +841,6 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
     const sigDate = document.getElementById('sigDate').value;
     const agreed = document.getElementById('sigAgree').checked;
 
-    // Collect signature
     const result = await sigService.collect({
       name, idNum, email, sigDate, agreed,
       quoteSnapshot: specData,
@@ -755,17 +848,13 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
     });
 
     if (!result.ok) {
-      // Highlight errors
       const errorMap = {
         name: 'sigName', idNum: 'sigId', email: 'sigEmail',
         sigDate: 'sigDate', canvas: 'canvasWrap', agree: null,
       };
-      result.errors.forEach(e => {
-        if (e === 'canvas') {
-          document.getElementById('canvasWrap').classList.add('error');
-        } else if (errorMap[e]) {
-          document.getElementById(errorMap[e]).classList.add('error');
-        }
+      result.errors.forEach((e) => {
+        if (e === 'canvas') document.getElementById('canvasWrap').classList.add('error');
+        else if (errorMap[e]) document.getElementById(errorMap[e]).classList.add('error');
       });
 
       const messages = {
@@ -776,13 +865,11 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
         canvas: 'חתימה על המסמך',
         agree: 'אישור תנאים',
       };
-      const missing = result.errors.map(e => messages[e] || e).join(', ');
-      errorEl.textContent = 'חסר: ' + missing;
+      errorEl.textContent = 'חסר: ' + result.errors.map((e) => messages[e] || e).join(', ');
       errorEl.style.display = 'block';
       return;
     }
 
-    // Disable button, show progress
     btn.disabled = true;
     btn.textContent = 'שומר...';
     const progressBar = document.getElementById('progressBar');
@@ -809,7 +896,7 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
           signed: true,
         });
       },
-      onProgress: (step, ok, error) => {
+      onProgress: (step, ok) => {
         if (step === 'save' && ok === null) {
           progressText.textContent = 'שומר חתימה...';
           progressFill.style.width = '30%';
@@ -826,10 +913,10 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
       },
     });
 
-    // Update Monday task status to "בוצע" after successful signature
+    // Mark the Monday subitem "בוצע" once the signature is stored.
     if (processResult.saved && specData.subitemId) {
       try {
-        fetch(`${YARON_WORKER_URL}/update-status`, {
+        fetch(YARON_WORKER_URL + '/update-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ itemId: specData.subitemId, newStatus: 'בוצע' }),
