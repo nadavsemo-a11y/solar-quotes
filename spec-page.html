@@ -1,7 +1,17 @@
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
+<!-- THE SIGNATURE LAYOUT CONTRACT WITH semo-pdf.
+     This page draws its own ruled signature area and marks the element the customer's
+     signature PNG belongs in ([data-semo-signature-target="customer"]). semo-pdf reads this
+     declaration and writes the image INTO that element instead of appending its historical
+     historical appended signature section at the end of the document.
+     A document WITHOUT this tag still gets the appended block, so every spec signed before
+     this version keeps rendering exactly as it did.
+     Removing this tag reverts the PDF to the appended block; removing the TARGET while
+     leaving the tag makes semo-pdf refuse the render (422), on purpose. -->
+<meta name="semo-signature-layout" content="inline-v1">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מפרט טכני לביצוע — SEMO A.G.S</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -249,6 +259,82 @@
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+  }
+
+  /* ── Commercial tables ───────────────────────────────────────────────── */
+  /* The upgrade table reuses .grid-table; only the money column and the totals block are new. */
+  .grid-table td.money, .grid-table th.money { text-align: left; }
+  .grid-table td.money {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-weight: 700;
+    color: var(--ink-900);
+  }
+  .choice-yes { font-weight: 700; }
+  .choice-no  { color: var(--ink-400); }
+
+  .totals {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    margin-bottom: 22px;
+    break-inside: avoid;
+  }
+  .totals td { padding-block: 6px; }
+  .totals td:first-child { text-align: right; color: var(--ink-700); }
+  .totals td:last-child {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .totals tr.rule td { border-top: 1.5px solid var(--ags-black); }
+  .totals tr.grand td { font-size: 16px; font-weight: 900; padding-block: 9px; }
+
+  .doc-note {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ink-500);
+    margin: -12px 0 22px;
+  }
+
+  /* ── Inline signature area ───────────────────────────────────────────────
+     The ruled line the customer signs ON. It is part of the DOCUMENT, so it
+     prints on both the unsigned copy and the PDF, and semo-pdf places the
+     transparent signature PNG inside [data-semo-signature-target]. The band is
+     40px so a signature sits on the rule rather than floating above it. */
+  .sig-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin-top: 26px;
+    break-inside: avoid;
+  }
+  .sig-inline .sig-slot { display: flex; flex-direction: column; }
+  .sig-inline .sig-rule {
+    height: 40px;
+    border-bottom: 1.5px solid var(--ags-black);
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  .sig-inline .sig-rule > * { max-height: 40px; }
+  .sig-inline .sig-caption {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-500);
+    margin-top: 6px;
+  }
+  .sig-inline .sig-value {
+    font-size: 13.5px;
+    color: var(--ink-700);
+    margin-top: 2px;
+    min-height: 1.4em;
   }
 
   /* ── Figure ──────────────────────────────────────────────────────────── */
@@ -571,6 +657,47 @@
         <ol class="doc-list" id="notesList"></ol>
       </section>
 
+      <!-- COMMERCIAL. Rendered only from the FROZEN block semo-quotes returned at spec-creation
+           time (specData.commercial). This page performs no pricing arithmetic of its own: the
+           signed quote's own basis is the only authority for the money on a document a customer
+           signs, and a second implementation here is exactly how two totals start disagreeing.
+           Every section below removes ITSELF — heading included — when it has no data. -->
+      <section id="upgradesSection" hidden>
+        <h2 class="sec-title">שדרוגים שנבחרו</h2>
+        <table class="grid-table">
+          <thead><tr>
+            <th>שדרוג</th>
+            <th>תיאור</th>
+            <th class="money">עלות</th>
+            <th style="white-space:nowrap">בחירה</th>
+          </tr></thead>
+          <tbody id="upgradesTable"></tbody>
+        </table>
+      </section>
+
+      <section id="costSection" hidden>
+        <h2 class="sec-title">עלות הפרויקט</h2>
+        <table class="totals"><tbody id="costTable"></tbody></table>
+        <p class="doc-note" id="costNote" hidden></p>
+      </section>
+
+      <section id="comparisonSection" hidden>
+        <h2 class="sec-title">השוואה מול הצעת המחיר</h2>
+        <table class="grid-table">
+          <thead><tr><th></th><th class="money">הספק</th><th class="money">עלות מערכת</th></tr></thead>
+          <tbody id="comparisonTable"></tbody>
+        </table>
+      </section>
+
+      <section id="potentialSection" hidden>
+        <h2 class="sec-title">הוצאות אפשריות נוספות</h2>
+        <p class="doc-note">אינן נכללות בעלות הפרויקט. תחויבנה רק אם יתברר בביצוע שהן נדרשות.</p>
+        <table class="grid-table">
+          <thead><tr><th>סעיף</th><th class="money">עלות</th></tr></thead>
+          <tbody id="potentialTable"></tbody>
+        </table>
+      </section>
+
       <h2 class="sec-title">אישור הלקוח לפני הזמנת עבודה</h2>
       <div id="signatureSection">
 
@@ -608,6 +735,24 @@
           <input type="checkbox" id="sigAgree">
           <span>קראתי את התנאים לעיל ואני מאשר/ת את תוכן המפרט הטכני</span>
         </label>
+
+        <!-- THE RULED SIGNATURE AREA — part of the printed document, not the on-screen form.
+             The canvas above is the INPUT (no-print, and it does not survive outerHTML capture);
+             this is where the resulting signature appears on the page and in the PDF.
+             semo-pdf writes the transparent PNG into [data-semo-signature-target="customer"].
+             DO NOT rename that attribute or the id below — they are an external contract. -->
+        <div class="sig-inline" id="signatureRules">
+          <div class="sig-slot">
+            <div class="sig-rule"><span data-semo-signature-target="customer" id="customerSignatureTarget"></span></div>
+            <div class="sig-caption">חתימת הלקוח</div>
+            <div class="sig-value" id="sigNameOut"></div>
+          </div>
+          <div class="sig-slot">
+            <div class="sig-rule"></div>
+            <div class="sig-caption">תאריך</div>
+            <div class="sig-value" id="sigDateOut"></div>
+          </div>
+        </div>
 
         <button class="sig-btn no-print" id="sigBtn" onclick="submitSignature()">אישור וחתימה</button>
         <div class="sig-error no-print" id="sigError"></div>
@@ -766,6 +911,91 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
     document.getElementById('notesSection').hidden = false;
   }
 
+  // ── עלות הפרויקט ──────────────────────────────────────────────────────────
+  // Everything here comes from specData.commercial, frozen at spec-creation time by the pricing
+  // authority (semo-quotes). THE DISPLAY RULE: a value we do not have removes its row, and a
+  // section with no rows removes its own heading. There are no "not available" placeholders, and
+  // there is never a plausible zero — `status: "review_required"` renders the whole block away.
+  const money = (n) => Number(n).toLocaleString('he-IL') + ' ₪';
+  const kwp2 = (n) => Number(n).toFixed(2) + ' kWp';
+  const signed = (n, fmt) => (n > 0 ? '+' : '') + fmt(n);
+
+  const commercial = specData.commercial;
+  const commercialUsable = !!(commercial && commercial.status === 'ok' && commercial.totals);
+
+  if (commercial && !commercialUsable) {
+    // Say so in the console for the operator; show NOTHING on the document. A legally binding page
+    // must not carry a number the pricing authority declined to stand behind.
+    console.warn('[spec] commercial block withheld:', commercial.status, commercial.reasons);
+  } else if (!commercial) {
+    console.warn('[spec] no commercial block:', specData.commercialReason || 'unknown');
+  }
+
+  if (commercialUsable) {
+    // ── שדרוגים שנבחרו ──
+    // One-time and permanent upgrades appear in the SAME table. The customer's document has no
+    // business advertising which of them happens to live in the company's catalogue; what it owes
+    // the customer is the signed label, description, price and choice.
+    const upgradeRows = (commercial.upgrades || []).filter((u) => u.amount != null);
+    if (upgradeRows.length) {
+      document.getElementById('upgradesTable').innerHTML = upgradeRows.map((u) =>
+        '<tr><td class="strong">' + esc(u.label) + '</td>' +
+        '<td>' + esc(u.displayNote || '') + '</td>' +
+        '<td class="money">' + esc(money(u.amount)) + '</td>' +
+        '<td class="choice-yes">נבחר</td></tr>',
+      ).join('');
+      document.getElementById('upgradesSection').hidden = false;
+    }
+
+    // ── עלות הפרויקט ──
+    const t = commercial.totals;
+    const costRows = [];
+    if (t.base != null) {
+      const basis = (commercial.base && commercial.base.dcKW != null && commercial.base.pricePerKw != null)
+        ? ' (' + kwp2(commercial.base.dcKW) + ' × ' + money(commercial.base.pricePerKw) + ')'
+        : '';
+      costRows.push(['עלות מערכת' + basis, money(t.base), '']);
+    }
+    if (t.upgradesTotal) costRows.push(['שדרוגים שנבחרו', money(t.upgradesTotal), '']);
+    if (t.projectTotal != null) costRows.push(['סה"כ לפני מע"מ', money(t.projectTotal), 'rule']);
+    if (t.projectTotalVat != null) {
+      costRows.push(['סה"כ כולל מע"מ (' + esc(String(t.vatPercent)) + '%)', money(t.projectTotalVat), 'grand']);
+    }
+    if (costRows.length) {
+      document.getElementById('costTable').innerHTML = costRows.map(([k, v, cls]) =>
+        '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + esc(k) + '</td>' +
+        '<td>' + esc(v) + '</td></tr>',
+      ).join('');
+      document.getElementById('costSection').hidden = false;
+    }
+
+    // ── השוואה מול הצעת המחיר ──
+    // Rendered ONLY when the capacity actually changed. Terms 2–4 that the customer signs promise
+    // exactly this reconciliation, so when there is nothing to reconcile the section is absent
+    // rather than showing two identical rows.
+    const cmp = commercial.comparison;
+    if (cmp && cmp.quoted && cmp.final && cmp.quoted.dcKW != null && cmp.final.dcKW != null
+        && cmp.quoted.price != null && cmp.final.price != null) {
+      document.getElementById('comparisonTable').innerHTML =
+        '<tr><td class="strong">בהצעת המחיר</td><td class="money">' + esc(kwp2(cmp.quoted.dcKW)) + '</td><td class="money">' + esc(money(cmp.quoted.price)) + '</td></tr>' +
+        '<tr><td class="strong">סופי</td><td class="money">' + esc(kwp2(cmp.final.dcKW)) + '</td><td class="money">' + esc(money(cmp.final.price)) + '</td></tr>' +
+        (cmp.delta && cmp.delta.dcKW != null && cmp.delta.price != null
+          ? '<tr><td class="strong">הפרש</td><td class="money">' + esc(signed(cmp.delta.dcKW, kwp2)) + '</td><td class="money">' + esc(signed(cmp.delta.price, money)) + '</td></tr>'
+          : '');
+      document.getElementById('comparisonSection').hidden = false;
+    }
+
+    // ── הוצאות אפשריות נוספות ──
+    // A SEPARATE table, always. They are informational and are never part of projectTotal.
+    const potentialRows = (commercial.potential || []).filter((p) => p.amount != null);
+    if (potentialRows.length) {
+      document.getElementById('potentialTable').innerHTML = potentialRows.map((p) =>
+        '<tr><td class="strong">' + esc(p.label) + '</td><td class="money">' + esc(money(p.amount)) + '</td></tr>',
+      ).join('');
+      document.getElementById('potentialSection').hidden = false;
+    }
+  }
+
   // ── תנאים ──
   document.getElementById('termsBlock').innerHTML =
     SPEC_TERMS.map((p) => '<li>' + esc(p) + '</li>').join('');
@@ -773,6 +1003,16 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
   // he-IL, not the padded document format: this value travels into the
   // signature payload, the confirmation emails and Monday.
   document.getElementById('sigDate').value = issuedAt.toLocaleDateString('he-IL');
+
+  // The ruled area is part of the printed document, so the values under the rules track the form
+  // as it is filled in. freezeFormState() writes .value back onto the attributes at capture time,
+  // but these are TEXT nodes and would otherwise be empty in the captured HTML.
+  const sigNameOut = document.getElementById('sigNameOut');
+  const sigDateOut = document.getElementById('sigDateOut');
+  sigDateOut.textContent = document.getElementById('sigDate').value;
+  document.getElementById('sigName').addEventListener('input', function () {
+    sigNameOut.textContent = this.value.trim();
+  });
 
   // ── Signature capture ──
   // includeDocumentHtml opt-in (15A.1): collect() attaches the page's final
@@ -813,6 +1053,9 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
       ['מזהה חתימה', sig.refID],
     ].filter(([, v]) => has(v));
 
+    // The ON-SCREEN confirmation. The ruled signature area is REBUILT inside it rather than
+    // discarded: it is part of the document, and a viewer who opens a signed spec should see the
+    // signature on its line, in the same place the PDF puts it.
     document.getElementById('signatureSection').innerHTML =
       '<div class="signed-block">' +
       '<div class="signed-head">Signed · אישור דיגיטלי</div>' +
@@ -820,9 +1063,20 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
       '<div class="signed-info">' +
       rows.map(([k, v]) => '<b>' + esc(k) + ':</b> ' + esc(v)).join('<br>') +
       '</div>' +
-      (has(sig.sigImg)
-        ? '<img class="signed-sig-img" src="' + esc(sig.sigImg) + '" alt="חתימה">'
-        : '') +
+      '</div>' +
+      '<div class="sig-inline" id="signatureRules">' +
+        '<div class="sig-slot">' +
+          '<div class="sig-rule"><span data-semo-signature-target="customer" id="customerSignatureTarget">' +
+            (has(sig.sigImg) ? '<img class="semo-inline-signature" src="' + esc(sig.sigImg) + '" alt="חתימת הלקוח" style="display:block;max-height:40px;max-width:100%;object-fit:contain;object-position:right bottom;background:transparent;border:0">' : '') +
+          '</span></div>' +
+          '<div class="sig-caption">חתימת הלקוח</div>' +
+          '<div class="sig-value">' + esc(sig.signerName || '') + '</div>' +
+        '</div>' +
+        '<div class="sig-slot">' +
+          '<div class="sig-rule"></div>' +
+          '<div class="sig-caption">תאריך</div>' +
+          '<div class="sig-value">' + esc(sig.dateStr || '') + '</div>' +
+        '</div>' +
       '</div>';
   }
 
