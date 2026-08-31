@@ -18,6 +18,21 @@
 
 class QuoteUI {
 
+  /**
+   * Today's date as `YYYY-MM-DD`, in the SELLER'S OWN day — not UTC.
+   * `toISOString()` would hand back yesterday between midnight and 02:00/03:00 Israel time, which
+   * is exactly the window in which a quote dated "today" must not be dated yesterday.
+   *
+   * A static (not a bare top-level function) on purpose: this file is a classic script sharing one
+   * global scope with the other portal scripts, where a duplicate top-level declaration silently
+   * discards a whole file.
+   */
+  static todayISO() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
   constructor() {
     // ── מופעי שירותים ────────────────────────────────────────────────────
     // Production origin. `window.__SEMO_API_BASE__` overrides it for local dev, where the static
@@ -37,6 +52,14 @@ class QuoteUI {
 
     // תעריף ירוק/רגיל — auto by default
     this._tariffState = { mode: 'auto', manualAgPerKwh: null, manualSetAtAcKW: null };
+
+    // ── QUOTE-LOCAL EXTRAS — "רק להצעה הנוכחית" ──────────────────────────
+    // Seller-created commercial lines that belong to THIS quote and are never published to the
+    // catalog. Held here, saved inside the quote, and given their permanent identity by the
+    // SERVER at save time (shared/quote-local-extras.js). `id` is null until then; `key` is a
+    // throwaway DOM handle and is never persisted or sent anywhere.
+    this._quoteLocalItems = [];
+    this._quoteLocalKeySeq = 0;
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -198,7 +221,243 @@ class QuoteUI {
       html += this._renderExtraItem(item, 'potential');
     }
 
+    // ── seller-created items ──
+    html += this._renderQuoteLocalSection();
+
     container.innerHTML = html;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SELLER-CREATED EXTRAS — one-time vs permanent
+  //
+  // ONE form, ONE list, TWO destinations. The seller writes a label and a price and then answers
+  // the only question that actually differs: is this a line on THIS deal, or a product the company
+  // will sell again?
+  //
+  //   רק להצעה הנוכחית  → a quote-local item (shared/quote-local-extras.js). Lives in this quote,
+  //                        is frozen into its pricing snapshot, reaches Monday through the shared
+  //                        "תוספות חד פעמיות" field, and never grows the catalog.
+  //   שמור כתוספת קבועה → the EXISTING permanent path, invoked from here instead of from a second
+  //                        screen: mint a server id, publish the next immutable catalog version.
+  //                        It then behaves exactly like any other catalog item, dedicated Monday
+  //                        column included.
+  //
+  // The wording is borrowed from the content editor ("שמור להצעה הנוכחית בלבד" / "שמור כברירת
+  // מחדל") because sellers already know it. The PERSISTENCE deliberately is not: that editor keeps
+  // its per-quote variant in localStorage, which is fine for wording and unacceptable for money.
+  // ══════════════════════════════════════════════════════════════════════
+
+  _renderQuoteLocalSection() {
+    const rows = this._quoteLocalItems.map((it) => `
+      <div class="extra-item${it.checked ? ' selected' : ''}" id="ex-${it.key}">
+        <div class="extra-left">
+          <input class="extra-checkbox" type="checkbox" id="chk-${it.key}"
+                 ${it.checked ? 'checked' : ''} onchange="_quoteUI.toggleQuoteLocal('${it.key}', this.checked)">
+          <label class="extra-label" for="chk-${it.key}">${this._escapeHtml(it.label)}
+            <span style="font-size:11px;font-weight:600;color:#7c3aed;margin-inline-start:6px">חד-פעמי${it.category === 'potential' ? ' · הוצאה פוטנציאלית' : ''}</span>
+          </label>
+        </div>
+        <div class="extra-right">
+          <span class="extra-currency">₪</span>
+          <input class="extra-price-input" type="number" step="50" value="${Number(it.price) || 0}"
+                 oninput="_quoteUI.setQuoteLocalPrice('${it.key}', this.value)">
+          <button type="button" onclick="_quoteUI.removeQuoteLocal('${it.key}')" title="הסר"
+                  style="margin-inline-start:8px;border:none;background:none;color:#b91c1c;font-size:16px;cursor:pointer;font-family:inherit">×</button>
+        </div>
+      </div>`).join('');
+
+    return `
+      <div style="border-top:2px solid #7c3aed;margin:16px 0 12px;padding-top:12px">
+        <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:4px">תוספות שאני יוצר עכשיו</div>
+        <div style="font-size:12px;color:var(--gray);margin-bottom:12px">בחר אם התוספת קיימת רק בהצעה הזו, או שהיא מוצר קבוע שיופיע בכל הצעה עתידית</div>
+      </div>
+      ${rows}
+      <div id="quote-local-form" style="border:1.5px dashed #cbd5e1;border-radius:10px;padding:12px;margin-top:10px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
+          <div style="flex:1 1 220px">
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--gray);margin-bottom:4px">שם התוספת</label>
+            <input id="ql-label" type="text" placeholder="למשל: בדיקת בידוד מיוחדת"
+                   style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit">
+          </div>
+          <div style="flex:0 0 120px">
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--gray);margin-bottom:4px">מחיר (₪)</label>
+            <input id="ql-price" type="number" step="50" min="0" placeholder="0"
+                   style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit">
+          </div>
+          <div style="flex:0 0 170px">
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--gray);margin-bottom:4px">סוג</label>
+            <select id="ql-category" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit">
+              <option value="upgrade">שדרוג (נכלל בעלות)</option>
+              <option value="potential">הוצאה פוטנציאלית</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button type="button" onclick="_quoteUI.addQuoteLocalItem()"
+                  style="padding:8px 16px;border:none;border-radius:7px;background:#7c3aed;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+            רק להצעה הנוכחית
+          </button>
+          <button type="button" onclick="_quoteUI.addPermanentCatalogItem()"
+                  style="padding:8px 16px;border:none;border-radius:7px;background:#16a34a;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+            שמור כתוספת קבועה
+          </button>
+          <span id="ql-msg" style="font-size:12px;font-weight:600;align-self:center"></span>
+        </div>
+      </div>`;
+  }
+
+  /** Read + validate the add-item form. Returns null and shows why when it is not usable. */
+  _readQuoteLocalForm() {
+    const label = (document.getElementById('ql-label')?.value || '').trim();
+    const priceRaw = document.getElementById('ql-price')?.value;
+    const category = document.getElementById('ql-category')?.value || 'upgrade';
+    const price = Math.round(parseFloat(priceRaw));
+    if (!label) return this._quoteLocalMsg('יש להזין שם לתוספת', true);
+    if (!Number.isFinite(price) || price < 0) return this._quoteLocalMsg('יש להזין מחיר תקין', true);
+    return { label, price, category };
+  }
+
+  _quoteLocalMsg(text, isError) {
+    const el = document.getElementById('ql-msg');
+    if (el) { el.textContent = text; el.style.color = isError ? '#b91c1c' : '#16a34a'; }
+    return null;
+  }
+
+  _clearQuoteLocalForm() {
+    const l = document.getElementById('ql-label'); if (l) l.value = '';
+    const p = document.getElementById('ql-price'); if (p) p.value = '';
+  }
+
+  /** רק להצעה הנוכחית — the item never leaves this quote. */
+  addQuoteLocalItem() {
+    const form = this._readQuoteLocalForm();
+    if (!form) return;
+    this._quoteLocalItems.push({
+      key: 'ql' + (++this._quoteLocalKeySeq),
+      id: null,                       // minted by the SERVER at save time
+      label: form.label,
+      category: form.category,
+      price: form.price,
+      checked: true,
+      // A potential cost is informational and never customer-selectable — the same rule the server
+      // enforces. Stated here only so the UI does not offer something the server will refuse.
+      customerToggleable: form.category !== 'potential',
+    });
+    this._renderExtrasUI();
+    this._updatePreview();
+    this._clearQuoteLocalForm();
+    this._quoteLocalMsg('נוספה תוספת חד-פעמית להצעה זו', false);
+  }
+
+  /** שמור כתוספת קבועה — publish the next immutable catalog version, exactly as the manager does. */
+  async addPermanentCatalogItem() {
+    const form = this._readQuoteLocalForm();
+    if (!form) return;
+    if (!this._catalog) return this._quoteLocalMsg('הקטלוג אינו זמין — לא ניתן לפרסם תוספת קבועה', true);
+    this._quoteLocalMsg('מפרסם גרסת קטלוג חדשה…', false);
+    // Publishing rebuilds the checkboxes from a NEW catalog version, which would reset them to
+    // their HTML defaults. Capture what the seller has ticked and replay it, so adding a product
+    // never silently changes the deal that is open on screen.
+    const preserved = this._buildExtrasState();
+    try {
+      const id = await CatalogClient.mintId(form.label);
+      const items = this._catalog.items.map(i => ({
+        id: i.id, label: i.label, category: i.category, active: i.active,
+        defaultPrice: i.defaultPrice, customerToggleable: i.customerToggleable, order: i.order,
+      }));
+      items.push({
+        id, label: form.label, category: form.category, active: true,
+        defaultPrice: form.price, customerToggleable: form.category !== 'potential',
+      });
+      const res = await CatalogClient.publish(
+        this._catalog.versionId, items, 'הוספת "' + form.label + '" ממסך ההצעה',
+      );
+      await this._loadCatalog();
+      this._renderExtrasUI();
+      this._renderCatalogState();
+      this._restoreExtrasState(preserved);
+      const chk = document.getElementById('chk-' + id);
+      if (chk) chk.checked = true;          // the seller just created it FOR this quote
+      this._updatePreview();
+      this._clearQuoteLocalForm();
+      // A Monday provisioning failure does NOT invalidate the publication — the catalog version is
+      // already immutable and current. Say so plainly rather than implying the item did not save.
+      const sync = res && res.mondaySync;
+      this._quoteLocalMsg(
+        sync && sync.ok === false
+          ? 'התוספת פורסמה לקטלוג, אך יצירת עמודת Monday נכשלה — יש להריץ סנכרון חוזר'
+          : 'התוספת פורסמה כתוספת קבועה בקטלוג',
+        !!(sync && sync.ok === false),
+      );
+    } catch (e) {
+      this._quoteLocalMsg('פרסום נכשל: ' + (e && e.message ? e.message : 'שגיאה'), true);
+    }
+  }
+
+  toggleQuoteLocal(key, checked) {
+    const it = this._quoteLocalItems.find(i => i.key === key);
+    if (!it) return;
+    it.checked = !!checked;
+    const row = document.getElementById('ex-' + key);
+    if (row) row.classList.toggle('selected', it.checked);
+    this._updatePreview();
+  }
+
+  setQuoteLocalPrice(key, value) {
+    const it = this._quoteLocalItems.find(i => i.key === key);
+    if (!it) return;
+    const n = Math.round(parseFloat(value));
+    it.price = Number.isFinite(n) && n >= 0 ? n : 0;
+    this._updatePreview();
+  }
+
+  removeQuoteLocal(key) {
+    this._quoteLocalItems = this._quoteLocalItems.filter(i => i.key !== key);
+    this._renderExtrasUI();
+    this._updatePreview();
+  }
+
+  /**
+   * The quote-local items in the SAVE contract's shape: no DOM key, and `id` omitted while it is
+   * still null so the server mints one. An id that IS present was minted by the server on an
+   * earlier save and is echoed back for re-validation, never invented here.
+   */
+  _buildQuoteLocalState() {
+    return this._quoteLocalItems.map(i => {
+      const out = {
+        label: i.label,
+        category: i.category,
+        price: Number(i.price) || 0,
+        checked: !!i.checked,
+        customerToggleable: i.category === 'potential' ? false : i.customerToggleable !== false,
+      };
+      if (i.id) out.id = i.id;
+      return out;
+    });
+  }
+
+  /** Adopt the server-minted identities returned by POST /q/save. */
+  adoptMintedQuoteLocalIds(minted) {
+    if (!Array.isArray(minted)) return;
+    // Same order in, same order out — the server preserves submission order.
+    minted.forEach((m, idx) => {
+      if (this._quoteLocalItems[idx] && m && m.id) this._quoteLocalItems[idx].id = m.id;
+    });
+  }
+
+  /** Restore quote-local items from a SAVED state. `keepIds` is false when duplicating a quote. */
+  _restoreQuoteLocalItems(list, keepIds) {
+    this._quoteLocalItems = (Array.isArray(list) ? list : []).map(i => ({
+      key: 'ql' + (++this._quoteLocalKeySeq),
+      // A DUPLICATE is a different quote, so it mints its own identities: a quote-local id names a
+      // line in one deal, and letting two quotes share one would make that untrue.
+      id: keepIds ? (i.id || null) : null,
+      label: String(i.label || ''),
+      category: i.category === 'potential' ? 'potential' : 'upgrade',
+      price: Number(i.price) || 0,
+      checked: !!i.checked,
+      customerToggleable: i.category === 'potential' ? false : i.customerToggleable !== false,
+    }));
   }
 
   /** Render a single extra item (upgrade or potential) */
@@ -508,6 +767,24 @@ class QuoteUI {
     for (const e of resolved) {
       const row = document.getElementById('ex-' + e.id);
       if (row) row.classList.toggle('selected', e.checked);
+    }
+
+    // Quote-local items are resolved WITHOUT the pricing module on purpose: they carry no strategy
+    // to run and no basis to read — a bespoke line is its own price. They are appended in the same
+    // shape every consumer already expects, so QuoteEngine's extrasTotal, the preview and the
+    // server's snapshot arrive at the same number. Their DOM key is a UI handle only; the `id`
+    // here is the server-minted one when it exists and the key until the first save, which is
+    // enough for the preview and is never what gets persisted (see _buildQuoteLocalState).
+    for (const it of this._quoteLocalItems) {
+      resolved.push({
+        id: it.id || it.key,
+        label: it.label,
+        checked: !!it.checked,
+        price: Number(it.price) || 0,
+        category: it.category,
+        calcType: 'fixed',
+        displayNote: '',
+      });
     }
     return resolved;
   }
@@ -978,6 +1255,9 @@ class QuoteUI {
     let shortUrl;
     try {
       shortUrl = await this.storage.save(state);
+      // Adopt the identities the server minted for this quote's one-time items, so a second save
+      // from the same open page describes the same lines rather than creating new ones.
+      this.adoptMintedQuoteLocalIds(this.storage.lastSaveResult && this.storage.lastSaveResult.quoteLocalItems);
     } catch {
       shortUrl = this.storage.buildFallbackUrl(state);
       if (errDiv) {
@@ -1014,7 +1294,7 @@ class QuoteUI {
           city: vals.city || '',
           quoteUrl: quoteUrl || '',
           hubspotId: window._hsContactId || null,
-          quoteDate: vals.date || new Date().toISOString().split('T')[0],
+          quoteDate: vals.date || QuoteUI.todayISO(),
           dcKw: vals.kw || '',
         }),
       });
@@ -1105,7 +1385,7 @@ class QuoteUI {
     const dateEl = document.getElementById('sigDate');
     if (nameEl && vals.name) nameEl.value = vals.name;
     if (idEl   && vals.cid)  idEl.value   = vals.cid;
-    if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+    if (dateEl) dateEl.value = QuoteUI.todayISO();
 
     setTimeout(() => this.signature.init(), 100);
   }
@@ -1272,8 +1552,14 @@ class QuoteUI {
     // so the stored extras price disagreed with the quote's own USD rate.
     const computed = this._getExtras(dcKW, vals.premiumPanel, vals.usdRate);
 
+    // CATALOG ITEMS ONLY. `extras` is the selections map the server validates against the
+    // published catalog version, so a quote-local id in it would be rejected as unknown. A
+    // quote-local item carries its own `checked` and `price` on the item itself, which also
+    // avoids a chicken-and-egg problem: its identity does not exist until the server mints it.
+    const localIds = new Set(this._quoteLocalItems.map(i => i.id || i.key));
     const state = {};
     for (const item of computed) {
+      if (localIds.has(item.id)) continue;
       state[item.id] = {
         checked: item.checked,
         price: String(item.price || ''),
@@ -1390,7 +1676,12 @@ class QuoteUI {
     // Schema 2 carries labels in its own snapshot; schema 1 has only `extras` ids and no labels.
     const snap = state.pricingSnapshot;
     const sourceItems = snap && Array.isArray(snap.items)
-      ? snap.items.map(i => ({ id: i.id, label: i.label, checked: i.checked, price: i.amount, calcType: i.calcType }))
+      ? snap.items
+          // Quote-local lines are NOT catalog items and are never expected to be found in one.
+          // They are carried by _restoreQuoteLocalItems instead, so listing them here would report
+          // every one-time upgrade as "missing from the catalog" — a warning about nothing.
+          .filter(i => i.scope !== 'quote')
+          .map(i => ({ id: i.id, label: i.label, checked: i.checked, price: i.amount, calcType: i.calcType }))
       : Object.entries(UpgradePricing.migrateExtrasSelections(state) || state.extras || {})
           .map(([id, v]) => ({ id, label: null, checked: !!(v && v.checked), price: (v && v.price) || '' }));
 
@@ -1489,6 +1780,9 @@ class QuoteUI {
       evM: get('evModel'),
       // extras — dynamic: scans all items from config so new extras are auto-included
       extras: this._buildExtrasState(),
+      // Seller-created "רק להצעה הנוכחית" lines. The SERVER validates and canonicalizes them and
+      // mints the id of any item that does not have one yet (shared/quote-local-extras.js).
+      quoteLocalItems: this._buildQuoteLocalState(),
       // digital signature preference
       digSig: document.getElementById('chk-digital-sig')?.checked ?? true,
       // HubSpot contact ID (set when salesperson uses the prefill toolbar);
@@ -1506,7 +1800,11 @@ class QuoteUI {
     };
     set('clientName', s.name); set('clientPhone', s.phone);
     set('clientAddress', s.addr); set('clientID', s.cid);
-    set('quoteDate', s.date); set('customNote', s.note);
+    // A DUPLICATE is a NEW document, issued today. Carrying the original's date would ship a quote
+    // dated weeks back — and with it a "תוקף ההצעה — 14 יום" window that is already spent. A
+    // RELOAD of the same quote in the portal keeps its own date, which is the quote's real one.
+    set('quoteDate', this._loadingAsDuplicate ? QuoteUI.todayISO() : s.date);
+    set('customNote', s.note);
     set('sysKW', s.kw); set('sysAC', s.acKW); set('ppkw', s.ppkw);
     set('batteries', s.batt); set('panelW', s.panelW); set('panelCount', s.panelCt);
     set('roofArea', s.roofArea); set('hoursPerKw', s.hours);
@@ -1538,8 +1836,18 @@ class QuoteUI {
     // saved selections onto whatever checkboxes exist; _rebaseOntoCatalog is what decides which of
     // them the current catalog still offers and surfaces the ones it does not. (If the catalog is
     // still loading, the rebase is queued and runs when init()'s load resolves.)
-    this._restoreExtrasState(this._migrateOldExtrasState(s));
-    this._noticeWithdrawnUpgrades(this._migrateOldExtrasState(s));
+    // ORDER MATTERS. The quote-local items go into the model FIRST, because _renderExtrasUI()
+    // rebuilds the whole extras block from it — including their rows — and would otherwise discard
+    // whatever was replayed onto the old DOM. Only then are the CATALOG selections replayed onto
+    // the fresh checkboxes.
+    //
+    // `_loadingAsDuplicate` is set by the duplicate path, which deliberately drops the ids so the
+    // new quote mints its own: a quote-local id names a line in ONE deal.
+    const migrated = this._migrateOldExtrasState(s);
+    this._restoreQuoteLocalItems(s.quoteLocalItems, !this._loadingAsDuplicate);
+    this._renderExtrasUI();
+    this._restoreExtrasState(migrated);
+    this._noticeWithdrawnUpgrades(migrated);
     this._rebaseOntoCatalog(s);
     // Store digital signature preference for client mode
     this._digitalSigPref = s.digSig !== undefined ? s.digSig : true;
@@ -2251,7 +2559,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Set today's date as default
     const dateEl = document.getElementById('quoteDate');
-    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+    if (dateEl && !dateEl.value) dateEl.value = QuoteUI.todayISO();
 
     window._quoteUI = new QuoteUI();
     // No explicit URL — loadTemplate picks v1/v2 based on window.__TEMPLATE_VERSION__.
