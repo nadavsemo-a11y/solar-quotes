@@ -1970,13 +1970,20 @@ async function loadFromQuoteUrl() {
 
     if (!state) { _setDupMsg('לא הצלחתי לפענח את נתוני ההצעה', false); btn.disabled = false; btn.textContent = oldLabel; return; }
 
-    _quoteUI._setFormFromState(state);
+    // DUPLICATING is not RELOADING. The new quote is a different document, so its one-time items
+    // must get their own identities — sharing an id across two quotes would make "a quote-local id
+    // names a line in one deal" untrue. The flag is consumed inside _setFormFromState.
+    _quoteUI._loadingAsDuplicate = true;
+    try { _quoteUI._setFormFromState(state); } finally { _quoteUI._loadingAsDuplicate = false; }
     if (typeof _quoteUI._updatePanelCount === 'function') _quoteUI._updatePanelCount();
     if (typeof _quoteUI._updatePreview === 'function') _quoteUI._updatePreview();
 
     closeDuplicateBox();
+    // The date field now already holds TODAY (set by _setFormFromState on the duplicate path).
+    // The glow no longer says "go fix this" — it says "this one field did not come from the
+    // original quote", so the salesperson sees what changed and can still override it.
     _flashDateField();
-    if (typeof EmailService !== 'undefined') EmailService.showToast('✅ פרטי ההצעה נטענו — שים לב לעדכן את התאריך');
+    if (typeof EmailService !== 'undefined') EmailService.showToast('✅ פרטי ההצעה נטענו — התאריך עודכן להיום');
   } catch (e) {
     _setDupMsg('שגיאה: ' + e.message, false);
     btn.disabled = false;
@@ -2319,7 +2326,7 @@ function ceResetDefaults() {
 </script>
 
 <!-- Unified Version Display -->
-<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.02.11.01</div>
+<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.02.11.02</div>
 
 </body>
 </html>
