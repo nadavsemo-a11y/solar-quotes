@@ -89,6 +89,10 @@ class StorageService {
       throw err;
     }
     const json = await resp.json();
+    // The response is now an object, not just a URL: a quote carrying seller-created one-time items
+    // gets their SERVER-MINTED identities back so the still-open portal page can adopt them. Saving
+    // twice would otherwise mint a second id for the same line.
+    this.lastSaveResult = json;
     return json.url;
   }
 
