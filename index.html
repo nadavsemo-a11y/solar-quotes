@@ -366,6 +366,8 @@ body { font-family: 'Heebo', 'Assistant', system-ui, sans-serif; background: var
 
 /* Financials */
 .fin-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+/* three-up row (return / payback / price-per-kWp) — falls back to the 2-up rule on narrow screens */
+.fin-grid.trio { grid-template-columns:repeat(3,1fr); }
 .fin-card {
   background:var(--light); border-radius:13px; padding:18px 20px; border:1px solid var(--border);
 }
@@ -743,6 +745,7 @@ body { font-family: 'Heebo', 'Assistant', system-ui, sans-serif; background: var
 @media (max-width:700px) {
   /* Quote output grids */
   .stats-row, .fin-grid, .env-grid, .inc-grid, .warranty-grid, .upgrade-grid { grid-template-columns:1fr 1fr; }
+  .fin-grid.trio { grid-template-columns:1fr 1fr; }
   .hero-title { font-size:24px; }
   .q-hero { padding:26px 16px; }
   .sec { padding:18px 14px; }
@@ -2326,7 +2329,7 @@ function ceResetDefaults() {
 </script>
 
 <!-- Unified Version Display -->
-<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.02.11.02</div>
+<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.02.11.05</div>
 
 </body>
 </html>
