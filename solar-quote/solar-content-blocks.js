@@ -970,11 +970,13 @@ const SOLAR_LABELS = {
   "fin.avg": "ממוצע שנתי",
   "fin.priceExcl": "עלות המערכת · לא כולל מע״מ",
   "fin.priceIncl": "עלות המערכת · כולל מע״מ",
+  "fin.pricePerKw": "מחיר לקו״ט",
   "fin.profit": "רווח נקי מוערך",
   "fin.roi": "תשואה שנה 1",
   "fin.payback": "החזר השקעה",
   // price breakdown
   "price.base": "מערכת בסיסית (turnkey)",
+  "price.perKw": "מחיר לקו״ט",
   "price.meter": "לוח מונה ייצור",
   "price.projectTotal": "סה״כ לפני מע״מ",
   "price.projectTotalVat": "סה״כ כולל מע״מ",
@@ -990,7 +992,6 @@ const SOLAR_LABELS = {
   "ctrl.plan": "מסלול תעריף",
   "ctrl.sunHours": "שעות שמש שנתיות",
   "ctrl.inflationPct": "אחוז אינפלציה",
-  "ctrl.vatDisplay": "תצוגת מחיר",
   "ctrl.upgrades": "שדרוגים נבחרים",
   "ctrl.battQty": "כמות בטריות",
 };
@@ -1013,8 +1014,6 @@ const SOLAR_PHRASES = {
   "plan.regular": "מסלול רגיל",
   "plan.fast": "החזר מהיר",
   "plan.index": "צמוד מדד",
-  "vat.incl": "כולל מע״מ",
-  "vat.excl": "לא כולל מע״מ",
   "upgrades.none": "אין",
 };
 
