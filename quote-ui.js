@@ -2181,7 +2181,7 @@ class QuoteUI {
         <div class="fin-note">לאחר החזר השקעה — הערכה</div>
       </div>
     </div>
-    <div class="fin-grid" style="margin-top:14px">
+    <div class="fin-grid trio" style="margin-top:14px">
       <div class="fin-card" style="background:var(--ags-mint-soft);border:1.5px solid var(--ags-mint)">
         <span class="fin-val" id="qf-roi">${(p.roi*100).toFixed(1)}%</span>
         <div class="fin-lbl" style="color:var(--ags-black)">תשואה שנה 1</div>
@@ -2189,6 +2189,10 @@ class QuoteUI {
       <div class="fin-card" style="background:var(--ags-ink-50);border:1.5px solid var(--ags-ink-200)">
         <span class="fin-val" id="qf-payback">${fmtD(p.payback)}</span>
         <div class="fin-lbl" style="color:var(--ags-black)">שנות החזר השקעה</div>
+      </div>
+      <div class="fin-card" style="background:var(--ags-ink-50);border:1.5px solid var(--ags-ink-200)">
+        <span class="fin-val" id="qf-price-per-kw">₪${fmt(d.ppkw)}</span>
+        <div class="fin-lbl" style="color:var(--ags-black)">מחיר לקו״ט</div>
       </div>
     </div>
 
@@ -2241,7 +2245,7 @@ class QuoteUI {
     <div class="sec-title"><span class="bar"></span>פירוט מחיר ההצעה</div>
     <ul class="spec-list" style="list-style:none;padding:0">
       <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מערכת סולארית ${d.dcKW} קו"ט (${d.panelCount} פאנלים × ${d.panelW}W)</span><strong>₪${fmt(d.dcKW * d.ppkw)}</strong></li>
-      <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--gray)"><span>מחיר KWP</span><span>₪${fmt(d.ppkw)} לקו"ט</span></li>
+      <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--gray)"><span>מחיר לקו״ט</span><span>₪${fmt(d.ppkw)}</span></li>
       ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
       ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:none;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
       <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(d.price)}</span></li>
