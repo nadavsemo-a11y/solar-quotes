@@ -215,13 +215,15 @@ tbody td { padding: 12px 16px; font-size: 14px; vertical-align: middle; }
 .modal-overlay.visible { display: flex; }
 .modal-box {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 32px; width: 420px;
+  border-radius: var(--radius); padding: 32px; width: 420px; max-width: calc(100vw - 32px);
   box-shadow: var(--shadow);
 }
 .modal-box h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
 .modal-box label { display: block; font-size: 13px; color: var(--text-2); margin-bottom: 6px; font-weight: 500; }
 .modal-box input[type="date"],
-.modal-box input[type="datetime-local"] {
+.modal-box input[type="datetime-local"],
+.modal-box input[type="url"],
+.modal-box input[type="text"] {
   width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
   border: 1px solid var(--border); background: var(--surface-2);
   color: var(--text); font-size: 14px; font-family: inherit;
@@ -235,7 +237,14 @@ tbody td { padding: 12px 16px; font-size: 14px; vertical-align: middle; }
   color: var(--text-2); transition: all 0.15s;
 }
 .quick-btn:hover { border-color: var(--accent); color: var(--accent); }
-.modal-actions { display: flex; gap: 10px; justify-content: flex-start; margin-top: 24px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-start; margin-top: 24px; flex-wrap: wrap; }
+.field-hint { font-size: 12px; color: var(--text-3); margin: -10px 0 16px; }
+.create-result {
+  display: none; align-items: center; gap: 10px; margin-top: 4px; padding: 12px 14px;
+  border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--green);
+}
+.create-result.visible { display: flex; }
+.create-result a { flex: 1; direction: ltr; text-align: left; font-weight: 600; word-break: break-all; }
 
 /* ── Toast ──────────────────────────────────────── */
 .toast {
@@ -316,6 +325,7 @@ tbody td { padding: 12px 16px; font-size: 14px; vertical-align: middle; }
       </div>
     </div>
     <div class="header-left">
+      <button class="btn btn-success" onclick="openCreateModal()">+ קיצור חדש</button>
       <button class="btn btn-outline" onclick="exportCSV()">ייצוא CSV</button>
       <button class="btn btn-primary" onclick="loadLinks()">רענון</button>
     </div>
@@ -425,10 +435,30 @@ tbody td { padding: 12px 16px; font-size: 14px; vertical-align: middle; }
   </div>
 </div>
 
+<!-- Create Modal -->
+<div class="modal-overlay" id="create-modal">
+  <div class="modal-box">
+    <h3>קיצור חדש</h3>
+    <label for="create-url-input">כתובת יעד</label>
+    <input type="url" id="create-url-input" placeholder="https://..." onkeydown="if(event.key==='Enter') createLink()">
+    <label for="create-slug-input">שם לקיצור (לא חובה)</label>
+    <input type="text" id="create-slug-input" placeholder="למשל cohen-rehovot" dir="ltr" onkeydown="if(event.key==='Enter') createLink()">
+    <div class="field-hint">אותיות באנגלית, ספרות, - ו-_ בלבד. בלי שם — מזהה אקראי. שם תפוס יקבל סיומת (cohen-2).</div>
+    <div class="create-result" id="create-result">
+      <a id="create-result-link" href="#" target="_blank" rel="noopener"></a>
+      <button class="btn btn-outline" onclick="copyUrl(document.getElementById('create-result-link').href)">העתק</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-success" id="create-submit" onclick="createLink()">צור קיצור</button>
+      <button class="btn btn-outline" onclick="closeCreateModal()">סגור</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<div id="app-version">Version 1.02.12.00</div>
+<div id="app-version">Version 1.02.13.00</div>
 
 <script>
 // ── Config ──────────────────────────────────────────────────────────────
@@ -762,6 +792,67 @@ async function deleteLink(id) {
   setLoading(false);
 }
 
+// ── Create ───────────────────────────────────────────────────────────────
+// The same public /q/shorten every other SEMO tool mints customer links with — one creation path,
+// so a link made here is indistinguishable from one made by the quote portal.
+function openCreateModal() {
+  document.getElementById('create-url-input').value = '';
+  document.getElementById('create-slug-input').value = '';
+  document.getElementById('create-result').classList.remove('visible');
+  document.getElementById('create-modal').classList.add('visible');
+  document.getElementById('create-url-input').focus();
+}
+
+function closeCreateModal() {
+  document.getElementById('create-modal').classList.remove('visible');
+}
+
+async function createLink() {
+  const url = document.getElementById('create-url-input').value.trim();
+  const slug = document.getElementById('create-slug-input').value.trim().replace(/\s+/g, '-');
+  // Mirrors the Worker's isValidQuoteId (/^[A-Za-z0-9_-]{1,40}$/), less room for a "-99" suffix.
+  // The Worker enforces the rule itself (an unservable slug becomes a random id); this check only
+  // tells the user why before that happens.
+  if (slug && !/^[A-Za-z0-9_-]{1,37}$/.test(slug)) {
+    showToast('שם הקיצור: אותיות באנגלית, ספרות, - ו-_ בלבד (עד 37 תווים)', 'error');
+    return;
+  }
+  let parsed = null;
+  try { parsed = new URL(url); } catch { /* invalid */ }
+  if (!parsed || !/^https?:$/.test(parsed.protocol)) {
+    showToast('הזן כתובת מלאה שמתחילה ב-https://', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('create-submit');
+  btn.disabled = true;
+  setLoading(true);
+  try {
+    const resp = await fetch(location.origin + '/q/shorten', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(slug ? { url, slug } : { url }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data.url) throw new Error(data.error || `HTTP ${resp.status}`);
+
+    const link = document.getElementById('create-result-link');
+    link.href = data.url;
+    link.textContent = data.url;
+    document.getElementById('create-result').classList.add('visible');
+    // Best effort: some browsers (Safari) refuse a clipboard write once the click is behind an
+    // await. The link and its copy button are on screen either way, so a refusal is not an error.
+    let copied = false;
+    try { await navigator.clipboard.writeText(data.url); copied = true; } catch { /* button remains */ }
+    showToast(copied ? 'הקיצור נוצר והועתק' : 'הקיצור נוצר', 'success');
+    await loadLinks();
+  } catch (err) {
+    showToast('שגיאה ביצירת הקיצור: ' + err.message, 'error');
+  }
+  btn.disabled = false;
+  setLoading(false);
+}
+
 // ── Export CSV ───────────────────────────────────────────────────────────
 function exportCSV() {
   const headers = ['ID', 'Type', 'URL', 'Client/Target', 'kWp', 'City', 'Created', 'Expiration', 'Signed'];
@@ -833,9 +924,12 @@ function showToast(msg, type = 'success') {
   el._timer = setTimeout(() => el.classList.remove('visible'), 3000);
 }
 
-// Close modal on overlay click
+// Close modals on overlay click
 document.getElementById('expiry-modal')?.addEventListener('click', e => {
   if (e.target === e.currentTarget) closeExpiryModal();
+});
+document.getElementById('create-modal')?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeCreateModal();
 });
 </script>
 </body>
