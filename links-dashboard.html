@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SEMO AGS — ניהול קיצורים</title>
+  <script>
+    // The dashboard lives at s-a.gs/portal/links, behind the SEMO Access Fabric (Google login).
+    // This GitHub Pages copy is only its source; opened directly it forwards there, so old
+    // bookmarks keep working.
+    if (location.hostname === 'nadavsemo-a11y.github.io') location.replace('https://s-a.gs/portal/links');
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -34,28 +40,24 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 button { font-family: inherit; cursor: pointer; border: none; }
 
-/* ── Auth Modal ─────────────────────────────────── */
+/* ── Access status (session expired / no permission) ─ */
 .auth-overlay {
   position: fixed; inset: 0; z-index: 1000;
   background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center;
+  display: none; align-items: center; justify-content: center;
 }
+.auth-overlay.visible { display: flex; }
 .auth-box {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 40px; width: 380px;
+  border-radius: var(--radius); padding: 40px; width: 380px; max-width: calc(100vw - 32px);
   text-align: center; box-shadow: var(--shadow);
 }
 .auth-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
 .auth-box p { color: var(--text-2); font-size: 14px; margin-bottom: 24px; }
-.auth-box input {
-  width: 100%; padding: 12px 16px; border-radius: var(--radius-sm);
-  border: 1px solid var(--border); background: var(--surface-2);
-  color: var(--text); font-size: 15px; text-align: center;
-  direction: ltr; margin-bottom: 16px;
-}
-.auth-box input:focus { outline: none; border-color: var(--accent); }
-.auth-box .auth-note {
-  color: var(--text-3); font-size: 12px; margin-top: 12px;
+
+#app-version {
+  position: fixed; bottom: 8px; right: 12px; z-index: 9999; pointer-events: none;
+  font-size: 10px; letter-spacing: 0.3px; color: var(--text-3);
 }
 
 /* ── Header ─────────────────────────────────────── */
@@ -291,21 +293,18 @@ tbody td { padding: 12px 16px; font-size: 14px; vertical-align: middle; }
 <!-- Loading bar -->
 <div class="loading-bar" id="loading-bar"></div>
 
-<!-- Auth Modal -->
-<div class="auth-overlay" id="auth-modal">
+<!-- Access status — identity comes from the SEMO Access Fabric, there is no login form here -->
+<div class="auth-overlay" id="access-modal">
   <div class="auth-box">
     <img src="ags-logo.png" alt="SEMO AGS" style="height:40px; margin-bottom:20px; filter:brightness(0) invert(1);">
-    <h2>ניהול קיצורים</h2>
-    <p>הזן מפתח גישה לדשבורד</p>
-    <input type="password" id="key-input" placeholder="Admin Key" autofocus
-           onkeydown="if(event.key==='Enter') authenticate()">
-    <button class="btn btn-primary" style="width:100%; padding:12px;" onclick="authenticate()">כניסה</button>
-    <div class="auth-note">או השאר ריק אם לא הוגדר ADMIN_KEY</div>
+    <h2 id="access-title">ניהול קיצורים</h2>
+    <p id="access-text"></p>
+    <button class="btn btn-primary" style="width:100%; padding:12px;" onclick="location.reload()">טען מחדש</button>
   </div>
 </div>
 
 <!-- Main App -->
-<div id="app" style="display:none">
+<div id="app">
 
   <!-- Header -->
   <header class="header">
@@ -429,55 +428,63 @@ tbody td { padding: 12px 16px; font-size: 14px; vertical-align: middle; }
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<div id="app-version">Version 1.02.12.00</div>
+
 <script>
 // ── Config ──────────────────────────────────────────────────────────────
-const API_BASE = 'https://s-a.gs';
-let adminKey = sessionStorage.getItem('semo_admin_key') || '';
+// Same origin as the page (s-a.gs/portal/links). location, not a relative URL: the Worker injects
+// a <base> pointing at GitHub Pages so the logo resolves, and a relative fetch would follow it.
+const API_BASE = location.origin + '/portal/api/links';
 let allLinks = [];
 let filteredLinks = [];
 let currentSort = { field: 'createdAt', dir: 'desc' };
 let expiryTargetId = null;
 
 // ── Init ────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  if (adminKey) {
-    document.getElementById('auth-modal').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    loadLinks();
-  }
-});
-
-function authenticate() {
-  adminKey = document.getElementById('key-input').value;
-  sessionStorage.setItem('semo_admin_key', adminKey);
-  document.getElementById('auth-modal').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  loadLinks();
-}
+document.addEventListener('DOMContentLoaded', loadLinks);
 
 // ── API ─────────────────────────────────────────────────────────────────
-async function apiCall(path, opts = {}) {
-  const headers = { 'X-Admin-Key': adminKey, ...opts.headers };
-  const resp = await fetch(`${API_BASE}${path}`, { ...opts, headers });
-  if (resp.status === 401) {
-    sessionStorage.removeItem('semo_admin_key');
-    adminKey = '';
-    document.getElementById('auth-modal').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
-    throw new Error('Unauthorized');
-  }
-  return resp.json();
+// Identity is the Cloudflare Access session cookie, sent automatically on a same-origin call.
+// An expired session is answered at the edge with a redirect to the Google login, which a fetch
+// cannot follow — `redirect: 'manual'` surfaces it so the page can reload into the login.
+class AccessError extends Error {}
+
+function showAccessProblem(title, text) {
+  document.getElementById('access-title').textContent = title;
+  document.getElementById('access-text').textContent = text;
+  document.getElementById('access-modal').classList.add('visible');
 }
+
+async function apiCall(path, opts = {}) {
+  const resp = await fetch(API_BASE + path, { ...opts, credentials: 'same-origin', redirect: 'manual' });
+  if (resp.type === 'opaqueredirect' || resp.status === 401) {
+    showAccessProblem('פג תוקף ההתחברות', 'יש לטעון את הדף מחדש ולהתחבר עם חשבון Google של החברה.');
+    throw new AccessError('unauthorized');
+  }
+  const data = await resp.json().catch(() => ({}));
+  if (resp.status === 403 && data.detail !== 'cross_origin') {
+    showAccessProblem('אין הרשאה', 'ניהול הקיצורים פתוח למנהלי המערכת בלבד (SEMO Access Fabric).');
+    throw new AccessError('forbidden');
+  }
+  if (resp.status === 503) {
+    showAccessProblem('שירות ההרשאות אינו זמין', 'נסה שוב בעוד רגע.');
+    throw new AccessError('unavailable');
+  }
+  if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+  return data;
+}
+
+const linkPath = (id) => '/' + encodeURIComponent(id);
 
 async function loadLinks() {
   setLoading(true);
   try {
-    const data = await apiCall('/admin/links');
+    const data = await apiCall('');
     allLinks = data.links || [];
     updateStats();
     applyFilters();
   } catch (err) {
-    if (err.message !== 'Unauthorized') {
+    if (!(err instanceof AccessError)) {
       showToast('שגיאה בטעינת נתונים: ' + err.message, 'error');
     }
   }
@@ -710,7 +717,7 @@ async function saveExpiry() {
 
   setLoading(true);
   try {
-    await apiCall(`/admin/links/${expiryTargetId}/expiry`, {
+    await apiCall(linkPath(expiryTargetId) + '/expiry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ expiration }),
@@ -727,7 +734,7 @@ async function saveExpiry() {
 async function removeExpiry() {
   setLoading(true);
   try {
-    await apiCall(`/admin/links/${expiryTargetId}/expiry`, {
+    await apiCall(linkPath(expiryTargetId) + '/expiry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ expiration: null }),
@@ -746,7 +753,7 @@ async function deleteLink(id) {
 
   setLoading(true);
   try {
-    await apiCall(`/admin/links/${id}`, { method: 'DELETE' });
+    await apiCall(linkPath(id), { method: 'DELETE' });
     showToast('הקיצור נמחק', 'success');
     await loadLinks();
   } catch (err) {
