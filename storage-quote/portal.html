@@ -117,6 +117,55 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
     <div id="milestonesMount"></div>
   </div>
 
+  <!-- 3b. REFINANCE CALCULATOR (separate customer link; not part of the quote) -->
+  <div id="refiCard" class="card hidden">
+    <h2><span class="bar"></span>מחשבון מחזור הלוואה</h2>
+    <p style="font-size:12px;color:var(--ink-500);margin:0 0 12px">
+      קישור נפרד ללקוח. הבנק ממחזר את יתרת ההלוואה על המערכת הקיימת יחד עם עלות השדרוג לתקופה חדשה;
+      המחשבון מראה כמה ריבית נחסכת כשמפקידים כל שנה את עודף התזרים להקטנת הקרן.
+      הנתונים השנתיים נלקחים מקובץ ה-enSights שהועלה למעלה. <strong>אינו חלק מההצעה החתומה.</strong>
+    </p>
+    <div class="grid2">
+      <div>
+        <label for="refiOldLoan">יתרת ההלוואה על המערכת הקיימת (₪)</label>
+        <input id="refiOldLoan" type="number" min="0" step="1000" value="0" style="width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:'JetBrains Mono',monospace;font-size:14px">
+      </div>
+      <div>
+        <label for="refiCost">עלות השדרוג (₪)</label>
+        <input id="refiCost" type="number" min="0" step="1000" value="0" style="width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:'JetBrains Mono',monospace;font-size:14px">
+      </div>
+      <div>
+        <label for="refiRate">ריבית שנתית (%)</label>
+        <input id="refiRate" type="number" min="0" max="40" step="0.05" value="5.5" style="width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:'JetBrains Mono',monospace;font-size:14px">
+      </div>
+      <div>
+        <label for="refiTerm">תקופה (שנים)</label>
+        <input id="refiTerm" type="number" min="1" max="40" step="1" value="16" style="width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:'JetBrains Mono',monospace;font-size:14px">
+      </div>
+      <div>
+        <label for="refiDeposit">הפקדה שנתית נוספת (₪)</label>
+        <input id="refiDeposit" type="number" min="0" step="1000" value="0" style="width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:'JetBrains Mono',monospace;font-size:14px">
+      </div>
+      <div>
+        <label for="refiStartYear">שנת התחלה</label>
+        <input id="refiStartYear" type="number" min="2000" max="2100" step="1" value="2027" style="width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:'JetBrains Mono',monospace;font-size:14px">
+      </div>
+    </div>
+    <div id="refiPreview" class="kpis hidden"></div>
+    <div class="btn-row">
+      <button id="refiBtn" class="btn btn-mint" onclick="saveRefi()">צור קישור למחשבון</button>
+    </div>
+    <div id="refiMsg" class="msg"></div>
+    <div id="refiResult" class="result hidden">
+      <p>הקישור למחשבון:</p>
+      <a id="refiLink" href="#" target="_blank"></a>
+      <div class="btn-row">
+        <button class="btn" onclick="copyRefiLink()">העתק קישור</button>
+        <a id="refiWa" class="btn" target="_blank">WhatsApp</a>
+      </div>
+    </div>
+  </div>
+
   <!-- 4. SAVE -->
   <div class="card">
     <h2><span class="bar"></span>יצירת הצעה</h2>
@@ -148,6 +197,7 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 <script src="../shared/chart-artifacts.js"></script>
 <script src="./storage-chart-images.js"></script>
 <script src="./storage-milestones-editor.js"></script>
+<script src="./storage-refinance.js"></script>
 <script>
 const WORKER='https://s-a.gs';
 let currentState=null;
@@ -168,10 +218,75 @@ function val(id){var el=document.getElementById(id);return el?(el.value||'').tri
 const msMount=document.getElementById('milestonesMount');
 function mountMilestones(){
   const card=document.getElementById('milestonesCard');
-  if(!currentState||!currentState.capex||!(currentState.capex.totalProjectCost>0)){card.classList.add('hidden');return;}
+  if(!currentState||!currentState.capex||!(currentState.capex.totalProjectCost>0)){card.classList.add('hidden');mountRefi();return;}
   card.classList.remove('hidden');
   StorageMilestonesEditor.render(msMount,{capex:currentState.capex,schedule:currentState.paymentMilestones});
+  mountRefi();
 }
+
+// ── refinance calculator (separate customer link; reuses the SAME extracted series) ──
+// The seed is built by the pure domain module, so the portal never re-derives the enSights
+// incremental-vs-total convention on its own.
+let refiSeed=null;
+function mountRefi(){
+  const card=document.getElementById('refiCard');
+  if(!currentState||!currentState.arrays20y){card.classList.add('hidden');refiSeed=null;return;}
+  refiSeed=StorageRefinance.buildRefiSeed(currentState);
+  card.classList.remove('hidden');
+  document.getElementById('refiCost').value=refiSeed.newProjectCost;
+  document.getElementById('refiRate').value=refiSeed.annualInterestPct;
+  document.getElementById('refiTerm').value=refiSeed.termYears;
+  document.getElementById('refiStartYear').value=refiSeed.startYear;
+  ['refiOldLoan','refiCost','refiRate','refiTerm','refiDeposit','refiStartYear'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.oninput=previewRefi; el.onchange=previewRefi;
+  });
+  previewRefi();
+}
+function refiConfig(){
+  if(!refiSeed) return null;
+  const n=id=>{const v=Number((document.getElementById(id)||{}).value);return isFinite(v)?v:0;};
+  return StorageRefinance.normalizeRefiConfig(Object.assign({},refiSeed,{
+    customerName:(getContact().name||''),
+    existingLoanBalance:n('refiOldLoan'), newProjectCost:n('refiCost'),
+    annualInterestPct:n('refiRate'), termYears:Math.round(n('refiTerm')),
+    extraAnnualDeposit:n('refiDeposit'), startYear:Math.round(n('refiStartYear')),
+  }));
+}
+function previewRefi(){
+  const cfg=refiConfig(); const box=document.getElementById('refiPreview');
+  if(!cfg){box.classList.add('hidden');return;}
+  const out=StorageRefinance.computeRefiPlan(cfg);
+  const fmt=x=>'₪'+Math.round(Number(x)||0).toLocaleString('he-IL');
+  box.classList.remove('hidden');
+  box.innerHTML=[
+    [fmt(out.inputs.loanPrincipal),'סך ההלוואה'],
+    [fmt(out.baseline.firstMonthlyPayment),'החזר חודשי'],
+    [fmt(out.baseline.totals.interest),'ריבית ללא הקטנה'],
+    [fmt(out.plan.totals.interest),'ריבית עם הקטנה'],
+    [fmt(out.saved.interest),'חיסכון בריבית'],
+    [(out.saved.years!=null?out.saved.years+' שנים':'—'),'קיצור תקופה']
+  ].map(x=>'<div class="kpi"><div class="v">'+x[0]+'</div><div class="l">'+x[1]+'</div></div>').join('');
+}
+async function saveRefi(){
+  const cfg=refiConfig(); const msg=document.getElementById('refiMsg');
+  if(!cfg){msg.textContent='טענו קודם קובץ enSights';return;}
+  const vr=StorageRefinance.validateRefiConfig(cfg);
+  if(!vr.ok){msg.textContent='שגיאה: '+vr.errors.join('; ');return;}
+  const btn=document.getElementById('refiBtn');btn.disabled=true;msg.textContent='שומר…';
+  try{
+    const r=await fetch(WORKER+'/calc/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cfg})});
+    const j=await r.json();
+    if(!r.ok){msg.textContent='שגיאה: '+(j.error||r.status)+(j.details?' — '+j.details.join('; '):'');btn.disabled=false;return;}
+    msg.textContent=(vr.warnings||[]).join(' · ');
+    document.getElementById('refiResult').classList.remove('hidden');
+    const a=document.getElementById('refiLink');a.href=j.url;a.textContent=j.url;
+    const name=(getContact().name||'לקוח יקר');
+    document.getElementById('refiWa').href='https://wa.me/?text='+encodeURIComponent('שלום '+name+',' + String.fromCharCode(10) + 'מצורף מחשבון לבדיקת השפעת הקטנת קרן ההלוואה:' + String.fromCharCode(10) + j.url);
+    btn.disabled=false;
+  }catch(e){msg.textContent='שגיאת רשת';btn.disabled=false;}
+}
+function copyRefiLink(){const t=document.getElementById('refiLink').textContent;navigator.clipboard&&navigator.clipboard.writeText(t);}
 
 // ── HubSpot pull (reuses trunk /q/hubspot/search) ──
 function toggleHub(){document.getElementById('hubBox').classList.toggle('hidden');}
