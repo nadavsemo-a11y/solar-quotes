@@ -1282,7 +1282,7 @@ class QuoteUI {
       const nameParts = (vals.name || '').trim().split(/\s+/);
       const firstname = nameParts[0] || '';
       const lastname = nameParts.slice(1).join(' ') || '';
-      await fetch('https://s-a.gs/q/hubspot/sync', {
+      const syncRes = await fetch('https://s-a.gs/q/hubspot/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1298,6 +1298,14 @@ class QuoteUI {
           dcKw: vals.kw || '',
         }),
       });
+      // ADOPT THE CANONICAL CONTACT. When the salesperson picked an ADDITIONAL CONTACT — a spouse,
+      // a partner — the Worker attributes the quote to the Contact that anchors that lead in SEMO
+      // and answers with its id (shared/hubspot-primary-contact.js). Taking it here is what makes
+      // the id stored on the quote (`hsId`) the same one the note was written against, so the
+      // post-sign lifecycle write and the CRM's own quote columns agree with each other. Without
+      // this the quote would remember the spouse while its note lived on the household.
+      const synced = await syncRes.json().catch(() => null);
+      if (synced && synced.success && synced.id) window._hsContactId = String(synced.id);
     } catch { /* best-effort */ }
   }
 
