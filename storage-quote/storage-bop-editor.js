@@ -33,8 +33,18 @@ const ils = (n) => '₪' + grp(n);
  * Hebrew wording for the domain's structured error codes. The domain speaks English (like the rest
  * of the codebase and like the Worker's `details` array); the salesperson-facing text lives here.
  */
-function hebrew(err, rowLabel) {
+/**
+ * @param err      the domain's structured error
+ * @param rowLabel the row's current name, for "…": prefixes
+ * @param rawAmount the row's RAW amount field, so an untouched row reads as "missing" rather than
+ *                  as "not a whole number" — the same domain code covers both, but they are very
+ *                  different mistakes to the person typing.
+ */
+function hebrew(err, rowLabel, rawAmount) {
   const who = rowLabel ? `"${rowLabel}": ` : '';
+  if (err.code === 'amount_invalid' && String(rawAmount == null ? '' : rawAmount).trim() === '') {
+    return who + 'חסר סכום לשורה.';
+  }
   switch (err.code) {
     case 'sum_mismatch':
       return err.delta > 0
@@ -261,9 +271,12 @@ function refreshPreview(mount) {
     const v = BOP.validateBreakdown(toPayload(st), st.capex);
     if (v.ok) { msg.className = 'bop-ed-msg ok'; msg.textContent = '✓ הפירוט תקין ומסתכם בדיוק לסכום שבסימולציה'; }
     else {
-      const byId = st.items.reduce((o, it) => (o[it.id] = it.name, o), {});
+      const byId = st.items.reduce((o, it) => (o[it.id] = it, o), {});
       msg.className = 'bop-ed-msg err';
-      msg.innerHTML = v.errors.map(e => '⚠ ' + esc(hebrew(e, byId[e.itemId]))).join('<br>');
+      msg.innerHTML = v.errors.map(e => {
+        const row = byId[e.itemId] || {};
+        return '⚠ ' + esc(hebrew(e, row.name, row.amount));
+      }).join('<br>');
     }
   }
 }
