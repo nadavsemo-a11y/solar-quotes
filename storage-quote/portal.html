@@ -71,6 +71,29 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 .pm-ed-msg.ok{color:var(--mint-deep)}
 .pm-ed-msg.err{color:#c0392b}
 @media(max-width:680px){.pm-ed-row{grid-template-columns:28px 1fr 92px 26px;grid-template-areas:"o name amount del" "o desc rule rule";row-gap:4px}.pm-ed-row .pm-ed-order{grid-area:o}.pm-ed-name{grid-area:name}.pm-ed-desc{grid-area:desc}.pm-ed-rule{grid-area:rule}.pm-ed-amount{grid-area:amount}.pm-ed-del{grid-area:del}}
+/* additional-cost (BOP) breakdown editor */
+.bop-ed-toggle{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;margin:0 0 6px;cursor:pointer}
+.bop-ed-toggle input{width:16px;height:16px;cursor:pointer}
+.bop-ed-toggle input:disabled{cursor:not-allowed}
+.bop-ed-hint{font-size:12px;color:var(--ink-500);margin:0 0 12px;line-height:1.5}
+.bop-ed-row{display:grid;grid-template-columns:34px 1fr 120px 30px;gap:6px;align-items:center;padding:7px 0;border-bottom:1px solid var(--ink-200)}
+.bop-ed-order{display:flex;flex-direction:column;gap:2px}
+.bop-ed-mini{cursor:pointer;border:1px solid var(--ink-300);background:#fff;border-radius:3px;font-size:9px;line-height:1;padding:2px 0}
+.bop-ed-mini:disabled{opacity:.3;cursor:not-allowed}
+.bop-ed-row input{width:100%;padding:6px 7px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:inherit;font-size:12px}
+.bop-ed-row input.bop-ed-amt{font-family:'JetBrains Mono',monospace;font-weight:700;text-align:left;direction:ltr}
+.bop-ed-del{cursor:pointer;border:1.5px solid var(--ink-300);background:#fff;border-radius:var(--radius);font-weight:800;color:#c0392b;padding:4px}
+.bop-ed-add-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.bop-ed-preset{padding:8px 10px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:inherit;font-size:12px;flex:1 1 160px}
+.bop-ed-add{cursor:pointer;font-family:inherit;font-weight:700;font-size:12px;border:1.5px dashed var(--ink-300);border-radius:var(--radius);background:var(--ink-50);padding:8px 14px}
+.bop-ed-foot{margin-top:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.bop-ed-counter{font-size:12px;font-weight:600}
+.bop-ed-ok{color:var(--mint-deep)}
+.bop-ed-warn{color:#c0392b}
+.bop-ed-msg{font-size:12px;font-weight:700;text-align:left}
+.bop-ed-msg.ok{color:var(--mint-deep)}
+.bop-ed-msg.err{color:#c0392b}
+@media(max-width:680px){.bop-ed-row{grid-template-columns:28px 1fr 100px 26px}}
 </style>
 </head>
 <body>
@@ -108,6 +131,12 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
     <div id="extractMsg" class="msg"></div>
     <div id="kpis" class="kpis hidden"></div>
     <div id="assertions" style="margin-top:10px"></div>
+  </div>
+
+  <!-- 2b. ADDITIONAL-COST BREAKDOWN (optional; replaces the single BOP line with named items) -->
+  <div id="bopCard" class="card hidden">
+    <h2><span class="bar"></span>פירוט עלויות נוספות</h2>
+    <div id="bopMount"></div>
   </div>
 
   <!-- 3. PAYMENT MILESTONES (editable per-quote schedule; shown once a quote is loaded) -->
@@ -188,6 +217,9 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 <script src="../shared/client-details.js"></script>
 <script src="../shared/contact-adapters.js"></script>
 <script src="./storage-payment-milestones.js"></script>
+<!-- Pure domain: MUST load before storage-validate.js, which reads it at module scope to validate
+     an itemised additional-cost breakdown. -->
+<script src="./storage-bop-breakdown.js"></script>
 <script src="./storage-validate.js"></script>
 <script src="./storage-public.js"></script>
 <script src="./storage-chart-series.js"></script>
@@ -197,6 +229,7 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 <script src="../shared/chart-artifacts.js"></script>
 <script src="./storage-chart-images.js"></script>
 <script src="./storage-milestones-editor.js"></script>
+<script src="./storage-bop-editor.js"></script>
 <script src="./storage-refinance.js"></script>
 <script>
 const WORKER='https://s-a.gs';
@@ -218,10 +251,26 @@ function val(id){var el=document.getElementById(id);return el?(el.value||'').tri
 const msMount=document.getElementById('milestonesMount');
 function mountMilestones(){
   const card=document.getElementById('milestonesCard');
-  if(!currentState||!currentState.capex||!(currentState.capex.totalProjectCost>0)){card.classList.add('hidden');mountRefi();return;}
+  if(!currentState||!currentState.capex||!(currentState.capex.totalProjectCost>0)){card.classList.add('hidden');mountBop();mountRefi();return;}
   card.classList.remove('hidden');
   StorageMilestonesEditor.render(msMount,{capex:currentState.capex,schedule:currentState.paymentMilestones});
+  mountBop();
   mountRefi();
+}
+
+// ── additional-cost breakdown editor (internal only; consumes the pure StorageBopBreakdown domain) ──
+// Called on EVERY state change (upload, duplicate, failed extraction). render() always resets to the
+// arguments it is given, so rows typed for one quote cannot survive into the next.
+const bopMount=document.getElementById('bopMount');
+function mountBop(){
+  const card=document.getElementById('bopCard');
+  if(!currentState||!currentState.capex||!(currentState.capex.totalProjectCost>0)){
+    card.classList.add('hidden');
+    StorageBopEditor.render(bopMount,{capex:{},breakdown:null});
+    return;
+  }
+  card.classList.remove('hidden');
+  StorageBopEditor.render(bopMount,{capex:currentState.capex,breakdown:currentState.bopBreakdown||null});
 }
 
 // ── refinance calculator (separate customer link; reuses the SAME extracted series) ──
@@ -377,6 +426,14 @@ async function save(){
   // Persist the negotiated milestone schedule (normalized). Block save on an invalid schedule.
   if(!StorageMilestonesEditor.isValid(msMount)){document.getElementById('saveMsg').textContent='לוח אבני הדרך אינו תקין — תקנו לפני שמירה';return;}
   currentState.paymentMilestones=StorageMilestonesEditor.getSchedule(msMount);
+  // Persist (or remove) the additional-cost itemisation. An invalid breakdown BLOCKS the save — it
+  // is never silently dropped back to the single BOP line, because that would issue a quote the
+  // salesperson believes is itemised. Disabled → the key is deleted, so the quote is byte-identical
+  // to one authored before this feature existed.
+  const bopV=StorageBopEditor.validation(bopMount);
+  if(!bopV.ok){document.getElementById('saveMsg').textContent='פירוט העלויות הנוספות אינו תקין — תקנו לפני שמירה';return;}
+  const bopCfg=StorageBopEditor.getBreakdown(bopMount);
+  if(bopCfg) currentState.bopBreakdown=bopCfg; else delete currentState.bopBreakdown;
   const btn=document.getElementById('saveBtn');btn.disabled=true;
   const msg=document.getElementById('saveMsg');msg.textContent='שומר…';
   try{
