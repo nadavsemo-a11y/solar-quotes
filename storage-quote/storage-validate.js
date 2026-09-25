@@ -27,6 +27,11 @@
 const PM = (typeof module !== 'undefined' && module.exports)
   ? require('./storage-payment-milestones.js')
   : (typeof globalThis !== 'undefined' ? globalThis.StoragePaymentMilestones : undefined);
+// Additional-cost (BOP) breakdown domain layer — the single authority for the optional itemisation
+// of capex.balanceOfPlantCost. Same loading contract as PM above.
+const BOP = (typeof module !== 'undefined' && module.exports)
+  ? require('./storage-bop-breakdown.js')
+  : (typeof globalThis !== 'undefined' ? globalThis.StorageBopBreakdown : undefined);
 
 const STORAGE_QUOTE_SCHEMA_VERSION = 1;
 const STORAGE_SNAPSHOT_VERSION = 2;   // v2 binds the chart artifacts by content hash
@@ -212,6 +217,23 @@ function validateStorageState(state, opts) {
     const parts = (cap.pvCost || 0) + (cap.storageCost || 0) + (cap.balanceOfPlantCost || 0) + visible;
     if (Math.abs(parts - cap.totalProjectCost) > ROUND_TOL) {
       errors.push(`capex components (${Math.round(parts)}) do not sum to totalProjectCost (${Math.round(cap.totalProjectCost)}) within ±${ROUND_TOL}`);
+    }
+  }
+
+  // ── bopBreakdown (optional per-quote itemisation of the single additional-cost line) ──
+  // ABSENT → the exact existing behaviour: one "עבודות מערכת ותשתית (BOP)" row. There is no
+  // empty/null/default representation, so a legacy state gains no new property by being opened.
+  // PRESENT → it must be a well-formed, EXACT partition of capex.balanceOfPlantCost (delegated to
+  // the domain layer, the single authority). The breakdown never alters any figure: the scalar
+  // above stays the value the milestones, the conditions and the project total are computed from.
+  if (s.bopBreakdown != null) {
+    if (!BOP || typeof BOP.validateBreakdown !== 'function') {
+      // Fail EXPLICITLY. Silently skipping the check would let a configured record through a
+      // runtime that cannot understand it, and it would then be rendered without its items.
+      errors.push('bopBreakdown is present but storage-bop-breakdown.js (StorageBopBreakdown) is unavailable');
+    } else {
+      const br = BOP.validateBreakdown(s.bopBreakdown, cap);
+      if (!br.ok) br.errors.forEach(e => errors.push('bopBreakdown: ' + e.message));
     }
   }
 
