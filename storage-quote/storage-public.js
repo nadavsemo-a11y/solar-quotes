@@ -26,6 +26,11 @@ const V = (typeof module !== 'undefined' && module.exports)
 const PM = (typeof module !== 'undefined' && module.exports)
   ? require('./storage-payment-milestones.js')
   : (typeof globalThis !== 'undefined' ? globalThis.StoragePaymentMilestones : undefined);
+// Additional-cost (BOP) breakdown domain layer — the single authority for the optional itemisation
+// of the one additional-cost line. Absent on a quote → the snapshot gains no key at all.
+const BOP = (typeof module !== 'undefined' && module.exports)
+  ? require('./storage-bop-breakdown.js')
+  : (typeof globalThis !== 'undefined' ? globalThis.StorageBopBreakdown : undefined);
 
 const round = n => Math.round(n);
 const round2 = n => Math.round(n * 100) / 100;
@@ -116,6 +121,16 @@ function buildStorageSignedSnapshot(state /* , knobs ignored */) {
   const a = s.arrays20y || {};
   const fin = recomputeCanonicalFinancing(s);
 
+  // Optional itemisation of the additional-cost line. Resolved ONCE here, so the item names,
+  // amounts, order, ids and version are part of what the customer signs and what the hash covers.
+  // Self-contained by construction (no catalog reference), so a later edit to the preset list
+  // cannot change a saved quote. `null` for every quote that does not use the feature — and the
+  // key is then OMITTED below, leaving legacy snapshot bytes (and their hash) untouched.
+  const bopBreakdown = BOP ? BOP.resolveBreakdownForState(s) : null;
+  if (s.bopBreakdown != null && !BOP) {
+    throw new Error('storage-public: bopBreakdown is present but storage-bop-breakdown.js is unavailable');
+  }
+
   return {
     snapshotType: 'storage',
     snapshotVersion: (V && V.STORAGE_SNAPSHOT_VERSION) || 1,
@@ -130,9 +145,14 @@ function buildStorageSignedSnapshot(state /* , knobs ignored */) {
     capex: {
       totalProjectCost: round(cap.totalProjectCost),
       pvCost: round(cap.pvCost), storageCost: round(cap.storageCost),
+      // The unchanged scalar. Payment milestones, the BMS/EMS condition and the project total all
+      // read THIS — the breakdown below is a presentation of it, never an addition to it.
       balanceOfPlantCost: round(cap.balanceOfPlantCost),
       otherVisibleItems: (Array.isArray(cap.otherVisibleItems) ? cap.otherVisibleItems : [])
         .map(it => ({ label: String(it.label || ''), amount: round(it.amount || 0) })),
+      // Present ONLY on a quote that was explicitly itemised. Spread so that an unitemised quote
+      // produces byte-identical snapshot JSON (and therefore an identical signing hash) to before.
+      ...(bopBreakdown ? { bopBreakdown } : {}),
     },
     metrics: {
       npv: round(m.npv),
