@@ -2096,6 +2096,24 @@ async function prefillFromDeepLink() {
 
 prefillFromDeepLink();
 
+// ── Duplicate deep link — the CRM's "שכפל / שנה הצעה" button: /portal?duplicate=<quoteId> ──
+//
+// A shortcut for "שכפל הצעה קיימת" → paste the link → טען, through the SAME loadFromQuoteUrl path
+// so a duplicate opened from the CRM is identical to one pasted by hand (fresh one-time ids, today's
+// date, the HubSpot contact carried by the quote's own hsId). Only the public quote id travels.
+async function prefillFromDuplicateLink() {
+  var id = new URLSearchParams(location.search).get('duplicate');
+  if (!id) return;
+  if (!/^[A-Za-z0-9_-]{4,40}$/.test(id)) { console.warn('[duplicate-link] ignoring malformed id'); return; }
+  var ui = await window.quoteUIReady;
+  if (!ui) { console.warn('[duplicate-link] quote UI failed to initialise'); return; }
+  openDuplicateBox();
+  document.getElementById('duplicateUrl').value = 'https://s-a.gs/q/' + id;
+  await loadFromQuoteUrl();   // on failure the box stays open with the error, exactly as by hand
+}
+
+prefillFromDuplicateLink();
+
 // ══════════════════════════════════════════════════════════════════════
 // CONTENT EDITOR — in-portal
 // ══════════════════════════════════════════════════════════════════════
