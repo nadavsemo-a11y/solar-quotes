@@ -309,9 +309,11 @@ class QuoteUI {
   /** Read + validate the add-item form. Returns null and shows why when it is not usable. */
   _readQuoteLocalForm() {
     const label = (document.getElementById('ql-label')?.value || '').trim();
-    const priceRaw = document.getElementById('ql-price')?.value;
+    const priceRaw = (document.getElementById('ql-price')?.value || '').trim();
     const category = document.getElementById('ql-category')?.value || 'upgrade';
-    const price = Math.round(parseFloat(priceRaw));
+    // An empty price is a FREE item (₪0), not an error — free upgrades are a deliberate sales tool,
+    // and the "0" placeholder already tells the seller that blank means zero.
+    const price = priceRaw === '' ? 0 : Math.round(parseFloat(priceRaw));
     if (!label) return this._quoteLocalMsg('יש להזין שם לתוספת', true);
     if (!Number.isFinite(price) || price < 0) return this._quoteLocalMsg('יש להזין מחיר תקין', true);
     return { label, price, category };
@@ -346,7 +348,7 @@ class QuoteUI {
     this._renderExtrasUI();
     this._updatePreview();
     this._clearQuoteLocalForm();
-    this._quoteLocalMsg('נוספה תוספת חד-פעמית להצעה זו', false);
+    this._quoteLocalMsg(form.price === 0 ? 'נוספה תוספת חד-פעמית ללא עלות (₪0)' : 'נוספה תוספת חד-פעמית להצעה זו', false);
   }
 
   /** שמור כתוספת קבועה — publish the next immutable catalog version, exactly as the manager does. */
@@ -1282,7 +1284,7 @@ class QuoteUI {
       const nameParts = (vals.name || '').trim().split(/\s+/);
       const firstname = nameParts[0] || '';
       const lastname = nameParts.slice(1).join(' ') || '';
-      await fetch('https://s-a.gs/q/hubspot/sync', {
+      const syncRes = await fetch('https://s-a.gs/q/hubspot/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1298,6 +1300,14 @@ class QuoteUI {
           dcKw: vals.kw || '',
         }),
       });
+      // ADOPT THE CANONICAL CONTACT. When the salesperson picked an ADDITIONAL CONTACT — a spouse,
+      // a partner — the Worker attributes the quote to the Contact that anchors that lead in SEMO
+      // and answers with its id (shared/hubspot-primary-contact.js). Taking it here is what makes
+      // the id stored on the quote (`hsId`) the same one the note was written against, so the
+      // post-sign lifecycle write and the CRM's own quote columns agree with each other. Without
+      // this the quote would remember the spouse while its note lived on the household.
+      const synced = await syncRes.json().catch(() => null);
+      if (synced && synced.success && synced.id) window._hsContactId = String(synced.id);
     } catch { /* best-effort */ }
   }
 
@@ -2231,7 +2241,7 @@ class QuoteUI {
           </select>
           <span style="font-size:11px;color:var(--gray)">(מינימום 2)</span>` : ''}
         </div>
-        <strong class="upgrade-price-display" style="font-size:14px;color:var(--sky)">₪${fmt(e.price)}</strong>
+        <strong class="upgrade-price-display" style="font-size:14px;color:var(--sky)">${UpgradePricing.formatLinePrice(e)}</strong>
       </div>`).join('')}
     </div>
     <div style="display:flex;justify-content:space-between;padding:12px 14px;font-weight:800;font-size:15px;color:var(--sky)">
@@ -2247,7 +2257,7 @@ class QuoteUI {
       <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>מערכת סולארית ${d.dcKW} קו"ט (${d.panelCount} פאנלים × ${d.panelW}W)</span><strong>₪${fmt(d.dcKW * d.ppkw)}</strong></li>
       <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--gray)"><span>מחיר לקו״ט</span><span>₪${fmt(d.ppkw)}</span></li>
       ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
-      ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:none;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>₪${fmt(e.price)}</strong></li>`).join('')}
+      ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:none;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>${UpgradePricing.formatLinePrice(e)}</strong></li>`).join('')}
       <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(d.price)}</span></li>
       <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span id="project-total-vat-display">₪${fmt(Math.round(d.price * VAT))}</span></li>
     </ul>
@@ -2263,7 +2273,7 @@ class QuoteUI {
         <th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);font-size:13px;color:var(--gray)">עלות משוערת</th>
       </tr></thead>
       <tbody>
-        ${selectedPotential.map(e => `<tr><td style="padding:10px;border-bottom:1px solid var(--border);font-size:14px">${e.label}</td><td style="padding:10px;border-bottom:1px solid var(--border);font-size:14px;text-align:left;font-weight:600">₪${fmt(e.price)}</td></tr>`).join('')}
+        ${selectedPotential.map(e => `<tr><td style="padding:10px;border-bottom:1px solid var(--border);font-size:14px">${e.label}</td><td style="padding:10px;border-bottom:1px solid var(--border);font-size:14px;text-align:left;font-weight:600">${UpgradePricing.formatLinePrice(e)}</td></tr>`).join('')}
       </tbody>
     </table>
     <div style="font-size:11px;color:var(--gray);margin-top:8px;font-style:italic">* הסכומים הם הערכה בלבד ויקבעו סופית לאחר סקר שטח</div>
@@ -2496,7 +2506,7 @@ class QuoteUI {
         priceLine.style.display = cb.checked ? 'flex' : 'none';
         if (cb.checked) {
           const priceEl = priceLine.querySelector('strong');
-          if (priceEl) priceEl.textContent = '₪' + fmt(price);
+          if (priceEl) priceEl.textContent = UpgradePricing.formatLinePrice({ id, calcType, price });
         }
       }
     });
