@@ -257,6 +257,28 @@ const UpgradePricing = (() => {
       .reduce((s, e) => s + (num(e.price, 0)), 0);
   }
 
+  // ── how a line's price is SHOWN to the customer ──────────────────────────────────────────────
+  // A seller may give an upgrade away on purpose (₪0). The customer reads "ללא עלות", not "₪0".
+  // The battery line is the one exception: its ₪0 means "no quantity chosen yet", never "free".
+  // Display only — the amount itself stays 0 everywhere it is stored, summed or signed.
+  const FREE_PRICE_LABEL = 'ללא עלות';
+
+  /** item: any upgrade/potential line ({ id | srcId, price, calcType? }), in any layer's id form. */
+  function isFreeLine(item) {
+    if (!item) return false;
+    const id = String(item.srcId || item.id || '').replace(/^cost\.(upgrade|potential)\./, '');
+    if (id === 'batteries' || item.calcType === 'batteries') return false;
+    const p = item.price;
+    if (p == null || (typeof p === 'string' && p.trim() === '')) return false;   // unknown ≠ free
+    return Number(p) === 0;
+  }
+
+  /** "ללא עלות" for a free line, otherwise "₪1,234". */
+  function formatLinePrice(item) {
+    if (isFreeLine(item)) return FREE_PRICE_LABEL;
+    return '₪' + Math.round(Number(item && item.price) || 0).toLocaleString('he-IL');
+  }
+
   return {
     PRICING_SCHEMA_VERSION,
     getDefaultCatalog,
@@ -271,6 +293,9 @@ const UpgradePricing = (() => {
     resolvePrice,
     resolveExtras,
     sumUpgrades,
+    FREE_PRICE_LABEL,
+    isFreeLine,
+    formatLinePrice,
     // exposed for tests / guards — the price book itself, read-only by convention
     INVERTER_PRICING,
     LEGACY_INVERTER_PRICING,
