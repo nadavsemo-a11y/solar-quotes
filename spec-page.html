@@ -698,6 +698,16 @@
         </table>
       </section>
 
+      <section id="additionsSection" hidden>
+        <h2 class="sec-title">תוספות לאחר חתימת ההסכם</h2>
+        <p class="doc-note" id="additionsNote"></p>
+        <table class="grid-table">
+          <thead><tr><th>סעיף</th><th>פירוט</th><th class="money">סכום לפני מע"מ</th></tr></thead>
+          <tbody id="additionsTable"></tbody>
+        </table>
+        <table class="totals"><tbody id="additionsTotals"></tbody></table>
+      </section>
+
       <h2 class="sec-title">אישור הלקוח לפני הזמנת עבודה</h2>
       <div id="signatureSection">
 
@@ -993,6 +1003,44 @@ import { SignatureCapture as SignatureService } from './signature/index.js';
         '<tr><td class="strong">' + esc(p.label) + '</td><td class="money">' + esc(money(p.amount)) + '</td></tr>',
       ).join('');
       document.getElementById('potentialSection').hidden = false;
+    }
+  }
+
+  // ── תוספות לאחר חתימת ההסכם ───────────────────────────────────────────────
+  // specData.projectAdditions is frozen at spec-creation time by the pricing authority
+  // (semo-quotes shared/project-additions): the manual upgrades the customer SIGNED in an appendix
+  // after the agreement, and the site expenses finalized at installation. It is shown even when the
+  // historical quote total is unknown, because the lines themselves are known. This page does no
+  // arithmetic: every amount below is in agorot as the authority froze it, only formatted here.
+  const additions = specData.projectAdditions;
+  if (additions && additions.version === 1) {
+    const agorot = (n) => money(Number(n) / 100);
+    const rows = [];
+    for (const u of additions.upgrades || []) {
+      const detail = u.pricingMode === 'quantity_unit_price'
+        ? esc(u.quantity) + ' ' + esc(u.unitLabel) + ' × ' + esc(agorot(u.unitPriceMinor))
+        : (u.equipment && u.equipment.kind === 'hybrid_inverter' ? 'ממיר היברידי'
+          : (u.equipment && u.equipment.kind === 'battery' ? esc(u.equipment.quantity) + ' סוללות' : 'נספח חתום'));
+      rows.push('<tr><td class="strong">' + esc(u.label) + '</td><td>' + detail + '</td><td class="money">' + esc(agorot(u.lineNetMinor)) + '</td></tr>');
+    }
+    const ex = additions.expenses;
+    if (ex) {
+      for (const l of ex.lines || []) {
+        rows.push('<tr><td class="strong">' + esc(l.description) + '</td><td>' + esc(l.quantity) + ' ' + esc(l.unitLabel)
+          + (l.unitPriceMinor != null ? ' × ' + esc(agorot(l.unitPriceMinor)) : '') + '</td><td class="money">' + esc(agorot(l.lineNetMinor)) + '</td></tr>');
+      }
+    }
+    if (rows.length) {
+      document.getElementById('additionsTable').innerHTML = rows.join('');
+      const t = additions.totals || {};
+      document.getElementById('additionsTotals').innerHTML =
+        '<tr class="rule"><td>סה"כ תוספות לפני מע"מ</td><td>' + esc(agorot(t.net)) + '</td></tr>' +
+        '<tr class="grand"><td>סה"כ תוספות כולל מע"מ (' + esc(String(additions.vatPercent)) + '%)</td><td>' + esc(agorot(t.gross)) + '</td></tr>';
+      document.getElementById('additionsNote').textContent =
+        'שדרוגים שאושרו בנספח חתום לאחר ההסכם' + (ex ? ' והוצאות נוספות שבוצעו בפועל לפי דוח ההוצאות' : '') +
+        '. משולמים במסגרת התשלום האחרון (השלמה ל־100%).' +
+        (additions.finalBilling && additions.finalBilling.status !== 'ready' ? ' הסכום הסופי לחיוב ייקבע לאחר התאמה במשרד.' : '');
+      document.getElementById('additionsSection').hidden = false;
     }
   }
 

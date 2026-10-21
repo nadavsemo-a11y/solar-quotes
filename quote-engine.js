@@ -348,54 +348,48 @@ const QuoteEngine = (() => {
   // ── שלבי תשלום ───────────────────────────────────────────────────────────
 
   /**
-   * _loadPaymentStages()
-   * טוען הגדרות שלבי תשלום מ-localStorage (payment-editor.html) או ברירת מחדל.
+   * THE payment terms of every NEW quote — one definition, used by the seller preview and by the
+   * customer's signing path (quote-public.js) alike. `payment-terms/v1` is exactly what customers
+   * have been signing: ₪6,000 deposit, completion to 35%, to 95%, and the remainder, on the TOTAL
+   * before VAT (base + chosen upgrades). The arithmetic is the customer path's own
+   * (Math.round(total × 0.35) …), so every historical signed snapshot still re-hashes identically.
+   *
+   * The seller's localStorage ('semo-payment-stages') used to override these terms in the seller's
+   * own preview only — the customer never saw them. It is no longer an authority: a saved custom
+   * configuration is DETECTED (customPaymentStagesSaved) so the portal can say these are the terms
+   * that apply.
    */
-  function _loadPaymentStages() {
-    try {
-      const saved = typeof localStorage !== 'undefined' && localStorage.getItem('semo-payment-stages');
-      if (saved) return JSON.parse(saved);
-    } catch(e) {}
-    return [
-      { label: 'מקדמה',       desc: 'בחתימת ההסכם',                         type: 'fixed',     value: 6000 },
-      { label: 'השלמה ל-35%', desc: 'בקבלת תוכניות ביצוע',                  type: 'percent',   value: 35 },
-      { label: 'השלמה ל-95%', desc: '7 ימי עסקים בטרם אספקת פנלים לאתר',   type: 'percent',   value: 95 },
-      { label: '5% אחרון',    desc: 'ביום החיבור לחברת החשמל',               type: 'remainder', value: 100 },
-    ];
-  }
+  const PAYMENT_TERMS = Object.freeze({ version: 'payment-terms/v1', deposit: 6000, toSecond: 0.35, toThird: 0.95 });
+  const PAYMENT_STAGE_COPY = Object.freeze([
+    Object.freeze({ label: 'מקדמה',       desc: 'בחתימת ההסכם' }),
+    Object.freeze({ label: 'השלמה ל-35%', desc: 'בקבלת תוכניות ביצוע' }),
+    Object.freeze({ label: 'השלמה ל-95%', desc: '7 ימי עסקים בטרם אספקת פנלים לאתר' }),
+    Object.freeze({ label: '5% אחרון',    desc: 'ביום החיבור לחברת החשמל' }),
+  ]);
 
   /**
-   * calcPaymentStages(price)
-   * מחשב את שלבי התשלום לפי המחיר וההגדרות.
-   * @returns {{ dep, p2, p3, p4, stages }}
+   * calcPaymentStages(total)
+   * @param {number} total  the project total BEFORE VAT (base + chosen upgrades)
+   * @returns {{ dep, p2, p3, p4, total, version, stages }}
    */
-  function calcPaymentStages(price) {
-    const config = _loadPaymentStages();
-    const stages = [];
-    let cumulative = 0;
-
-    for (const s of config) {
-      let amount = 0;
-      if (s.type === 'fixed') {
-        amount = s.value;
-      } else if (s.type === 'percent') {
-        amount = Math.round(price * s.value / 100) - cumulative;
-      } else {
-        // remainder
-        amount = price - cumulative;
-      }
-      cumulative += amount;
-      stages.push({ label: s.label, desc: s.desc, amount });
-    }
-
-    // Backward compatibility: return dep/p2/p3/p4 + full stages array
+  function calcPaymentStages(total) {
+    const dep = PAYMENT_TERMS.deposit;
+    const c35 = Math.round(total * PAYMENT_TERMS.toSecond);
+    const c95 = Math.round(total * PAYMENT_TERMS.toThird);
+    const amounts = [dep, c35 - dep, c95 - c35, total - c95];
     return {
-      dep: stages[0] ? stages[0].amount : 0,
-      p2:  stages[1] ? stages[1].amount : 0,
-      p3:  stages[2] ? stages[2].amount : 0,
-      p4:  stages[3] ? stages[3].amount : 0,
-      stages,
+      dep: amounts[0], p2: amounts[1], p3: amounts[2], p4: amounts[3],
+      total, version: PAYMENT_TERMS.version,
+      stages: PAYMENT_STAGE_COPY.map((c, i) => ({ label: c.label, desc: c.desc, amount: amounts[i] })),
     };
+  }
+
+  /** A custom stage configuration a seller saved in this browser before v1 — reported, never applied. */
+  function customPaymentStagesSaved() {
+    try {
+      const saved = typeof localStorage !== 'undefined' && localStorage.getItem('semo-payment-stages');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) { return null; }
   }
 
   // ── חישוב כולל (ה-API הראשי) ─────────────────────────────────────────────
@@ -448,9 +442,11 @@ const QuoteEngine = (() => {
     const plan        = calcPlanIncome({ dcKW, acKW, price, planKey: effectivePlanKey,
                                           inflationPct, hasUrbanPremium, hours,
                                           manualGreenRegularTariffNisPerKwh: tariff.manualOverrideApplied ? tariff.appliedNisPerKwh : null });
-    const payments    = calcPaymentStages(price);
     // Only upgrades affect price; potential costs are informational only
     const extrasTotal = (extras || []).filter(e => e.checked && e.category !== 'potential').reduce((s, e) => s + e.price, 0);
+    // The stages are on the TOTAL the customer signs (base + chosen upgrades), exactly as the
+    // customer's page computes them — the seller preview no longer shows a base-only split.
+    const payments    = calcPaymentStages(price + extrasTotal);
 
     return {
       // קלט מעובד
@@ -537,6 +533,8 @@ const QuoteEngine = (() => {
     calcPaybackYears,
     calcPrice,
     calcPaymentStages,
+    customPaymentStagesSaved,
+    PAYMENT_TERMS,
     calcBreaker,
     getEligiblePlans,
     // תעריף ידני (green/regular)

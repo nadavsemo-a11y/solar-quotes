@@ -102,9 +102,10 @@ const ContentManager = (() => {
         type: 'fixed',
         enabled: true,
         fixedKey: 'payment-section',
-        description: 'טבלת שלבי תשלום — שמות, תיאורים, אחוזים וסכום מקדמה',
-        editLink: 'payment-editor.html',
-        editLabel: 'עריכת תנאי תשלום',
+        // One set of terms for every new quote (QuoteEngine.PAYMENT_TERMS, payment-terms/v1) — the
+        // same the customer signs. The old browser-local editor is retired, so there is no edit link.
+        description: 'שלבי התשלום האחידים: ₪6,000 מקדמה, השלמה ל-35%, ל-95% והיתרה — אותם תנאים שהלקוח חותם עליהם',
+        editLink: null,
       },
     },
   };

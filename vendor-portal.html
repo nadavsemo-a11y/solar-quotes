@@ -690,7 +690,13 @@ async function executeDone(ref, t) {
     const fields = serials.length > 0 ? { 'סיריאלי ממירים': serials.join('; ') } : {};
     const res = await fetch(`${API}/v/api/done`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: TOKEN, taskRef: ref, fields, note: '' }) });
     const data = await res.json();
-    if (data.success) {
+    if (data.success && data.statusChanged === false) {
+      // The installation task: the report was recorded, but the task is completed by the office
+      // after the item-by-item expense review — the status did not change.
+      const row = document.getElementById(`row-${ref}`); row.classList.remove('completing');
+      document.getElementById(`action-${ref}`).innerHTML = '<span class="muted">הדיווח התקבל · ממתין לסקירת הוצאות</span>';
+      showToast(data.message || 'הדיווח התקבל', 'info');
+    } else if (data.success) {
       document.getElementById(`row-${ref}`).classList.add('done-exit');
       showToast(`${t.projectName} — בוצע ✓`, 'success');
       setTimeout(() => { tasks = tasks.filter(x => x.ref !== ref); updateCounts(); if (!tasks.length) render(); else document.getElementById(`row-${ref}`)?.remove(); }, 400);

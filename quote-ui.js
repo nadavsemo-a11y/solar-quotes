@@ -168,6 +168,11 @@ class QuoteUI {
   // ══════════════════════════════════════════════════════════════════════
 
   init() {
+    // A seller who once customised the payment stages in this browser saw them in the preview only;
+    // the customer always signed the uniform terms. Say which terms apply, once.
+    if (QuoteEngine.customPaymentStagesSaved && QuoteEngine.customPaymentStagesSaved()) {
+      EmailService?.showToast?.('הגדרת שלבי תשלום שנשמרה בדפדפן זה אינה בתוקף: בכל הצעה חדשה חלים התנאים האחידים — ₪6,000 מקדמה, השלמה ל-35%, ל-95% והיתרה', true);
+    }
     // Seed the price inputs BEFORE anything reads them: they carry no value= in the HTML, so the
     // price book (shared/upgrade-pricing.js) is their only source.
     this._applyNewQuoteInputDefaults();
@@ -2523,11 +2528,8 @@ class QuoteUI {
     const vatEl = document.getElementById('project-total-vat-display');
     if (vatEl) vatEl.textContent = '₪' + fmt(Math.round(totalPrice * VAT));
 
-    // Update payment stages
-    const dep = 6000;
-    const p2 = Math.round(totalPrice * 0.35) - dep;
-    const p3 = Math.round(totalPrice * 0.95) - Math.round(totalPrice * 0.35);
-    const p4 = totalPrice - Math.round(totalPrice * 0.95);
+    // Update payment stages — the engine's one calculator, the same the customer signs.
+    const { dep, p2, p3, p4 } = QuoteEngine.calcPaymentStages(totalPrice);
 
     const depEl = document.getElementById('pay-dep');
     if (depEl) depEl.textContent = '₪' + fmt(dep);
