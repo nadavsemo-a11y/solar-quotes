@@ -24,9 +24,25 @@
 (function () {
 
 const Assets = (typeof module !== 'undefined' && module.exports) ? require('./lease-assets.js') : globalThis.LeaseAssets;
+const V = (typeof module !== 'undefined' && module.exports) ? require('./lease-validate.js') : globalThis.LeaseValidate;
 
 const TEMPLATE_ID = 'solar-lease';
-const TEMPLATE_VERSION = '1';
+// '2' (2026-10-22): the system described with the sales quote's fields and labels (roof type and
+// area, DC, AC, panels, inverter), and Annex A — the optional hybrid inverter + batteries the customer
+// may choose on the link. No v1 lease was ever saved in production, so v1 is not kept.
+const TEMPLATE_VERSION = '2';
+
+// The labels a solar SALES document prints for the same facts (SolarContentBlocks.SOLAR_LABELS
+// sys.* — pinned by tests/lease-quote.test.js), so a customer reads one vocabulary across documents.
+const SYS_LABELS = Object.freeze({
+  type: 'סוג מערכת', dc: 'הספק DC', ac: 'הספק AC', panels: 'פאנלים', inverter: 'ממיר', roof: 'סוג גג', roofArea: 'שטח גג',
+});
+
+/** Whole shekels with thousands separators — deterministic (no locale data), so the server and the
+ *  page render the same bytes. */
+function ils(n) {
+  return `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ₪`;
+}
 
 const COMPANY = Object.freeze({
   name: 'סמו א.ג.ס בע"מ',
@@ -97,7 +113,7 @@ function sections(t) {
     { title: 'הצדדים והגדרות', clauses: [
       c('הסכם זה נערך בין החברה לבין הלקוח, כמפורט בטבלת הצדדים שבראש ההסכם. ההגדרות שלהלן יחולו בכל מקום בהסכם, אלא אם נאמר במפורש אחרת:', [
         '"הנכס" — הבית שבכתובת ההתקנה המפורטת בראש ההסכם, לרבות גגו, מבניו והמערכת החשמלית שבו.',
-        '"המערכת" — המערכת הסולארית המפורטת בפרק "ערכים מסחריים", לרבות הפאנלים, הממיר, הקונסטרוקציה, הכבלים, ציוד המיתוג וההגנות, מערכת הניטור ומונה הצריכה הפרטי, וכל רכיב שיוחלף או יתווסף בהם במהלך תקופת ההסכם.',
+        '"המערכת" — המערכת הסולארית המפורטת בפרק "ערכים מסחריים", לרבות הפאנלים, הממיר (ובכלל זה ממיר היברידי שהותקן לפי נספח א\'), הקונסטרוקציה, הכבלים, ציוד המיתוג וההגנות, מערכת הניטור ומונה הצריכה הפרטי, וכל רכיב שיוחלף או יתווסף בהם במהלך תקופת ההסכם — למעט סוללות אגירה.',
         '"חברת החשמל" — חברת החשמל לישראל בע"מ או כל גורם אחר המוסמך על פי דין לספק חשמל לנכס, למדוד אותו או לחבר מתקן ייצור לרשת.',
         '"המונה הרשמי" — מונה החשמל הדו-כיווני שהתקינה חברת החשמל בנכס, המודד את החשמל הנצרך מהרשת ואת החשמל המוזרם אליה.',
         '"מונה הצריכה הפרטי" — המונה שתתקין החברה בנכס לפי פרק 5 (חשבון החשמל ומדידה), המודד את כלל צריכת החשמל של משק הבית.',
@@ -118,7 +134,7 @@ function sections(t) {
       c('ההתקנה כפופה לבדיקת היתכנות הנדסית, לרבות בדיקת מבנה הגג וחוזקו, ולקבלת כל האישורים הנדרשים מחברת החשמל ומכל רשות מוסמכת אחרת.'),
       c('יצרן הפאנלים ודגם הממיר הסופיים ייקבעו בסיום התכנון ויפורטו במפרט הטכני. החברה רשאית להחליף רכיב ברכיב שווה ערך או טוב ממנו. שינוי בהספק ה-DC המותקן ביותר מ-10% לעומת הספק המפורט בהסכם טעון את הסכמת הלקוח בכתב.'),
       c('החברה תתאם עם הלקוח מראש את מועדי העבודה בנכס, תבצע את העבודות באופן מקצועי ובטיחותי, תשמור על הניקיון ותשיב לקדמותו כל נזק שייגרם לנכס עקב העבודות.'),
-      c('המערכת אינה כוללת סוללות אגירה. התקנת סוללות או כל רכיב נוסף תיעשה רק בהסכם נפרד בכתב.'),
+      c('המערכת שבליסינג אינה כוללת סוללות אגירה. תוספת של ממיר היברידי וסוללות אגירה, אם הוצעה ללקוח ונבחרה על ידו, מוסדרת בנספח א\' — היא אינה חלק מעסקת הליסינג, ומחירה משולם על ידי הלקוח בנפרד. כל תוספת אחרת תיעשה רק בהסכם נפרד בכתב.'),
     ] },
     { title: 'בעלות וזכויות בנכס', clauses: [
       c('בתקופת ההסכם המערכת היא בבעלותה הבלעדית של החברה. המערכת היא מיטלטלין, והתקנתה על הגג או חיבורה למבנה לא יהפכו אותה לחלק מהנכס ולא יקנו ללקוח או לצד שלישי כל זכות בה.'),
@@ -241,7 +257,64 @@ function declarations(t) {
   ];
 }
 
-const APPROVAL_TEXT = 'בחתימתי להלן אני מאשר/ת את ההצהרות שלעיל, וכי קראתי את הסכם הליסינג על כל פרקיו, ערכיו המסחריים ותנאיו, ואני מסכים/ה להם.';
+const BACKUP_DECLARATION = 'הבנתי שתוספת הממיר ההיברידי והסוללות (נספח א\'), אם בחרתי בה, אינה חלק מעסקת הליסינג: מחירה ישולם על ידי במלואו לפני ההתקנה, הסוללות יהיו בבעלותי, והממיר ההיברידי יהיה חלק מהמערכת.';
+
+// ── Annex A: the optional backup upgrade ────────────────────────────────────────────────────────
+//
+// The ONLY parts of the agreement that depend on the customer's choice on the link. Each is a whole
+// element with a fixed id, rendered by the functions below — the server's frozen agreement AND the
+// alternatives the customer page swaps in come from the same function, so what the customer sees for
+// a choice is byte-for-byte what is frozen when they sign it.
+
+const BACKUP_ROW_ID = 'lease-backup-row';
+const BACKUP_ANNEX_ID = 'lease-backup-annex';
+
+function backupRowHtml(state, n) {
+  const offered = !!(state.backupOption && state.backupOption.offered);
+  let v;
+  if (!offered) v = 'ללא — המערכת אינה כוללת סוללות אגירה';
+  else if (!n) v = 'לא נבחרה<small>ניתן לבחור ממיר היברידי וסוללות לגיבוי בהפסקת חשמל — נספח א\'</small>';
+  else {
+    const p = V.backupPrice(state, n);
+    v = `ממיר היברידי + ${n} סוללות (${p.kWh} קוט&quot;ש) · ${esc(ils(p.gross))} כולל מע&quot;מ<small>על חשבון הלקוח, בנפרד מהליסינג · נספח א'</small>`;
+  }
+  return `<tr id="${BACKUP_ROW_ID}"><th>${esc('גיבוי בהפסקת חשמל (אופציונלי)')}</th><td>${v}</td></tr>`;
+}
+
+function backupAnnexHtml(state, n) {
+  const offered = !!(state.backupOption && state.backupOption.offered);
+  if (!offered) return `<section id="${BACKUP_ANNEX_ID}" class="clause-sec"></section>`;
+  const head = `<h2>${esc('נספח א\' — תוספת אופציונלית: ממיר היברידי וסוללות אגירה (גיבוי בהפסקת חשמל)')}</h2>`;
+  const para = (num, text) => `<p class="cl"><b>א.${num}</b><span>${esc(text)}</span></p>`;
+  if (!n) {
+    return `<section id="${BACKUP_ANNEX_ID}" class="clause-sec">${head}
+${para(1, 'הלקוח לא בחר בתוספת ממיר היברידי וסוללות אגירה. ניתן להוסיף אותה בעתיד בהסכם נפרד בכתב.')}
+</section>`;
+  }
+  const p = V.backupPrice(state, n);
+  const inv = state.system.inv;
+  const rows = [
+    ['ממיר היברידי (במקום ממיר המערכת)', ils(p.hybrid)],
+    [`${n} סוללות אגירה × ${V.BATTERY.kWhEach} קוט"ש`, ils(p.batteryTotal)],
+    ['סה"כ לפני מע"מ', ils(p.net)],
+    [`מע"מ (${Math.round((state.vatRate - 1) * 100)}%)`, ils(p.vat)],
+    ['סה"כ לתשלום, כולל מע"מ', ils(p.gross)],
+  ].map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('\n');
+  return `<section id="${BACKUP_ANNEX_ID}" class="clause-sec">${head}
+${para(1, `הלקוח בחר בתוספת הבאה, שאינה חלק מעסקת הליסינג: החלפת ממיר המערכת בממיר היברידי מתוצרת ${inv} או שווה ערך, והתקנת ${n} סוללות אגירה בקיבולת ${V.BATTERY.kWhEach} קוט"ש כל אחת (סה"כ ${p.kWh} קוט"ש).`)}
+${para(2, 'התוספת מאפשרת אספקת חשמל לבית בזמן הפסקת חשמל ברשת, בהיקף ולמשך התלויים בקיבולת הסוללות, במצב הטעינה שלהן ובצריכת הבית. היא אינה מבטיחה אספקה רציפה או אספקה לכל צרכני הבית.')}
+${para(3, 'מחיר התוספת:')}
+<table class="kv"><tbody>
+${rows}
+</tbody></table>
+${para(4, 'מלוא מחיר התוספת ישולם על ידי הלקוח לפני ביצוע ההתקנה, כנגד חשבונית מס. התקנת התוספת כפופה לתנאים המתלים שבפרק 14 ולכל אישור הנדרש להתקנת סוללות אגירה. לא הותקנה התוספת מסיבה שאינה תלויה בלקוח — יוחזר לו מלוא הסכום ששילם בעבורה.')}
+${para(5, 'הסוללות יהיו בבעלות הלקוח מיום התקנתן, ואחריות היצרן להן תומחה ללקוח. הממיר ההיברידי הוא חלק מהמערכת: הוא בבעלות החברה בתקופת ההסכם, החברה מתחזקת אותו לפי פרק 8, והוא עובר לבעלות הלקוח יחד עם המערכת בתום התקופה לפי פרק 13.')}
+${para(6, 'תחזוקת הסוללות ותיקונן אינם כלולים בהתחייבויות התחזוקה של החברה לפי פרק 8, מעבר למימוש אחריות היצרן בשם הלקוח.')}
+${para(7, 'התוספת אינה משנה את תנאי הליסינג: תקופת ההסכם, נוסחת החיוב לפי פרק 6 (הצריכה הכוללת נמדדת כרגיל, גם כשהחשמל מגיע מהסוללות) וחלוקת ההכנסות לפי פרק 7 נשארות כפי שהן.')}
+</section>`;
+}
+
+const APPROVAL_TEXT ='בחתימתי להלן אני מאשר/ת את ההצהרות שלעיל, וכי קראתי את הסכם הליסינג על כל פרקיו, ערכיו המסחריים ותנאיו, ואני מסכים/ה להם.';
 
 // ── the house stylesheet (semo-scheduling src/documents/design/appendixCss.ts) ──────────────────
 
@@ -344,12 +417,18 @@ ol.decl{padding-inline-start:1.6em}
 /**
  * The complete frozen agreement HTML for a VALIDATED lease state (lease-validate.js).
  * @param {object} state
- * @param {object} ctx  { id: the quote id (the agreement number), reviewDraft?: boolean }
+ * @param {object} ctx  { id: the quote id (the agreement number),
+ *                        knobs?: { backupBatteries } — the customer's choice (normalizeLeaseKnobs),
+ *                        reviewDraft?: boolean }
  * @returns {string}
  */
 function renderAgreement(state, ctx) {
   const id = ctx && ctx.id;
   if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{4,40}$/.test(id)) throw new Error('renderAgreement: a quote id is required');
+  const knobs = V.normalizeLeaseKnobs(state, ctx.knobs || {});
+  if (!knobs) throw new Error('renderAgreement: the backup choice is not valid for this quote');
+  const backupN = knobs.backupBatteries;
+  const offered = !!(state.backupOption && state.backupOption.offered);
   const cu = state.customer;
   const sys = state.system;
   const t = { termYears: state.lease.termYears, termMonths: state.lease.termYears * 12 };
@@ -362,14 +441,17 @@ function renderAgreement(state, ctx) {
   const footerLabel = number;
 
   const kv = (rows) => rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('\n');
+  // The sales quote's facts, labels and formats (solar-document-contract systemRows).
+  const panels = V.panelCount(sys);
   const systemRows = kv([
-    ['הספק DC מותקן', `${esc(sys.dcKw)} קילוואט-שיא<small>${esc(`${sys.panelCount} פאנלים × ${sys.panelWatt} וואט`)}</small>`],
-    ['הספק AC של הממיר', `${esc(sys.acKw)} קילוואט`],
-    ['דגם הפאנלים', esc(sys.panelModel)],
-    ['דגם הממיר', esc(sys.inverterModel)],
-    ...(sys.roofType ? [['סוג הגג', esc(sys.roofType)]] : []),
+    [SYS_LABELS.type, esc(V.systemTypeLabel(sys))],
+    [SYS_LABELS.dc, `${esc(sys.kw)} קילו-וואט`],
+    [SYS_LABELS.ac, `${esc(sys.acKW)} קילו-וואט`],
+    [SYS_LABELS.panels, `${panels} × ${esc(sys.panelW)}W<small>${esc(`פאנל מיצרן בדרג TIER 1 בהספק ${sys.panelW} וואט. יצרן הפאנל וההספק הסופי יקבעו בסיום התכנון.`)}</small>`],
+    [SYS_LABELS.inverter, `${esc(sys.inv)}<small>${esc(`ממיר זרם תוצרת ${sys.inv} או שווה ערך.`)}</small>`],
+    [SYS_LABELS.roof, esc(sys.roof)],
+    [SYS_LABELS.roofArea, `${esc(sys.roofArea)} מ״ר`],
     ['מסלול חיבור', 'מסלול ירוק, ללא מונה ייצור רשמי נפרד'],
-    ['אגירה', 'ללא סוללות אגירה'],
   ]);
   const termsRows = kv([
     ['עלות הקמה ללקוח', '0 ₪'],
@@ -386,7 +468,7 @@ function renderAgreement(state, ctx) {
     ['רכישה מוקדמת', 'אינה אפשרית'],
     ['העברת בעלות', `בתום ${t.termMonths} חודשים, ללא תשלום נוסף`],
     ['מכירת הנכס', 'הקונה מצטרף להסכם במקום הלקוח · פרק 11'],
-  ]);
+  ]) + '\n' + backupRowHtml(state, backupN);
 
   const body = sections(t).map((s, si) => {
     const n = si + 1;
@@ -435,6 +517,7 @@ ${ctx.reviewDraft ? '<p class="summary"><strong>טיוטה לבדיקה — אי
 <li>כל הכנסות המערכת בתקופה זו שייכות לחברה.</li>
 <li>בתום התקופה המערכת עוברת לבעלות הלקוח, ללא תשלום. רכישה מוקדמת אינה אפשרית.</li>
 <li>ההסדר נכנס לתוקף רק לאחר קיום התנאים המתלים שבפרק 14, לרבות העברת חשבון החשמל על שם החברה.</li>
+${offered ? '<li>אופציונלי, בנפרד מהליסינג ועל חשבון הלקוח: ממיר היברידי וסוללות אגירה לגיבוי בזמן הפסקת חשמל (נספח א\').</li>' : ''}
 </ul>
 </div>
 <h2>ערכים מסחריים</h2>
@@ -446,10 +529,11 @@ ${termsRows}
 </tbody></table>
 <div class="body">
 ${body}
+${backupAnnexHtml(state, backupN)}
 </div>
 <section class="approval">
 <h2>הצהרות הלקוח</h2>
-<ol class="decl">${declarations(t).map((d) => `<li>${esc(d)}</li>`).join('')}</ol>
+<ol class="decl">${[...declarations(t), ...(offered ? [BACKUP_DECLARATION] : [])].map((d) => `<li>${esc(d)}</li>`).join('')}</ol>
 <h2>אישור וחתימה דיגיטלית</h2>
 <p>${esc(APPROVAL_TEXT)}</p>
 <div class="sign">
@@ -483,8 +567,8 @@ function withSignerEvidence(html, evidence) {
 }
 
 const api = {
-  TEMPLATE_ID, TEMPLATE_VERSION, TITLE, COMPANY, POLICY,
-  renderAgreement, withSignerEvidence, agreementNumber, subtitle, yearsHe,
+  TEMPLATE_ID, TEMPLATE_VERSION, TITLE, COMPANY, POLICY, SYS_LABELS, BACKUP_ROW_ID, BACKUP_ANNEX_ID,
+  renderAgreement, withSignerEvidence, agreementNumber, subtitle, yearsHe, ils, backupRowHtml, backupAnnexHtml,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.LeaseAgreement = api;
