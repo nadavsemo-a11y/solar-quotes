@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>הפקת הסכם ליסינג סולארי | SEMO A.G.S</title>
+<!--
+  lease-quote/portal.html — authoring page for residential solar LEASING agreements.
+  Reuses the trunk endpoints only: /q/hubspot/search (contact pull), /q/data/:id (load a solar quote's
+  system data, or duplicate a lease), /q/save (persist; the Worker validates through the lease
+  quote-type), /q/hubspot/sync (note + follow-up task). The agreement preview is rendered here by the
+  SAME module the Worker signs with (lease-agreement.js), so what the seller previews is what is sent.
+  The seller sets ONE commercial value: the lease term in years. Everything else in the agreement is
+  the template version.
+-->
+<link rel="icon" type="image/png" href="https://nadavsemo-a11y.github.io/solar-quotes/ags-mark.png">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--black:#0A0A0A;--mint:#9CF5C4;--mint-deep:#5FE0A0;--mint-soft:#D8FBE7;--ink-200:#E4E4E4;--ink-300:#C4C4C4;--ink-500:#6B6B6B;--ink-50:#F8F8F8;--radius:4px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink-50);font-family:'Heebo',system-ui,Arial,sans-serif;color:var(--black);line-height:1.55}
+.wrap{max-width:780px;margin:0 auto;padding:24px 18px 60px}
+.topbar{display:flex;align-items:center;gap:12px;background:var(--black);padding:14px 20px;border-bottom:3px solid var(--mint);border-radius:var(--radius) var(--radius) 0 0}
+.topbar img{height:28px;filter:brightness(0) invert(1)}
+.topbar h1{color:#fff;font-size:16px;margin:0;font-weight:800}
+.topbar a{margin-inline-start:auto;color:var(--mint);font-size:12px;font-weight:700;text-decoration:none}
+.card{background:#fff;border:1.5px solid var(--ink-200);border-radius:var(--radius);padding:20px;margin-top:16px}
+.card h2{font-size:15px;margin:0 0 14px;display:flex;align-items:center;gap:8px}
+.card h2 .bar{width:5px;height:18px;background:var(--mint);border:1.5px solid var(--black)}
+label{display:block;font-size:13px;font-weight:700;margin:10px 0 4px}
+input[type=text],input[type=number],textarea{width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:inherit;font-size:14px}
+input.num{font-family:'JetBrains Mono',monospace;direction:ltr;text-align:right}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+.hint{font-size:12px;color:var(--ink-500);margin:4px 0 0}
+.btn{cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;border-radius:var(--radius);padding:10px 16px;border:2px solid var(--black);background:#fff;color:var(--black);text-decoration:none;display:inline-block}
+.btn-mint{background:var(--mint)}
+.btn:disabled{background:var(--ink-200);border-color:var(--ink-300);color:var(--ink-500);cursor:not-allowed}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.term{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.term input{width:110px;font-size:22px;font-weight:800;text-align:center}
+.term .out{font-size:14px;font-weight:700}
+.fixed{background:var(--ink-50);border:1.5px dashed var(--ink-300);border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-top:12px;line-height:1.8}
+.msg{font-size:13px;margin-top:8px;min-height:18px}
+.msg.err{color:#c0392b;font-weight:700}
+.msg ul{margin:4px 0;padding-inline-start:18px}
+.warn{color:#8a5a00}
+.result a{font-family:'JetBrains Mono',monospace;font-weight:700;word-break:break-all}
+.hidden{display:none}
+#hubResults div{padding:8px;border:1px solid var(--ink-200);border-radius:4px;margin-top:6px;cursor:pointer;font-size:13px}
+#hubResults div:hover{background:var(--mint-soft)}
+#preview{display:block;width:100%;height:75vh;border:1.5px solid var(--ink-200);margin-top:12px;background:#EFEFEC}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <img src="https://nadavsemo-a11y.github.io/solar-quotes/ags-logo.png" alt="A.G.S">
+    <h1>הסכם ליסינג למערכת סולארית ביתית</h1>
+    <a href="../index.html">← לפורטל ההצעות</a>
+  </div>
+
+  <!-- 1. CUSTOMER -->
+  <div class="card">
+    <div class="btn-row">
+      <button class="btn" type="button" onclick="toggleBox('hubBox')">שליפה מ-HubSpot</button>
+      <button class="btn" type="button" onclick="toggleBox('srcBox')">טעינה מהצעה קיימת</button>
+    </div>
+    <div id="hubBox" class="hidden" style="margin-top:10px">
+      <input id="hubQuery" type="text" placeholder="חיפוש לפי שם / טלפון / אימייל…" oninput="searchHub(this.value)">
+      <div id="hubResults"></div>
+    </div>
+    <div id="srcBox" class="hidden" style="margin-top:10px">
+      <p class="hint" style="margin:0 0 6px">קישור להצעה סולארית (נטענים פרטי הלקוח ונתוני המערכת) או להסכם ליסינג קודם (נטען הכול).</p>
+      <div class="grid2"><input id="srcUrl" type="text" dir="ltr" placeholder="https://s-a.gs/q/abc123">
+      <button class="btn" type="button" onclick="loadSource()">טען</button></div>
+      <div id="srcMsg" class="msg"></div>
+    </div>
+    <div id="clientDetailsMount" style="margin-top:12px"></div>
+    <label for="parcel">גוש / חלקה / תת-חלקה</label>
+    <input id="parcel" type="text" placeholder="לא חובה — אם ריק, יודפס קו למילוי">
+  </div>
+
+  <!-- 2. SYSTEM -->
+  <div class="card">
+    <h2><span class="bar"></span>המערכת</h2>
+    <div class="grid2">
+      <div><label for="panelCount">מספר פאנלים</label><input id="panelCount" class="num" type="number" min="1" step="1" oninput="syncDc()"></div>
+      <div><label for="panelWatt">הספק פאנל (וואט)</label><input id="panelWatt" class="num" type="number" min="100" step="5" oninput="syncDc()"></div>
+      <div><label for="dcKw">הספק DC (קילוואט-שיא)</label><input id="dcKw" class="num" type="text" readonly>
+        <p class="hint">מחושב: פאנלים × הספק פאנל</p></div>
+      <div><label for="acKw">הספק AC של הממיר (קילוואט)</label><input id="acKw" class="num" type="text"></div>
+    </div>
+    <label for="panelModel">דגם הפאנלים</label>
+    <input id="panelModel" type="text">
+    <label for="inverterModel">דגם הממיר</label>
+    <input id="inverterModel" type="text">
+    <label for="roofType">סוג הגג</label>
+    <input id="roofType" type="text" placeholder="לדוגמה: גג רעפים">
+  </div>
+
+  <!-- 3. LEASE TERM — the one commercial parameter -->
+  <div class="card">
+    <h2><span class="bar"></span>תקופת הליסינג</h2>
+    <div class="term">
+      <input id="termYears" class="num" type="number" min="1" max="25" step="1" value="6" oninput="syncTerm()">
+      <span class="out" id="termOut">שנים · 72 חודשים</span>
+    </div>
+    <div class="fixed">
+      קבוע בהסכם (אינו ניתן לשינוי כאן): עלות הקמה 0 ₪ · דמי ליסינג 0 ₪ · תשלום חודשי לפי הצריכה הכוללת × תעריף החשמל הביתי ·
+      100% מהכנסות ההזרמה לחברה בתקופה · תחזוקה על החברה · אין רכישה מוקדמת · העברת בעלות ללקוח בתום התקופה ללא תשלום.
+    </div>
+  </div>
+
+  <!-- 4. PREVIEW + CREATE -->
+  <div class="card">
+    <h2><span class="bar"></span>תצוגה מקדימה ויצירת קישור</h2>
+    <div class="btn-row">
+      <button class="btn" type="button" onclick="preview()">תצוגה מקדימה של ההסכם</button>
+      <button id="saveBtn" class="btn btn-mint" type="button" onclick="save()">צור קישור לחתימה</button>
+    </div>
+    <div id="saveMsg" class="msg"></div>
+    <iframe id="preview" class="hidden" title="תצוגה מקדימה" sandbox="allow-same-origin"></iframe>
+    <div id="result" class="result hidden">
+      <p>הקישור להסכם:</p>
+      <a id="resultLink" href="#" target="_blank" rel="noreferrer"></a>
+      <div class="btn-row">
+        <button class="btn" type="button" onclick="copyLink()">העתק קישור</button>
+        <a id="waLink" class="btn" target="_blank" rel="noreferrer">WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/israel-cities.js"></script>
+<script src="../shared/client-details.js"></script>
+<script src="./lease-validate.js"></script>
+<script src="./lease-assets.js"></script>
+<script src="./lease-agreement.js"></script>
+<script src="./lease-public.js"></script>
+<script>
+const WORKER='https://s-a.gs';
+const cdMount=document.getElementById('clientDetailsMount');
+// The HubSpot identity of whoever is loaded. Carried TOP-LEVEL into /q/hubspot/sync, which is what
+// stops every agreement from minting a duplicate contact.
+let _hsContactId=null;
+let _sourceQuoteId='';
+ClientDetails.renderClientDetails(cdMount,{});
+// The lease prints neither a per-quote note nor an ID typed by the seller (the ID is the signer's own,
+// captured at signing), so those two shared fields are hidden here.
+['clientID','customNote'].forEach(function(id){var el=cdMount.querySelector('#'+id);if(el&&el.parentElement)el.parentElement.style.display='none';});
+(function(){var d=cdMount.querySelector('#quoteDate');if(d&&d.previousElementSibling)d.previousElementSibling.textContent='תאריך ההסכם';})();
+
+function $(id){return document.getElementById(id);}
+function val(id){var el=$(id);return el?(el.value||'').trim():'';}
+function toggleBox(id){$(id).classList.toggle('hidden');}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+function syncDc(){
+  var n=parseInt(val('panelCount'),10), w=parseInt(val('panelWatt'),10);
+  $('dcKw').value=(n>0&&w>0)?String(Math.round(n*w/100)/10):'';
+}
+function syncTerm(){
+  var y=parseInt(val('termYears'),10);
+  $('termOut').textContent=(y>0)?(LeaseAgreement.yearsHe(y)+' · '+(y*12)+' חודשים'):'';
+}
+
+function defaultPanelModel(w){return 'פאנל מיצרן בדרג TIER 1 בהספק '+w+' וואט; היצרן והדגם הסופיים ייקבעו בסיום התכנון ויפורטו במפרט הטכני';}
+function defaultInverterModel(brand,ac){return (brand||'ממיר')+' בהספק '+ac+' קילוואט AC, או שווה ערך; הדגם הסופי יפורט במפרט הטכני';}
+
+function buildState(){
+  var c=ClientDetails.getClientDetailsValues(cdMount);
+  return {
+    type:'lease', leaseVersion:LeaseValidate.LEASE_VERSION,
+    customer:{ name:c.name, phone:c.phone, email:c.email, address:c.address, city:c.city, date:c.date, note:'', hubspotId:_hsContactId||'' },
+    system:{ dcKw:val('dcKw'), acKw:val('acKw'), panelCount:parseInt(val('panelCount'),10)||0, panelWatt:parseInt(val('panelWatt'),10)||0,
+      panelModel:val('panelModel'), inverterModel:val('inverterModel'), roofType:val('roofType') },
+    lease:{ termYears:parseInt(val('termYears'),10) },
+    property:{ parcel:val('parcel') },
+    sourceQuoteId:_sourceQuoteId||'',
+  };
+}
+
+function showValidation(v){
+  var m=$('saveMsg');
+  if(v.ok){m.className='msg';m.innerHTML=v.warnings.length?'<span class="warn">'+v.warnings.map(esc).join(' · ')+'</span>':'';return true;}
+  m.className='msg err';m.innerHTML='יש לתקן לפני ההמשך:<ul>'+v.errors.map(function(e){return '<li>'+esc(e)+'</li>';}).join('')+'</ul>';
+  return false;
+}
+
+function preview(){
+  var st=buildState();
+  if(!showValidation(LeaseValidate.validateLeaseState(st)))return;
+  var f=$('preview');f.classList.remove('hidden');
+  f.srcdoc=LeaseAgreement.renderAgreement(st,{id:'PREVIEW',reviewDraft:true});
+}
+
+// ── HubSpot (trunk /q/hubspot/search) ──
+let hubTimer=null;
+function searchHub(q){clearTimeout(hubTimer);if((q||'').length<2){$('hubResults').innerHTML='';return;}
+  hubTimer=setTimeout(async function(){try{
+    var r=await fetch(WORKER+'/q/hubspot/search?q='+encodeURIComponent(q));var j=await r.json();
+    var list=j.results||j.contacts||j||[];if(!Array.isArray(list))list=[];
+    $('hubResults').innerHTML=list.slice(0,8).map(function(c,i){window['_hub'+i]=c;
+      var nm=c.name||((c.firstname||'')+' '+(c.lastname||'')).trim();
+      return '<div onclick="pickHub('+i+')">'+esc(nm)+' · '+esc(c.phone||'')+' · '+esc(c.email||'')+'</div>';}).join('')||'<p class="hint">לא נמצאו אנשי קשר</p>';
+  }catch(e){$('hubResults').innerHTML='<p class="hint">שגיאה בחיפוש</p>';}},300);}
+function pickHub(i){var c=window['_hub'+i]||{};_hsContactId=c.id||null;
+  ClientDetails.setClientDetailsValues(cdMount,{name:c.name||((c.firstname||'')+' '+(c.lastname||'')).trim(),phone:c.phone||'',email:c.email||'',address:c.address||'',city:c.city||''});
+  toggleBox('hubBox');}
+
+// ── load a solar quote's system data, or duplicate a lease (trunk /q/data/:id) ──
+function decodeState(b64){return JSON.parse(decodeURIComponent(escape(atob(b64))));}
+async function loadSource(){
+  var raw=val('srcUrl');var m=raw.match(/\/q\/([A-Za-z0-9_-]+)/);var id=m?m[1]:raw;var msg=$('srcMsg');
+  if(!/^[A-Za-z0-9_-]{4,40}$/.test(id)){msg.textContent='קישור לא תקין';return;}
+  msg.textContent='טוען…';
+  try{
+    var r=await fetch(WORKER+'/q/data/'+encodeURIComponent(id));var j=await r.json();
+    if(!r.ok||!j.data){msg.textContent='ההצעה לא נמצאה';return;}
+    var s=decodeState(j.data);
+    if(s.type==='lease'){
+      var c=s.customer||{};_hsContactId=c.hubspotId||null;_sourceQuoteId=s.sourceQuoteId||'';
+      ClientDetails.setClientDetailsValues(cdMount,{name:c.name,phone:c.phone,email:c.email,address:c.address,city:c.city});
+      var y=s.system||{};
+      $('panelCount').value=y.panelCount||'';$('panelWatt').value=y.panelWatt||'';$('acKw').value=y.acKw||'';
+      $('panelModel').value=y.panelModel||'';$('inverterModel').value=y.inverterModel||'';$('roofType').value=y.roofType||'';
+      $('termYears').value=(s.lease&&s.lease.termYears)||6;$('parcel').value=(s.property&&s.property.parcel)||'';
+      msg.textContent='הסכם הליסינג נטען — עדכנו את התאריך לפני יצירת קישור חדש';
+    } else if(!s.type||s.type==='quote'||s.type==='solar'){
+      // A solar quote: the customer and the SYSTEM (the price is irrelevant to a lease).
+      _hsContactId=s.hsId||null;_sourceQuoteId=id;
+      ClientDetails.setClientDetailsValues(cdMount,{name:s.name,phone:s.phone,email:s.email,address:s.addr,city:s.city});
+      var w=parseInt(s.panelW,10)||0, n=parseInt(s.panelCt,10)||0, ac=String(s.acKW||'').trim();
+      $('panelCount').value=n||'';$('panelWatt').value=w||'';$('acKw').value=ac;
+      $('panelModel').value=w?defaultPanelModel(w):'';
+      $('inverterModel').value=ac?defaultInverterModel(s.inv==='custom'?(s.customInvModel||''):s.inv,ac):'';
+      $('roofType').value=s.roof?('גג '+s.roof):'';
+      msg.textContent='נטענו פרטי הלקוח ונתוני המערכת מההצעה הסולארית '+id;
+    } else { msg.textContent='סוג ההצעה ('+s.type+') אינו מתאים לליסינג'; return; }
+    syncDc();syncTerm();
+  }catch(e){msg.textContent='שגיאה בטעינה';}
+}
+
+// ── save (trunk /q/save; the Worker re-validates through the lease quote-type) ──
+function encodeState(s){return btoa(unescape(encodeURIComponent(JSON.stringify(s))));}
+async function save(){
+  var st=buildState();
+  if(!showValidation(LeaseValidate.validateLeaseState(st)))return;
+  var btn=$('saveBtn');btn.disabled=true;var msg=$('saveMsg');msg.className='msg';msg.textContent='שומר…';
+  try{
+    var r=await fetch(WORKER+'/q/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:encodeState(st)})});
+    var j=await r.json();
+    if(!r.ok){msg.className='msg err';msg.textContent='שגיאה: '+(j.error||r.status)+(j.details?' — '+j.details.join('; '):'');btn.disabled=false;return;}
+    msg.textContent='';
+    var link=j.url;$('result').classList.remove('hidden');
+    var a=$('resultLink');a.href=link;a.textContent=link;
+    try{
+      var hsBody=LeasePublic.buildLeaseHubspotSyncPayload(st,{quoteId:j.id,quoteUrl:link});
+      fetch(WORKER+'/q/hubspot/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hsBody)});
+    }catch(e){/* best-effort: never blocks the link */}
+    var name=st.customer.name||'לקוח יקר';
+    $('waLink').href='https://wa.me/?text='+encodeURIComponent('שלום '+name+',\nמצורף הסכם הליסינג למערכת הסולארית לעיון וחתימה דיגיטלית:\n'+link);
+    btn.disabled=false;
+  }catch(e){msg.className='msg err';msg.textContent='שגיאת רשת';btn.disabled=false;}
+}
+function copyLink(){var t=$('resultLink').textContent;navigator.clipboard&&navigator.clipboard.writeText(t);}
+syncTerm();
+</script>
+</body>
+</html>
