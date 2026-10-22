@@ -7,26 +7,37 @@
 'use strict';
 (function () {
 
-const A = (typeof module !== 'undefined' && module.exports) ? require('./lease-agreement.js') : globalThis.LeaseAgreement;
+const isNode = typeof module !== 'undefined' && module.exports;
+const A = isNode ? require('./lease-agreement.js') : globalThis.LeaseAgreement;
+const V = isNode ? require('./lease-validate.js') : globalThis.LeaseValidate;
 
 function str(v) { return typeof v === 'string' ? v.trim() : ''; }
 
-/** The deterministic, customer-facing projection of everything the agreement prints. */
-function buildLeaseSignedSnapshot(state) {
+/**
+ * The deterministic, customer-facing projection of everything the agreement prints, for ONE choice
+ * of the backup option. Binds the template version (new wording ⇒ new hash ⇒ an old token stops
+ * verifying), and the computed price of the chosen option, so the signature proves the customer
+ * signed that option at that price.
+ * @param {object} state   a validated lease state
+ * @param {object} knobs   normalized: { backupBatteries }
+ */
+function buildLeaseSignedSnapshot(state, knobs) {
   const s = state || {};
   const c = s.customer || {};
   const sys = s.system || {};
+  const o = s.backupOption || {};
+  const n = (knobs && knobs.backupBatteries) || 0;
   return {
     kind: 'lease-signed-snapshot',
     template: `${A.TEMPLATE_ID}/${A.TEMPLATE_VERSION}`,
     leaseVersion: s.leaseVersion,
     customer: { name: str(c.name), phone: str(c.phone), email: str(c.email), city: str(c.city), address: str(c.address), date: str(c.date) },
-    system: {
-      dcKw: str(sys.dcKw), acKw: str(sys.acKw), panelCount: sys.panelCount, panelWatt: sys.panelWatt,
-      panelModel: str(sys.panelModel), inverterModel: str(sys.inverterModel), roofType: str(sys.roofType),
-    },
+    system: { kw: sys.kw, acKW: sys.acKW, panelW: sys.panelW, panelCount: V.panelCount(sys), roof: sys.roof, roofArea: sys.roofArea, inv: sys.inv },
     lease: { termYears: s.lease && s.lease.termYears },
     property: { parcel: str(s.property && s.property.parcel) },
+    backupOption: { offered: !!o.offered, hybridInverterPrice: o.hybridInverterPrice, batteryFirstPrice: o.batteryFirstPrice, batteryAdditionalPrice: o.batteryAdditionalPrice },
+    vatRate: s.vatRate,
+    chosenBackup: n ? V.backupPrice(s, n) : null,
   };
 }
 
@@ -41,7 +52,7 @@ function buildLeaseHubspotSyncPayload(state, ctx) {
   const quoteUrl = x.quoteUrl || (x.quoteId ? `https://s-a.gs/q/${x.quoteId}` : '');
   const name = str(c.name);
   const years = state && state.lease && state.lease.termYears;
-  const metricValue = `${str(sys.dcKw)} kW`;
+  const metricValue = `${sys.kw} kW`;
   const noteBody = `הסכם ליסינג סולארי — ${name}<br>הספק DC: ${metricValue}<br>תקופת ליסינג: ${A.yearsHe(years)}<br>לינק: <a href="${quoteUrl}" target="_blank">${quoteUrl}</a>`;
   return {
     quoteType: 'lease', quoteId: x.quoteId || '', quoteUrl,
