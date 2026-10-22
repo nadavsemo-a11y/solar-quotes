@@ -6,12 +6,14 @@
 <title>הפקת הסכם ליסינג סולארי | SEMO A.G.S</title>
 <!--
   lease-quote/portal.html — authoring page for residential solar LEASING agreements.
-  Reuses the trunk endpoints only: /q/hubspot/search (contact pull), /q/data/:id (load a solar quote's
-  system data, or duplicate a lease), /q/save (persist; the Worker validates through the lease
-  quote-type), /q/hubspot/sync (note + follow-up task). The agreement preview is rendered here by the
-  SAME module the Worker signs with (lease-agreement.js), so what the seller previews is what is sent.
-  The seller sets ONE commercial value: the lease term in years. Everything else in the agreement is
-  the template version.
+  Reuses the trunk endpoints only: /q/hubspot/search (contact pull), /q/data/:id (load a solar sales
+  quote's customer + system, or duplicate a lease), /q/save (persist; the Worker validates through the
+  lease quote-type), /q/hubspot/sync (note + follow-up task).
+  The SYSTEM is entered with the solar sales form's fields, defaults and rules (the same shared
+  modules: InverterCatalog, QuoteValidation, UpgradePricing; panels = ⌈kW×1000/W⌉). The seller sets
+  the lease term, and whether to offer the optional backup upgrade (hybrid inverter + batteries) at
+  the sales price book's prices. The agreement preview is rendered by the SAME module the Worker
+  signs with (lease-agreement.js).
 -->
 <link rel="icon" type="image/png" href="https://nadavsemo-a11y.github.io/solar-quotes/ags-mark.png">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -28,11 +30,19 @@ body{margin:0;background:var(--ink-50);font-family:'Heebo',system-ui,Arial,sans-
 .card h2{font-size:15px;margin:0 0 14px;display:flex;align-items:center;gap:8px}
 .card h2 .bar{width:5px;height:18px;background:var(--mint);border:1.5px solid var(--black)}
 label{display:block;font-size:13px;font-weight:700;margin:10px 0 4px}
-input[type=text],input[type=number],textarea{width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:inherit;font-size:14px}
+input[type=text],input[type=number],select,textarea{width:100%;padding:9px 11px;border:1.5px solid var(--ink-300);border-radius:var(--radius);font-family:inherit;font-size:14px;background:#fff}
 input.num{font-family:'JetBrains Mono',monospace;direction:ltr;text-align:right}
+input[readonly]{background:#f1f5f9;color:var(--ink-500)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:600px){.grid2,.grid3{grid-template-columns:1fr}}
 .hint{font-size:12px;color:var(--ink-500);margin:4px 0 0}
+.req{color:#c0392b}
+.radios{display:flex;gap:8px;flex-wrap:wrap}
+.radios label{display:inline-flex;align-items:center;gap:6px;margin:0;padding:8px 14px;border:1.5px solid var(--ink-300);border-radius:var(--radius);cursor:pointer;font-weight:700}
+.radios input{accent-color:var(--black)}
+.check{display:flex;align-items:center;gap:8px;font-weight:700;margin:0 0 6px;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--black)}
 .btn{cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;border-radius:var(--radius);padding:10px 16px;border:2px solid var(--black);background:#fff;color:var(--black);text-decoration:none;display:inline-block}
 .btn-mint{background:var(--mint)}
 .btn:disabled{background:var(--ink-200);border-color:var(--ink-300);color:var(--ink-500);cursor:not-allowed}
@@ -41,6 +51,7 @@ input.num{font-family:'JetBrains Mono',monospace;direction:ltr;text-align:right}
 .term input{width:110px;font-size:22px;font-weight:800;text-align:center}
 .term .out{font-size:14px;font-weight:700}
 .fixed{background:var(--ink-50);border:1.5px dashed var(--ink-300);border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-top:12px;line-height:1.8}
+.prices{font-size:13px;margin-top:10px;line-height:1.9}
 .msg{font-size:13px;margin-top:8px;min-height:18px}
 .msg.err{color:#c0392b;font-weight:700}
 .msg ul{margin:4px 0;padding-inline-start:18px}
@@ -71,7 +82,7 @@ input.num{font-family:'JetBrains Mono',monospace;direction:ltr;text-align:right}
       <div id="hubResults"></div>
     </div>
     <div id="srcBox" class="hidden" style="margin-top:10px">
-      <p class="hint" style="margin:0 0 6px">קישור להצעה סולארית (נטענים פרטי הלקוח ונתוני המערכת) או להסכם ליסינג קודם (נטען הכול).</p>
+      <p class="hint" style="margin:0 0 6px">קישור להצעת מחיר סולארית (נטענים פרטי הלקוח, נתוני המערכת והגג ומחירי הממיר ההיברידי והמצברים) או להסכם ליסינג קודם (נטען הכול).</p>
       <div class="grid2"><input id="srcUrl" type="text" dir="ltr" placeholder="https://s-a.gs/q/abc123">
       <button class="btn" type="button" onclick="loadSource()">טען</button></div>
       <div id="srcMsg" class="msg"></div>
@@ -81,30 +92,42 @@ input.num{font-family:'JetBrains Mono',monospace;direction:ltr;text-align:right}
     <input id="parcel" type="text" placeholder="לא חובה — אם ריק, יודפס קו למילוי">
   </div>
 
-  <!-- 2. SYSTEM -->
+  <!-- 2. SYSTEM — the solar sales form's fields, defaults and rules -->
   <div class="card">
-    <h2><span class="bar"></span>המערכת</h2>
-    <div class="grid2">
-      <div><label for="panelCount">מספר פאנלים</label><input id="panelCount" class="num" type="number" min="1" step="1" oninput="syncDc()"></div>
-      <div><label for="panelWatt">הספק פאנל (וואט)</label><input id="panelWatt" class="num" type="number" min="100" step="5" oninput="syncDc()"></div>
-      <div><label for="dcKw">הספק DC (קילוואט-שיא)</label><input id="dcKw" class="num" type="text" readonly>
-        <p class="hint">מחושב: פאנלים × הספק פאנל</p></div>
-      <div><label for="acKw">הספק AC של הממיר (קילוואט)</label><input id="acKw" class="num" type="text"></div>
+    <h2><span class="bar"></span>פרמטרי המערכת</h2>
+    <div class="grid3">
+      <div><label for="sysKW">הספק DC (קו"ט)</label><input id="sysKW" class="num" type="number" value="24" step="0.5" min="0.5" oninput="syncPanels()"></div>
+      <div><label for="sysAC">הספק AC (קו"ט)</label><input id="sysAC" class="num" type="number" value="15" step="0.5" min="1"></div>
+      <div><label for="roofArea">שטח גג (מ"ר) <span class="req">*</span></label><input id="roofArea" class="num" type="number" required min="0.1" step="0.1" placeholder="חובה — שטח הגג בפועל"></div>
     </div>
-    <label for="panelModel">דגם הפאנלים</label>
-    <input id="panelModel" type="text">
-    <label for="inverterModel">דגם הממיר</label>
-    <input id="inverterModel" type="text">
-    <label for="roofType">סוג הגג</label>
-    <input id="roofType" type="text" placeholder="לדוגמה: גג רעפים">
+    <label>סוג גג</label>
+    <div class="radios" id="roofRadios"></div>
+    <div class="grid3">
+      <div><label for="inv">יצרן ממיר <span class="req">*</span></label><select id="inv" onchange="onInverter()"></select></div>
+      <div><label for="panelW">הספק פאנל (וואט)</label><input id="panelW" class="num" type="number" value="665" step="10" oninput="syncPanels()"></div>
+      <div><label for="panelCount">כמות פאנלים (חישוב אוטומטי)</label><input id="panelCount" class="num" type="number" readonly></div>
+    </div>
   </div>
 
-  <!-- 3. LEASE TERM — the one commercial parameter -->
+  <!-- 3. OPTIONAL BACKUP — the only money in a lease, paid by the customer, chosen on the link -->
+  <div class="card">
+    <h2><span class="bar"></span>תוספת אופציונלית: ממיר היברידי וסוללות (גיבוי בהפסקת חשמל)</h2>
+    <label class="check"><input id="backupOffered" type="checkbox" checked onchange="syncBackup()">להציע ללקוח את התוספת — הלקוח יבחר בקישור אם להוסיף ואת כמות המצברים (2–6)</label>
+    <div id="backupPrices" class="grid3">
+      <div><label for="hybridPrice">ממיר היברידי (₪, לפני מע"מ)</label><input id="hybridPrice" class="num" type="number" min="1" step="100" oninput="syncBackup()"></div>
+      <div><label for="battFP">מצבר ראשון — 5 קו"ט (₪)</label><input id="battFP" class="num" type="number" min="1" step="100" oninput="syncBackup()"></div>
+      <div><label for="battEP">כל מצבר נוסף — 5 קו"ט (₪)</label><input id="battEP" class="num" type="number" min="1" step="100" oninput="syncBackup()"></div>
+    </div>
+    <div id="backupTable" class="prices"></div>
+    <p class="hint">ברירת המחדל: מחירון ההצעה הרגילה לפי יצרן הממיר. התוספת על חשבון הלקוח ומשולמת לפני ההתקנה; הסוללות בבעלות הלקוח, הממיר ההיברידי חלק מהמערכת.</p>
+  </div>
+
+  <!-- 4. LEASE TERM -->
   <div class="card">
     <h2><span class="bar"></span>תקופת הליסינג</h2>
     <div class="term">
       <input id="termYears" class="num" type="number" min="1" max="25" step="1" value="6" oninput="syncTerm()">
-      <span class="out" id="termOut">שנים · 72 חודשים</span>
+      <span class="out" id="termOut"></span>
     </div>
     <div class="fixed">
       קבוע בהסכם (אינו ניתן לשינוי כאן): עלות הקמה 0 ₪ · דמי ליסינג 0 ₪ · תשלום חודשי לפי הצריכה הכוללת × תעריף החשמל הביתי ·
@@ -112,7 +135,7 @@ input.num{font-family:'JetBrains Mono',monospace;direction:ltr;text-align:right}
     </div>
   </div>
 
-  <!-- 4. PREVIEW + CREATE -->
+  <!-- 5. PREVIEW + CREATE -->
   <div class="card">
     <h2><span class="bar"></span>תצוגה מקדימה ויצירת קישור</h2>
     <div class="btn-row">
@@ -134,6 +157,11 @@ input.num{font-family:'JetBrains Mono',monospace;direction:ltr;text-align:right}
 
 <script src="../shared/israel-cities.js"></script>
 <script src="../shared/client-details.js"></script>
+<!-- The solar sales quote's own modules, in index.html's order. -->
+<script src="../shared/inverter-catalog.js"></script>
+<script src="../shared/upgrade-pricing.js"></script>
+<script src="../shared/quote-validation.js"></script>
+<script src="../quote-engine.js"></script>
 <script src="./lease-validate.js"></script>
 <script src="./lease-assets.js"></script>
 <script src="./lease-agreement.js"></script>
@@ -153,30 +181,42 @@ ClientDetails.renderClientDetails(cdMount,{});
 
 function $(id){return document.getElementById(id);}
 function val(id){var el=$(id);return el?(el.value||'').trim():'';}
+function numVal(id){var v=parseFloat(val(id));return Number.isFinite(v)?v:'';}
+function intVal(id){var v=parseInt(val(id),10);return Number.isFinite(v)?v:0;}
 function toggleBox(id){$(id).classList.toggle('hidden');}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 
-function syncDc(){
-  var n=parseInt(val('panelCount'),10), w=parseInt(val('panelWatt'),10);
-  $('dcKw').value=(n>0&&w>0)?String(Math.round(n*w/100)/10):'';
-}
-function syncTerm(){
-  var y=parseInt(val('termYears'),10);
-  $('termOut').textContent=(y>0)?(LeaseAgreement.yearsHe(y)+' · '+(y*12)+' חודשים'):'';
-}
+// ── the sales form's vocabularies ──
+$('roofRadios').innerHTML=LeaseValidate.ROOF_TYPES.map(function(r,i){return '<label><input type="radio" name="roof" value="'+esc(r)+'"'+(i===0?' checked':'')+'>'+esc(r)+'</label>';}).join('');
+$('inv').innerHTML=InverterCatalog.listInverters().map(function(i){return '<option value="'+esc(i.id)+'">'+esc(i.label)+'</option>';}).join('');
+$('inv').value=InverterCatalog.getDefaultInverter();
+function roofVal(){var r=document.querySelector('input[name="roof"]:checked');return r?r.value:'';}
+function setRoof(v){document.querySelectorAll('input[name="roof"]').forEach(function(r){r.checked=(r.value===v);});}
 
-function defaultPanelModel(w){return 'פאנל מיצרן בדרג TIER 1 בהספק '+w+' וואט; היצרן והדגם הסופיים ייקבעו בסיום התכנון ויפורטו במפרט הטכני';}
-function defaultInverterModel(brand,ac){return (brand||'ממיר')+' בהספק '+ac+' קילוואט AC, או שווה ערך; הדגם הסופי יפורט במפרט הטכני';}
+function syncPanels(){ $('panelCount').value=LeaseValidate.panelCount({kw:numVal('sysKW'),panelW:numVal('panelW')})||''; }
+function syncTerm(){ var y=intVal('termYears'); $('termOut').textContent=(y>0)?(LeaseAgreement.yearsHe(y)+' · '+(y*12)+' חודשים'):''; }
+function setBackupPrices(p){ $('hybridPrice').value=p.hybridInverterPrice; $('battFP').value=p.batteryFirstPrice; $('battEP').value=p.batteryAdditionalPrice; }
+function onInverter(){ setBackupPrices(LeaseValidate.defaultBackupPrices(val('inv'))); syncBackup(); }
+function syncBackup(){
+  var on=$('backupOffered').checked; $('backupPrices').style.opacity=on?'1':'.45'; $('backupTable').innerHTML='';
+  if(!on)return;
+  var st=buildState(); var v=LeaseValidate.validateLeaseState(st);
+  if(!(st.backupOption.hybridInverterPrice>0&&st.backupOption.batteryFirstPrice>0&&st.backupOption.batteryAdditionalPrice>0))return;
+  var rows=[];for(var n=LeaseValidate.BATTERY.min;n<=LeaseValidate.BATTERY.max;n++){var p=LeaseValidate.backupPrice(st,n);
+    rows.push(n+' מצברים ('+p.kWh+' קו"ט): '+LeaseAgreement.ils(p.net)+' + מע"מ = <strong>'+LeaseAgreement.ils(p.gross)+'</strong>');}
+  $('backupTable').innerHTML='מה הלקוח יראה בקישור:<br>'+rows.join('<br>'); void v;
+}
 
 function buildState(){
   var c=ClientDetails.getClientDetailsValues(cdMount);
   return {
     type:'lease', leaseVersion:LeaseValidate.LEASE_VERSION,
     customer:{ name:c.name, phone:c.phone, email:c.email, address:c.address, city:c.city, date:c.date, note:'', hubspotId:_hsContactId||'' },
-    system:{ dcKw:val('dcKw'), acKw:val('acKw'), panelCount:parseInt(val('panelCount'),10)||0, panelWatt:parseInt(val('panelWatt'),10)||0,
-      panelModel:val('panelModel'), inverterModel:val('inverterModel'), roofType:val('roofType') },
-    lease:{ termYears:parseInt(val('termYears'),10) },
+    system:{ kw:numVal('sysKW'), acKW:numVal('sysAC'), panelW:intVal('panelW'), roof:roofVal(), roofArea:numVal('roofArea'), inv:val('inv') },
+    lease:{ termYears:intVal('termYears') },
     property:{ parcel:val('parcel') },
+    backupOption:{ offered:$('backupOffered').checked, hybridInverterPrice:intVal('hybridPrice'), batteryFirstPrice:intVal('battFP'), batteryAdditionalPrice:intVal('battEP') },
+    vatRate:LeaseValidate.engineVat(),
     sourceQuoteId:_sourceQuoteId||'',
   };
 }
@@ -192,7 +232,8 @@ function preview(){
   var st=buildState();
   if(!showValidation(LeaseValidate.validateLeaseState(st)))return;
   var f=$('preview');f.classList.remove('hidden');
-  f.srcdoc=LeaseAgreement.renderAgreement(st,{id:'PREVIEW',reviewDraft:true});
+  // The preview shows the option as the customer first sees it ("none"); Annex A explains the offer.
+  f.srcdoc=LeaseAgreement.renderAgreement(st,{id:'PREVIEW',knobs:{backupBatteries:0},reviewDraft:true});
 }
 
 // ── HubSpot (trunk /q/hubspot/search) ──
@@ -209,8 +250,9 @@ function pickHub(i){var c=window['_hub'+i]||{};_hsContactId=c.id||null;
   ClientDetails.setClientDetailsValues(cdMount,{name:c.name||((c.firstname||'')+' '+(c.lastname||'')).trim(),phone:c.phone||'',email:c.email||'',address:c.address||'',city:c.city||''});
   toggleBox('hubBox');}
 
-// ── load a solar quote's system data, or duplicate a lease (trunk /q/data/:id) ──
+// ── load a solar sales quote, or duplicate a lease (trunk /q/data/:id) ──
 function decodeState(b64){return JSON.parse(decodeURIComponent(escape(atob(b64))));}
+function firstNum(){for(var i=0;i<arguments.length;i++){var n=parseFloat(arguments[i]);if(Number.isFinite(n)&&n>0)return Math.round(n);}return 0;}
 async function loadSource(){
   var raw=val('srcUrl');var m=raw.match(/\/q\/([A-Za-z0-9_-]+)/);var id=m?m[1]:raw;var msg=$('srcMsg');
   if(!/^[A-Za-z0-9_-]{4,40}$/.test(id)){msg.textContent='קישור לא תקין';return;}
@@ -220,25 +262,28 @@ async function loadSource(){
     if(!r.ok||!j.data){msg.textContent='ההצעה לא נמצאה';return;}
     var s=decodeState(j.data);
     if(s.type==='lease'){
+      if(s.leaseVersion!==LeaseValidate.LEASE_VERSION){msg.textContent='הסכם בגרסה ישנה — יש להזין מחדש';return;}
       var c=s.customer||{};_hsContactId=c.hubspotId||null;_sourceQuoteId=s.sourceQuoteId||'';
       ClientDetails.setClientDetailsValues(cdMount,{name:c.name,phone:c.phone,email:c.email,address:c.address,city:c.city});
       var y=s.system||{};
-      $('panelCount').value=y.panelCount||'';$('panelWatt').value=y.panelWatt||'';$('acKw').value=y.acKw||'';
-      $('panelModel').value=y.panelModel||'';$('inverterModel').value=y.inverterModel||'';$('roofType').value=y.roofType||'';
+      $('sysKW').value=y.kw;$('sysAC').value=y.acKW;$('roofArea').value=y.roofArea;setRoof(y.roof);$('inv').value=y.inv;$('panelW').value=y.panelW;
+      var o=s.backupOption||{};$('backupOffered').checked=!!o.offered;setBackupPrices(o);
       $('termYears').value=(s.lease&&s.lease.termYears)||6;$('parcel').value=(s.property&&s.property.parcel)||'';
       msg.textContent='הסכם הליסינג נטען — עדכנו את התאריך לפני יצירת קישור חדש';
     } else if(!s.type||s.type==='quote'||s.type==='solar'){
-      // A solar quote: the customer and the SYSTEM (the price is irrelevant to a lease).
+      // A solar SALES quote: the customer, the system and the roof as the seller entered them, and the
+      // hybrid-inverter / battery prices that quote used. Its price per kW is irrelevant to a lease.
       _hsContactId=s.hsId||null;_sourceQuoteId=id;
       ClientDetails.setClientDetailsValues(cdMount,{name:s.name,phone:s.phone,email:s.email,address:s.addr,city:s.city});
-      var w=parseInt(s.panelW,10)||0, n=parseInt(s.panelCt,10)||0, ac=String(s.acKW||'').trim();
-      $('panelCount').value=n||'';$('panelWatt').value=w||'';$('acKw').value=ac;
-      $('panelModel').value=w?defaultPanelModel(w):'';
-      $('inverterModel').value=ac?defaultInverterModel(s.inv==='custom'?(s.customInvModel||''):s.inv,ac):'';
-      $('roofType').value=s.roof?('גג '+s.roof):'';
-      msg.textContent='נטענו פרטי הלקוח ונתוני המערכת מההצעה הסולארית '+id;
+      $('sysKW').value=s.kw||'';$('sysAC').value=s.acKW||'';$('roofArea').value=s.roofArea||'';setRoof(s.roof||LeaseValidate.ROOF_TYPES[0]);
+      $('panelW').value=s.panelW||665;
+      if(InverterCatalog.isSupportedInverter(s.inv)){$('inv').value=s.inv;}
+      var book=LeaseValidate.defaultBackupPrices(val('inv'));var ex={};try{ex=typeof s.extras==='string'?JSON.parse(s.extras):(s.extras||{});}catch(e){ex={};}
+      setBackupPrices({ hybridInverterPrice:firstNum(ex['hybrid-inv']&&ex['hybrid-inv'].price,book.hybridInverterPrice),
+        batteryFirstPrice:firstNum(s.battFP,book.batteryFirstPrice), batteryAdditionalPrice:firstNum(s.battEP,book.batteryAdditionalPrice) });
+      msg.textContent='נטענו פרטי הלקוח, נתוני המערכת והגג ומחירי התוספת מההצעה '+id+(InverterCatalog.isSupportedInverter(s.inv)?'':' — יש לבחור יצרן ממיר נתמך');
     } else { msg.textContent='סוג ההצעה ('+s.type+') אינו מתאים לליסינג'; return; }
-    syncDc();syncTerm();
+    syncPanels();syncTerm();syncBackup();
   }catch(e){msg.textContent='שגיאה בטעינה';}
 }
 
@@ -265,7 +310,7 @@ async function save(){
   }catch(e){msg.className='msg err';msg.textContent='שגיאת רשת';btn.disabled=false;}
 }
 function copyLink(){var t=$('resultLink').textContent;navigator.clipboard&&navigator.clipboard.writeText(t);}
-syncTerm();
+onInverter();syncPanels();syncTerm();
 </script>
 </body>
 </html>
