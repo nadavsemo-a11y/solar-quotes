@@ -1345,37 +1345,44 @@ class QuoteUI {
   }
 
   async shareEmail() {
-    const url  = document.getElementById('share-url')?.value;
-    const vals = this._getFormValues();
-    const clientMail = document.getElementById('clientEmail')?.value?.trim() || '';
+    // One click = one send. The server sends every request it accepts (no retry, no idempotency key),
+    // so a second click while the first is in flight must not reach it.
+    if (this._emailSending) return;
 
+    // The mail is built server-side from the SAVED quote, so there must be one — and it must be the
+    // quote the share bar shows. When saving failed the bar holds the long fallback URL, which no
+    // stored record stands behind.
+    const url   = document.getElementById('share-url')?.value || '';
+    const saved = this.storage && this.storage.lastSaveResult;
+    const quoteId = saved && saved.id && saved.url === url ? saved.id : '';
+    if (!quoteId) {
+      EmailService.showToast('⚠️ ההצעה לא נשמרה בשרת — לא ניתן לשלוח במייל. יש להפיק את ההצעה מחדש', true);
+      return;
+    }
+
+    const clientMail = document.getElementById('clientEmail')?.value?.trim() || '';
     if (!clientMail) {
       EmailService.showToast('⚠️ יש למלא אימייל לקוח בטופס', true);
       return;
     }
 
-    const d = this.quoteData || {};
-    const fmt = n => Math.round(n).toLocaleString('he-IL');
-
+    const btn = document.getElementById('share-email-btn');
+    this._emailSending = true;
+    if (btn) btn.disabled = true;
     try {
-      const result = await EmailService.sendQuoteEmail({
-        clientName:  vals.name,
-        clientEmail: clientMail,
-        quoteUrl:    url || '',
-        systemKW:    String(d.dcKW || vals.kw || ''),
-        totalPrice:  fmt(d.price || 0),
-        quoteDate:   vals.date ? new Date(vals.date).toLocaleDateString('he-IL') : '',
-        city:        vals.city || d.city || '',
-      });
+      const result = await EmailService.sendQuoteEmail({ quoteId, clientEmail: clientMail });
 
       if (result.success) {
-        EmailService.showToast('📧 ההצעה נשלחה ל-' + clientMail);
+        EmailService.showToast('📧 ההצעה נשלחה ל-' + ((result.sentTo && result.sentTo[0]) || clientMail));
       } else {
         EmailService.showToast('⚠️ שגיאה בשליחה: ' + (result.error || ''), true);
       }
     } catch (err) {
       console.error('shareEmail failed:', err);
       EmailService.showToast('⚠️ שגיאה בשליחת מייל', true);
+    } finally {
+      this._emailSending = false;
+      if (btn) btn.disabled = false;
     }
   }
 
@@ -2426,35 +2433,6 @@ class QuoteUI {
     win.document.close();
 
     // Email is sent explicitly via "שלח במייל" button — not automatically on print
-  }
-
-  /** Send quote email via EmailService module */
-  async _sendQuoteEmail(vals, d) {
-    if (typeof EmailService === 'undefined') return;
-    const fmt = n => Math.round(n).toLocaleString('he-IL');
-    const quoteUrl = document.getElementById('share-url')?.value || '';
-    const clientMail = document.getElementById('clientEmail')?.value?.trim() || '';
-
-    try {
-      const result = await EmailService.sendQuoteEmail({
-        clientName:  vals.name,
-        clientEmail: clientMail,
-        quoteUrl:    quoteUrl,
-        systemKW:    String(d.dcKW),
-        totalPrice:  fmt(d.price),
-        quoteDate:   vals.date ? new Date(vals.date).toLocaleDateString('he-IL') : '',
-        city:        vals.city || d.city || '',
-      });
-
-      if (result.success) {
-        const recipients = result.sentTo.join(', ');
-        EmailService.showToast('📧 ההצעה נשלחה בהצלחה: ' + recipients);
-      } else {
-        EmailService.showToast('⚠️ שגיאה בשליחת מייל: ' + (result.error || ''), true);
-      }
-    } catch (err) {
-      console.error('Email send failed:', err);
-    }
   }
 
   // ══════════════════════════════════════════════════════════════════════
