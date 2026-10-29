@@ -125,15 +125,28 @@ const UpgradePricing = (() => {
     };
   }
 
+  // ── the per-selection price field (`extras[id].price`) ──────────────────────────────────────
+  // On the wire it is a string: "0" is the seller's explicit ₪0, '' means "no per-selection
+  // price" (the server then uses the catalog default). Presence is NOT numeric validation — that
+  // stays where it is, at the snapshot boundary (shared/pricing-snapshot.js).
+  function hasSelectionPrice(v) { return v != null && v !== ''; }
+  function serializeSelectionPrice(v) { return v == null ? '' : String(v); }
+
   /**
-   * migrateExtrasSelections(state)
+   * migrateExtrasSelections(state, { authoring })
    * Quotes written before the dynamic extras format stored one flat key per upgrade
    * (`exEv`, `exMonitor`, …). This lifts them into the `{ id: { checked, price } }` shape every
    * resolver expects. Returns null when there is nothing to migrate.
    * Lived in quote-ui.js AND quote-public.js as two identical copies; it is one rule, so it is
    * one function, and both callers now share it.
+   *
+   * `authoring` — the result seeds a NEW draft (a duplicate), so a stored numeric 0 is carried as
+   * the explicit zero "0". The default is the historical rule, under which a stored 0 reads as
+   * "no price" (→ catalog default). Historical readers (quote-public.js in the Worker) render old
+   * quotes through the default, and changing it would reprice them although not one stored byte
+   * changed — it is required compatibility behaviour, not dead code.
    */
-  function migrateExtrasSelections(state) {
+  function migrateExtrasSelections(state, { authoring = false } = {}) {
     const s = state || {};
     if (s.extras) return s.extras; // already the current format
     const map = {
@@ -147,7 +160,9 @@ const UpgradePricing = (() => {
     };
     const result = {};
     for (const [id, val] of Object.entries(map)) {
-      if (val.checked !== undefined) result[id] = { checked: val.checked || false, price: val.price || '' };
+      if (val.checked === undefined) continue;
+      const price = authoring ? serializeSelectionPrice(val.price) : (val.price || '');
+      result[id] = { checked: val.checked || false, price };
     }
     return Object.keys(result).length > 0 ? result : null;
   }
@@ -282,6 +297,8 @@ const UpgradePricing = (() => {
   return {
     PRICING_SCHEMA_VERSION,
     getDefaultCatalog,
+    hasSelectionPrice,
+    serializeSelectionPrice,
     migrateExtrasSelections,
     flattenCatalog,
     legacyUpgradeIds,
