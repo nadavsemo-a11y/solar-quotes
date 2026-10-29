@@ -185,7 +185,11 @@ class QuoteUI {
       this._renderCatalogState();
       this._updatePreview();
       // A quote being duplicated cannot be rebased until the catalog is known.
-      if (this._pendingRebase) { const s = this._pendingRebase; this._pendingRebase = null; this._rebaseOntoCatalog(s); }
+      if (this._pendingRebase) {
+        const { state, authoring } = this._pendingRebase;
+        this._pendingRebase = null;
+        this._rebaseOntoCatalog(state, { authoring });
+      }
     });
     this._initCitySearch();
     // Tariff override listeners must register BEFORE the generic input listener
@@ -1582,9 +1586,14 @@ class QuoteUI {
     const state = {};
     for (const item of computed) {
       if (localIds.has(item.id)) continue;
+      // A FIXED price is the seller's: a resolved 0 is a deliberate free line and must reach the
+      // server as "0" — '' would make it fall back to the catalog default. A computed price
+      // (batteries, premium) is re-derived server-side from its basis and never read from here,
+      // so it keeps its historical form (0 → '').
+      const fixed = !item.calcType || item.calcType === 'fixed';
       state[item.id] = {
         checked: item.checked,
-        price: String(item.price || ''),
+        price: fixed ? UpgradePricing.serializeSelectionPrice(item.price) : String(item.price || ''),
       };
     }
     return state;
@@ -1658,8 +1667,13 @@ class QuoteUI {
     }
   }
 
-  /** Restores extras checkboxes + prices from saved state */
-  _restoreExtrasState(extras) {
+  /**
+   * Restores extras checkboxes + prices from saved state.
+   * `authoring` — the DOM becomes a draft the seller will save, so an explicit 0 is restored.
+   * Otherwise (a historical read, e.g. the #q= client view) the historical rule stands: a numeric 0
+   * is not restored and the input keeps its default, exactly as that quote has always rendered.
+   */
+  _restoreExtrasState(extras, { authoring = false } = {}) {
     if (!extras) return;
     // New format: { id: { checked, price } }
     for (const [id, val] of Object.entries(extras)) {
@@ -1667,7 +1681,8 @@ class QuoteUI {
       const chk = document.getElementById('chk-' + id);
       if (chk) chk.checked = !!val.checked;
       const price = document.getElementById('price-' + id);
-      if (price && val.price) price.value = val.price;
+      const hasPrice = authoring ? UpgradePricing.hasSelectionPrice(val.price) : !!val.price;
+      if (price && hasPrice) price.value = val.price;
     }
   }
 
@@ -1690,10 +1705,11 @@ class QuoteUI {
   /**
    * Rebase a duplicated quote's extras onto the current catalog.
    * `state` is the SOURCE quote's state (schema 1 or 2). Returns nothing; it drives the DOM and
-   * reports unmatched items to the seller.
+   * reports unmatched items to the seller. `authoring` as in _restoreExtrasState: only a new draft
+   * reads a legacy stored 0 as the explicit zero.
    */
-  _rebaseOntoCatalog(state) {
-    if (!this._catalog) { this._pendingRebase = state; return; }
+  _rebaseOntoCatalog(state, { authoring = false } = {}) {
+    if (!this._catalog) { this._pendingRebase = { state, authoring }; return; }
 
     // Schema 2 carries labels in its own snapshot; schema 1 has only `extras` ids and no labels.
     const snap = state.pricingSnapshot;
@@ -1704,8 +1720,11 @@ class QuoteUI {
           // every one-time upgrade as "missing from the catalog" — a warning about nothing.
           .filter(i => i.scope !== 'quote')
           .map(i => ({ id: i.id, label: i.label, checked: i.checked, price: i.amount, calcType: i.calcType }))
-      : Object.entries(UpgradePricing.migrateExtrasSelections(state) || state.extras || {})
-          .map(([id, v]) => ({ id, label: null, checked: !!(v && v.checked), price: (v && v.price) || '' }));
+      : Object.entries(UpgradePricing.migrateExtrasSelections(state, { authoring }) || state.extras || {})
+          .map(([id, v]) => ({
+            id, label: null, checked: !!(v && v.checked),
+            price: authoring ? UpgradePricing.serializeSelectionPrice(v && v.price) : ((v && v.price) || ''),
+          }));
 
     const known = new Map(this._catalog.items.map(i => [i.id, i]));
     const carried = [], unmatched = [];
@@ -1752,7 +1771,7 @@ class QuoteUI {
     if (!unmatched || !unmatched.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
     const rows = unmatched.map(u => {
       const shown = u.label ? this._escapeHtml(u.label) : `<code>${this._escapeHtml(u.id)}</code> (השם המקורי אינו קיים בשרת)`;
-      const price = u.price ? ` — ₪${this._escapeHtml(String(u.price))}` : '';
+      const price = UpgradePricing.hasSelectionPrice(u.price) ? ` — ${this._escapeHtml(UpgradePricing.formatLinePrice(u))}` : '';
       return `<li>${shown}${price}</li>`;
     }).join('');
     el.innerHTML = `<div style="font-weight:700;margin-bottom:6px">⚠ פריטים מההצעה המקורית שאינם בקטלוג הנוכחי</div>
@@ -1769,8 +1788,8 @@ class QuoteUI {
    * Backward compat: converts old hardcoded state (exEv, exMonitor...) to the dynamic extras
    * format. The rule itself lives in shared/upgrade-pricing.js so the Worker migrates identically.
    */
-  _migrateOldExtrasState(s) {
-    return UpgradePricing.migrateExtrasSelections(s);
+  _migrateOldExtrasState(s, opts) {
+    return UpgradePricing.migrateExtrasSelections(s, opts);
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1865,12 +1884,16 @@ class QuoteUI {
     //
     // `_loadingAsDuplicate` is set by the duplicate path, which deliberately drops the ids so the
     // new quote mints its own: a quote-local id names a line in ONE deal.
-    const migrated = this._migrateOldExtrasState(s);
+    //
+    // A duplicate is a NEW draft, so only it reads a stored 0 as the seller's explicit ₪0. Every
+    // other load (the #q= client view) is a historical read and keeps the historical price rule.
+    const authoring = !!this._loadingAsDuplicate;
+    const migrated = this._migrateOldExtrasState(s, { authoring });
     this._restoreQuoteLocalItems(s.quoteLocalItems, !this._loadingAsDuplicate);
     this._renderExtrasUI();
-    this._restoreExtrasState(migrated);
+    this._restoreExtrasState(migrated, { authoring });
     this._noticeWithdrawnUpgrades(migrated);
-    this._rebaseOntoCatalog(s);
+    this._rebaseOntoCatalog(s, { authoring });
     // Store digital signature preference for client mode
     this._digitalSigPref = s.digSig !== undefined ? s.digSig : true;
     // Tariff override — legacy payloads (no tariffOverride) → auto
