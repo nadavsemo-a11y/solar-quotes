@@ -22,6 +22,7 @@ const InverterCatalog = (() => {
     { id: 'Sungrow',  label: 'Sungrow'  },
     { id: 'GoodWe',   label: 'GoodWe'   },
     { id: 'Solinteg', label: 'Solinteg' },
+    { id: 'SolarEdge', label: 'SolarEdge' }, // re-offered 2026-11-17 (no per-panel surcharge)
   ];
 
   const DEFAULT_INVERTER_ID = 'Sungrow';
