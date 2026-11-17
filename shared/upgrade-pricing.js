@@ -31,12 +31,15 @@ const UpgradePricing = (() => {
 
   // ── the per-inverter price book — DATA ONLY ──────────────────────────────────────────────────
   // Changing what a manufacturer costs is a change HERE and nowhere else: no QuoteUI edit, no
-  // HTML edit, no engine edit. Today all three are identical on purpose; that is a business fact,
+  // HTML edit, no engine edit. Today all four are identical on purpose; that is a business fact,
   // not an architectural one.
   const INVERTER_PRICING = {
     Sungrow:  { hybridInverter: 8900, batteryFirst: 8900, batteryAdditional: 6500 },
     GoodWe:   { hybridInverter: 8900, batteryFirst: 8900, batteryAdditional: 6500 },
     Solinteg: { hybridInverter: 8900, batteryFirst: 8900, batteryAdditional: 6500 },
+    // SolarEdge re-offered 2026-11-17 at the same prices and WITHOUT the old per-panel optimiser
+    // surcharge (the `solaredge` upgrade below stays legacy — billed only on already-saved quotes).
+    SolarEdge: { hybridInverter: 8900, batteryFirst: 8900, batteryAdditional: 6500 },
   };
 
   // LEGACY COMPATIBILITY: quotes saved before the catalog existed carry inverters that are not in
