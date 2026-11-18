@@ -480,6 +480,11 @@ class QuoteUI {
     const defaultPrice = this._upgradeDefaultPrice(item);
 
     let rightHtml = '';
+    // "מתנה" — a fixed-price UPGRADE given free as part of a closed deal (shared/deal-pricing.js).
+    const giftHtml = category === 'upgrade'
+      ? `<label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#16a34a;margin-inline-end:8px;cursor:pointer" title="ללא תשלום — הלקוח יראה את שווי השדרוג">
+           <input type="checkbox" id="gift-${id}" onchange="_quoteUI.toggleGift('${id}', this.checked)">מתנה</label>`
+      : '';
     if (isBattery) {
       rightHtml = `<div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:12px;color:var(--gray)">כמות:</span>
@@ -491,10 +496,10 @@ class QuoteUI {
     } else if (item.calcType === 'premium') {
       rightHtml = `<span style="font-size:11px;color:var(--gray)">$100 לקילו-וואט DC × שער דולר</span>`;
     } else if (id === 'ev') {
-      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${defaultPrice}" step="100" oninput="updatePreview()">
+      rightHtml = `${giftHtml}<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${defaultPrice}" step="100" oninput="updatePreview()">
         <input id="evModel" type="text" placeholder="דגם (אופציונלי)" style="width:140px;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;margin-right:8px">`;
     } else {
-      rightHtml = `<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${defaultPrice}" step="50" oninput="updatePreview()">`;
+      rightHtml = `${giftHtml}<span class="extra-currency">₪</span><input class="extra-price-input" id="price-${id}" type="number" value="${defaultPrice}" step="50" oninput="updatePreview()">`;
     }
 
     return `<div class="extra-item" id="ex-${id}">
@@ -676,7 +681,98 @@ class QuoteUI {
 
       // תוספות
       extras: this._getExtras(dcKW, premiumPanel, usdRate),
+
+      // עסקה סגורה — the fixed discount the engine applies (0 = no deal). See _dealPreview().
+      dealDiscount: this._dealPreview(dcKW).discount,
     };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // CLOSED DEAL — agreed base price + free upgrades (shared/deal-pricing.js)
+  // The seller types the price closed for the system as quoted; the difference from the list price
+  // becomes a FIXED discount, so every kWp added or removed later still costs the quote's own price
+  // per kWp. A gift is an upgrade sold at ₪0 whose list value the customer is shown.
+  // ══════════════════════════════════════════════════════════════════════
+
+  /** The deal as the seller proposes it (the server recomputes and validates it on save). */
+  _buildDealState() {
+    const agreed = String(document.getElementById('dealAgreedBase')?.value ?? '').trim();
+    const gifts = {};
+    document.querySelectorAll('input[id^="gift-"]').forEach((cb) => {
+      if (!cb.checked) return;
+      const id = cb.id.slice('gift-'.length);
+      const v = parseFloat(document.getElementById('price-' + id)?.dataset.giftValue);
+      if (Number.isFinite(v) && v > 0) gifts[id] = v;
+    });
+    if (agreed === '' && !Object.keys(gifts).length) return undefined;
+    return { agreedBase: agreed, gifts };
+  }
+
+  /** Live preview of the deal + the hint under the field. Never throws. */
+  _dealPreview(dcKW) {
+    const get = id => document.getElementById(id)?.value ?? '';
+    const hint = document.getElementById('dealHint');
+    const raw = this._buildDealState();
+    let discount = 0, msg = '', bad = false;
+    if (raw && raw.agreedBase !== '' && typeof DealPricing !== 'undefined') {
+      const ctx = { dcKW, ppkw: get('ppkw'), acKW: get('sysAC'), meterPanelPrice: get('meterPanelPrice') };
+      try {
+        const deal = DealPricing.normalizeDeal({ agreedBase: raw.agreedBase }, ctx);
+        discount = deal ? deal.discount : 0;
+        const fmt = n => Math.round(n).toLocaleString('he-IL');
+        msg = `מחירון ₪${fmt(DealPricing.listBaseFor(ctx))} · הנחת עסקה ₪${fmt(discount)} · כל קו"ט נוסף/חסר בתכנון הסופי: ₪${fmt(parseFloat(get('ppkw')) || 0)}`;
+      } catch (e) {
+        bad = true;
+        msg = e && e.code === 'deal_agreed_above_list' ? 'המחיר המוסכם גבוה ממחיר המחירון' : 'מחיר מוסכם לא תקין';
+      }
+    }
+    if (hint) {
+      if (hint.dataset.defaultText == null) hint.dataset.defaultText = hint.textContent;
+      hint.textContent = msg || hint.dataset.defaultText;
+      hint.style.color = bad ? '#b91c1c' : 'var(--gray)';
+    }
+    return { discount };
+  }
+
+  /** Tick "מתנה": remember the line's price as its shown worth and sell it at ₪0. */
+  toggleGift(id, on) {
+    const input = document.getElementById('price-' + id);
+    if (!input) return;
+    if (on) {
+      const v = parseFloat(input.value);
+      if (!(Number.isFinite(v) && v > 0)) {
+        const cb = document.getElementById('gift-' + id);
+        if (cb) cb.checked = false;
+        return;
+      }
+      input.dataset.giftValue = String(v);
+      input.value = '0';
+      input.readOnly = true;
+      const chk = document.getElementById('chk-' + id);
+      if (chk) chk.checked = true;
+    } else {
+      if (input.dataset.giftValue) input.value = input.dataset.giftValue;
+      delete input.dataset.giftValue;
+      input.readOnly = false;
+    }
+    this._updatePreview();
+  }
+
+  /** Replay a saved deal onto the form (after the extras rows exist). */
+  _restoreDealState(s) {
+    const deal = s && s.deal;
+    const field = document.getElementById('dealAgreedBase');
+    if (field) field.value = deal && Number(deal.discount) > 0 ? String(deal.agreedBase) : '';
+    const gifts = (deal && deal.gifts) || {};
+    for (const [id, value] of Object.entries(gifts)) {
+      const cb = document.getElementById('gift-' + id);
+      const input = document.getElementById('price-' + id);
+      if (!cb || !input) continue;
+      cb.checked = true;
+      input.dataset.giftValue = String(value);
+      input.value = '0';
+      input.readOnly = true;
+    }
   }
 
   /**
@@ -1824,6 +1920,8 @@ class QuoteUI {
       // Seller-created "רק להצעה הנוכחית" lines. The SERVER validates and canonicalizes them and
       // mints the id of any item that does not have one yet (shared/quote-local-extras.js).
       quoteLocalItems: this._buildQuoteLocalState(),
+      // Closed deal (agreed base + free upgrades). Absent unless the seller set one.
+      deal: this._buildDealState(),
       // digital signature preference
       digSig: document.getElementById('chk-digital-sig')?.checked ?? true,
       // HubSpot contact ID (set when salesperson uses the prefill toolbar);
@@ -1894,6 +1992,7 @@ class QuoteUI {
     this._restoreExtrasState(migrated, { authoring });
     this._noticeWithdrawnUpgrades(migrated);
     this._rebaseOntoCatalog(s, { authoring });
+    this._restoreDealState(s);
     // Store digital signature preference for client mode
     this._digitalSigPref = s.digSig !== undefined ? s.digSig : true;
     // Tariff override — legacy payloads (no tariffOverride) → auto
@@ -2293,6 +2392,7 @@ class QuoteUI {
       <li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--gray)"><span>מחיר לקו״ט</span><span>₪${fmt(d.ppkw)}</span></li>
       ${d.needsMeter ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>לוח מונה ייצור</span><strong>₪${fmt(d.meterPanelPrice)}</strong></li>` : ''}
       ${allUpgrades.map(e => `<li class="upgrade-price-line" data-upgrade-line="${e.id}" style="display:none;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><span>${e.label}</span><strong>${UpgradePricing.formatLinePrice(e)}</strong></li>`).join('')}
+      ${d.dealDiscount > 0 ? `<li style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);color:var(--green-dark);font-weight:700"><span>${DealPricing.DEAL_DISCOUNT_LABEL}</span><strong>${DealPricing.discountText(d.dealDiscount)}</strong></li>` : ''}
       <li style="display:flex;justify-content:space-between;padding:10px 0;font-size:16px;font-weight:800;color:var(--sky)"><span>סה"כ עלות הפרויקט (לא כולל מע"מ)</span><span id="project-total-display">₪${fmt(d.price)}</span></li>
       <li style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:var(--gray)"><span>סה"כ כולל מע"מ (18%)</span><span id="project-total-vat-display">₪${fmt(Math.round(d.price * VAT))}</span></li>
     </ul>
