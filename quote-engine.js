@@ -422,6 +422,9 @@ const QuoteEngine = (() => {
       meterPanelPrice = 2500,
       extras = [],
       tariffOverrideState = null,
+      // A negotiated deal's FIXED discount on the base system (shared/deal-pricing.js). 0 = no deal,
+      // which leaves every number below exactly as it always was.
+      dealDiscount = 0,
     } = params;
     const tariff = resolveTariffOverride(tariffOverrideState, acKW);
 
@@ -432,9 +435,14 @@ const QuoteEngine = (() => {
     const premiumPanelNIS  = Math.round(premiumPanel * usdRate * dcKW);
     const invDisplay       = inv === 'אחר' && customInvModel ? customInvModel : inv;
 
-    const price       = calcPrice({ dcKW, batt, needsMeter,
+    const listPrice   = calcPrice({ dcKW, batt, needsMeter,
                                      ppkw, battFirstPrice, battExtraPrice,
                                      meterPanelPrice });
+    const discount    = Number.isFinite(Number(dealDiscount)) && Number(dealDiscount) > 0
+      ? Math.min(Math.round(Number(dealDiscount)), listPrice) : 0;
+    // The price the customer pays for the base system. Income/ROI/payback and the payment stages
+    // are all built on it, so a closed deal is reflected everywhere at once.
+    const price       = listPrice - discount;
     const priceVAT    = Math.round(price * VAT);
     const annualKwh   = dcKW * (hours || DEFAULT_HOURS);
     const panelArea   = panelCount * 2.42;
@@ -459,6 +467,8 @@ const QuoteEngine = (() => {
       extras, extrasTotal,
       // תוצאות מחיר
       price, priceVAT, batteryPrice,
+      // Present only on a deal, so the engine output of every other quote is unchanged.
+      ...(discount > 0 ? { listPrice, dealDiscount: discount } : {}),
       premiumPanelNIS, premiumPanel, usdRate,
       // תוצאות טכניות
       annualKwh, breaker,
