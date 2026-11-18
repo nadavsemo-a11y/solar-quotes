@@ -1522,6 +1522,10 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
           <div class="field"><label>הספק פאנל (וואט)</label><input id="panelW" type="number" value="665" step="10"></div>
           <div class="field"><label>כמות פאנלים (חישוב אוטומטי)</label><input id="panelCount" type="number" value="0" readonly style="background:#f1f5f9;color:var(--gray)"></div>
         </div>
+        <div class="form-grid" style="grid-template-columns:minmax(180px,260px) 1fr;align-items:end;margin-top:10px">
+          <div class="field"><label>מחיר מוסכם למערכת (₪, ללא מע"מ) — אופציונלי</label><input id="dealAgreedBase" type="number" step="100" min="0" placeholder="ריק = לפי המחירון" oninput="updatePreview()"></div>
+          <div id="dealHint" style="font-size:12px;color:var(--gray);padding-bottom:10px">עסקה סגורה: ההפרש ממחיר המחירון יוצג ללקוח כ"הנחת עסקה". שדרוג במתנה — סמן "מתנה" ליד השדרוג.</div>
+        </div>
         <!-- Plan selection removed from portal — customer chooses in quote -->
         <input type="hidden" name="planRadio" value="green">
         <input type="hidden" id="inflationPct" value="2.5">
@@ -1833,6 +1837,7 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
      upgrade-pricing and quote-validation read it. -->
 <script src="shared/inverter-catalog.js"></script>
 <script src="shared/upgrade-pricing.js"></script>
+<script src="shared/deal-pricing.js"></script>
 <!-- The ONLY way a browser reaches the central extras catalog. No localStorage fallback by design. -->
 <script src="shared/catalog-client.js"></script>
 <script src="shared/quote-validation.js"></script>
@@ -2352,7 +2357,7 @@ function ceResetDefaults() {
 </script>
 
 <!-- Unified Version Display -->
-<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.02.20.00</div>
+<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.06.15.00</div>
 
 </body>
 </html>
