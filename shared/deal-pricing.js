@@ -26,6 +26,9 @@
  *   every consumer adds deal fields to its output ONLY when a discount or a gift exists, so the
  *   documents and hashes of all existing quotes stay byte-identical.
  */
+// Wrapped in a function scope: the portal loads this as a classic <script>, where a top-level
+// `const api` collides with other shared scripts ("Identifier 'api' has already been declared").
+(function () {
 'use strict';
 
 const DEAL_VERSION = 'deal/v1';
@@ -136,3 +139,4 @@ const api = {
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 if (typeof globalThis !== 'undefined') globalThis.DealPricing = api;
+})();
