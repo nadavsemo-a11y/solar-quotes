@@ -1302,7 +1302,7 @@ class QuoteUI {
     set('qf-yr1',         '₪' + this._fmt(p.yr1));
     set('qf-total',       '₪' + this._fmt(p.totalInc));
     set('qf-avg',         '₪' + this._fmt(p.avgAnnual));
-    set('qf-annual-kwh',  this._fmt(d.dcKW * currentHours));
+    set('qf-annual-kwh',  this._fmt(QuoteEngine.annualKwhAfterClipping(d.dcKW, d.acKW, currentHours)));
 
     // VAT-sensitive fields go through the single render path.
     // Toggle state lives on #quote-financial-section (survives plan switching).
