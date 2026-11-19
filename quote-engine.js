@@ -24,6 +24,44 @@ const QuoteEngine = (() => {
   const MAX_AC_INDEX = 15;    // צמוד מדד: AC ≤ 15 בלבד
   const MAX_AC_FAST  = 30;    // החזר מהיר: AC ≤ 30 בלבד
 
+  // ── קליפינג (קטימת ממיר) — policy clipping/v1, הוראת בעלים 2026-11-19 ─────────
+  // Annual share of DC energy lost above the inverter AC, by DC/AC ratio. Zero up to 1.40 (the
+  // owner's field rule); above it, the SEMO Simulator's generation model (computeDayDC, 365 days at
+  // 10-minute steps) scaled so the year's highest instantaneous DC = nameplate / 1.40. Winter clips
+  // almost nothing; the first clipping (1.45–1.6) is on cold clear days of Feb–Apr / Sep–Nov.
+  // CLIPPING_TABLE[i] = loss in ppm at ratio 1.40 + i × 0.01 (→ 3.00); linear between entries,
+  // last slope above 3.00, capped at 90%. 1.5 → 0.07% · 1.6 → 0.24% · 1.8 → 1.57% · 2.0 → 4.38%.
+  // The single source: shared/clipping.js re-exports these for the server modules.
+  const CLIPPING_POLICY       = 'clipping/v1';
+  const CLIPPING_ONSET_RATIO  = 1.4;
+  const CLIPPING_STEP         = 0.01;
+  const CLIPPING_MAX_LOSS_PPM = 900000;
+  const CLIPPING_TABLE = Object.freeze([0,13,43,91,149,215,291,372,462,561,670,786,916,1056,1205,1366,1546,1740,1952,2182,2432,2704,3000,3320,3681,4081,4517,5000,5539,6135,6780,7478,8219,9003,9835,10712,11633,12596,13598,14645,15737,16866,18031,19228,20464,21735,23038,24373,25735,27120,28527,29959,31417,32898,34402,35925,37469,39032,40617,42220,43837,45472,47123,48789,50469,52163,53869,55587,57315,59056,60805,62562,64332,66108,67887,69678,71474,73277,75086,76901,78723,80550,82382,84219,86059,87901,89745,91594,93446,95299,97151,99004,100858,102713,104566,106419,108272,110126,111980,113831,115683,117533,119379,121224,123067,124905,126743,128579,130412,132244,134075,135901,137724,139546,141363,143178,144989,146796,148600,150401,152198,153992,155784,157572,159354,161133,162910,164684,166452,168217,169979,171739,173495,175248,176996,178740,180481,182219,183953,185682,187408,189130,190849,192565,194275,195980,197681,199378,201070,202758,204442,206120,207793,209462,211127,212788,214444,216095,217743,219384,221020]);
+
+  /** Annual clipping loss in whole ppm for a DC/AC ratio. */
+  function clippingLossPpm(ratio) {
+    const r = Number(ratio);
+    if (!Number.isFinite(r) || r <= CLIPPING_ONSET_RATIO) return 0;
+    const x = (r - CLIPPING_ONSET_RATIO) / CLIPPING_STEP;
+    const last = CLIPPING_TABLE.length - 1;
+    let v;
+    if (x >= last) v = CLIPPING_TABLE[last] + (x - last) * (CLIPPING_TABLE[last] - CLIPPING_TABLE[last - 1]);
+    else { const i = Math.floor(x); v = CLIPPING_TABLE[i] + (x - i) * (CLIPPING_TABLE[i + 1] - CLIPPING_TABLE[i]); }
+    return Math.min(CLIPPING_MAX_LOSS_PPM, Math.max(0, Math.round(v)));
+  }
+
+  /** Clipping loss (ppm) for DC kWp on an inverter of AC kW; 0 when either is unknown. */
+  function clippingLossPpmFor(dcKW, acKW) {
+    const dc = Number(dcKW), ac = Number(acKW);
+    if (!(dc > 0) || !(ac > 0)) return 0;
+    return clippingLossPpm(dc / ac);
+  }
+
+  /** Year-1 sellable kWh: DC × sun-hours, less the clipping loss on this inverter. */
+  function annualKwhAfterClipping(dcKW, acKW, hours) {
+    return dcKW * hours * (1 - clippingLossPpmFor(dcKW, acKW) / 1e6);
+  }
+
   // תעריפי רכישה 2026 — אג׳ לקו"ט, מדרגות מצטברות (Nominal)
   const TARIFF_TIERS = [
     { cap: 15,    rate: 0.4800 },
@@ -239,7 +277,7 @@ const QuoteEngine = (() => {
   function calcPlanIncome({ dcKW, acKW, price, planKey, inflationPct, hasUrbanPremium, hours,
                             manualGreenRegularTariffNisPerKwh = null }) {
     const HOURS   = hours || DEFAULT_HOURS;
-    const kwh     = dcKW * HOURS;
+    const kwh     = annualKwhAfterClipping(dcKW, acKW, HOURS);   // clipping/v1: not linear in DC above DC/AC 1.40
     const up      = hasUrbanPremium ? URBAN_PREMIUM : 0;
     const autoR   = calcWeightedRate(acKW);
 
@@ -444,7 +482,8 @@ const QuoteEngine = (() => {
     // are all built on it, so a closed deal is reflected everywhere at once.
     const price       = listPrice - discount;
     const priceVAT    = Math.round(price * VAT);
-    const annualKwh   = dcKW * (hours || DEFAULT_HOURS);
+    const annualKwh   = annualKwhAfterClipping(dcKW, acKW, hours || DEFAULT_HOURS);
+    const clipping    = { policy: CLIPPING_POLICY, lossPpm: clippingLossPpmFor(dcKW, acKW) };
     const panelArea   = panelCount * 2.42;
     const breaker     = calcBreaker(acKW);
     const plan        = calcPlanIncome({ dcKW, acKW, price, planKey: effectivePlanKey,
@@ -471,7 +510,7 @@ const QuoteEngine = (() => {
       ...(discount > 0 ? { listPrice, dealDiscount: discount } : {}),
       premiumPanelNIS, premiumPanel, usdRate,
       // תוצאות טכניות
-      annualKwh, breaker,
+      annualKwh, clipping, breaker,
       // שלבי תשלום
       ...payments,
       // תוצאות פיננסיות לפי מסלול
@@ -540,6 +579,12 @@ const QuoteEngine = (() => {
     // פונקציות בסיס (לשימוש ישיר אם צריך)
     calcWeightedRate,
     calcPlanIncome,
+    clippingLossPpm,
+    clippingLossPpmFor,
+    annualKwhAfterClipping,
+    CLIPPING_POLICY,
+    CLIPPING_ONSET_RATIO,
+    CLIPPING_TABLE,
     calcPaybackYears,
     calcPrice,
     calcPaymentStages,
