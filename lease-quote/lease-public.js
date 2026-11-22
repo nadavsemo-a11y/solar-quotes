@@ -27,9 +27,13 @@ function buildLeaseSignedSnapshot(state, knobs) {
   const sys = s.system || {};
   const o = s.backupOption || {};
   const n = (knobs && knobs.backupBatteries) || 0;
+  // A rental binds its model and its rent too. An ownership lease's snapshot keeps exactly the keys it
+  // had before the rental model existed, so a page served before a deploy still signs after it.
+  const rental = V.isRental(s) ? { model: 'rental', rent: { annualAmount: s.rent && s.rent.annualAmount } } : {};
   return {
     kind: 'lease-signed-snapshot',
-    template: `${A.TEMPLATE_ID}/${A.TEMPLATE_VERSION}`,
+    template: A.templateOf(s),
+    ...rental,
     leaseVersion: s.leaseVersion,
     customer: { name: str(c.name), phone: str(c.phone), email: str(c.email), city: str(c.city), address: str(c.address), date: str(c.date) },
     system: { kw: sys.kw, acKW: sys.acKW, panelW: sys.panelW, panelCount: V.panelCount(sys), roof: sys.roof, roofArea: sys.roofArea, inv: sys.inv },
@@ -53,13 +57,18 @@ function buildLeaseHubspotSyncPayload(state, ctx) {
   const name = str(c.name);
   const years = state && state.lease && state.lease.termYears;
   const metricValue = `${sys.kw} kW`;
-  const noteBody = `הסכם ליסינג סולארי — ${name}<br>הספק DC: ${metricValue}<br>תקופת ליסינג: ${A.yearsHe(years)}<br>לינק: <a href="${quoteUrl}" target="_blank">${quoteUrl}</a>`;
+  const rental = V.isRental(state);
+  const kind = rental ? 'הסכם שכירות גג סולארי' : 'הסכם ליסינג סולארי';
+  const termLine = rental
+    ? `תקופת שכירות: ${A.yearsHe(years)}<br>דמי שכירות: ${A.ils(state.rent.annualAmount)} לשנה`
+    : `תקופת ליסינג: ${A.yearsHe(years)}`;
+  const noteBody = `${kind} — ${name}<br>הספק DC: ${metricValue}<br>${termLine}<br>לינק: <a href="${quoteUrl}" target="_blank">${quoteUrl}</a>`;
   return {
     quoteType: 'lease', quoteId: x.quoteId || '', quoteUrl,
     hubspotId: str(c.hubspotId) || null,
     customer: { name, phone: str(c.phone), email: str(c.email), address: str(c.address), city: str(c.city) },
     headlineMetricLabel: 'הספק DC', headlineMetricValue: metricValue,
-    noteBody, taskTitle: `מעקב הסכם ליסינג — ${name}`, taskBody: noteBody,
+    noteBody, taskTitle: `מעקב ${rental ? 'הסכם שכירות גג' : 'הסכם ליסינג'} — ${name}`, taskBody: noteBody,
   };
 }
 
