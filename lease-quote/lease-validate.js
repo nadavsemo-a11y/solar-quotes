@@ -28,6 +28,18 @@
  *   }
  *
  * The customer's choice is NOT state: it is the signing knob { backupBatteries: 0 | 2..6 }.
+ *
+ * TWO MODELS share this shape (`lease.model`, absent = 'ownership' — every lease saved before the
+ * rental model existed):
+ *   'ownership'  the leasing agreement: SEMO owns the system for N years, then it passes to the
+ *                customer for free (lease-agreement.js, template solar-lease/2).
+ *   'rental'     the roof RENTAL agreement: SEMO owns the system for the whole term of its arrangement
+ *                with the IEC (default 25 years) and pays the property owner an annual rent
+ *                (`rent.annualAmount`, whole ₪). The billing right (chapters 5–6), the export revenue,
+ *                and SEMO's right to register a warning note on the property are the template's
+ *                (rental-terms.js, template solar-rental/1). The backup upgrade is not offered on a
+ *                rental: the system and everything in it stay SEMO's, so `backupOption.offered` must
+ *                be false.
  */
 'use strict';
 (function () {
@@ -46,6 +58,11 @@ function engineVat() {
 
 const LEASE_VERSION = 2;
 const TERM_YEARS = Object.freeze({ min: 1, max: 25, default: 6 });
+const MODELS = Object.freeze(['ownership', 'rental']);
+// A rental runs for the IEC arrangement's term. 25 years is the cap of the term (a longer one is a
+// long lease — חכירה לדורות — in Israeli land law) and the default.
+const RENTAL_TERM_YEARS = Object.freeze({ min: 1, max: 25, default: 25 });
+const MAX_ANNUAL_RENT = 1000000;
 // The roof types the sales form offers (index.html, radios name="roof"). Pinned by a test.
 const ROOF_TYPES = Object.freeze(['בטון', 'רעפים', 'פח']);
 // The sales quote's battery rules: 2–6 batteries (PricingSnapshot BATT_MIN/BATT_MAX), 5 kWh each
@@ -83,18 +100,27 @@ function defaultBackupPrices(inv) {
   return { hybridInverterPrice: d.hybridInverter, batteryFirstPrice: d.batteryFirst, batteryAdditionalPrice: d.batteryAdditional };
 }
 
-function emptyLeaseState() {
+/** 'ownership' | 'rental'. A lease saved before the rental model has no `lease.model`. */
+function leaseModel(state) {
+  return (state && state.lease && state.lease.model) === 'rental' ? 'rental' : 'ownership';
+}
+function isRental(state) { return leaseModel(state) === 'rental'; }
+
+function emptyLeaseState(model) {
   const inv = InverterCatalog.getDefaultInverter();
-  return {
+  const rental = model === 'rental';
+  const s = {
     type: 'lease', leaseVersion: LEASE_VERSION,
     customer: { name: '', phone: '', email: '', address: '', city: '', date: '', note: '', hubspotId: '' },
     system: { kw: '', acKW: '', panelW: 665, roof: 'בטון', roofArea: '', inv },
-    lease: { termYears: TERM_YEARS.default },
+    lease: rental ? { model: 'rental', termYears: RENTAL_TERM_YEARS.default } : { termYears: TERM_YEARS.default },
     property: { parcel: '' },
-    backupOption: Object.assign({ offered: true }, defaultBackupPrices(inv)),
+    backupOption: Object.assign({ offered: !rental }, defaultBackupPrices(inv)),
     vatRate: engineVat(),
     sourceQuoteId: '',
   };
+  if (rental) s.rent = { annualAmount: '' };
+  return s;
 }
 
 /**
@@ -165,9 +191,20 @@ function validateLeaseState(state) {
   if (str(c.note)) text(c.note, 'ההערה', 0, 500);
   if (str(c.hubspotId) && !/^\d{1,20}$/.test(str(c.hubspotId))) errors.push('מזהה HubSpot אינו תקין');
 
+  const model = s.lease && s.lease.model;
+  if (model !== undefined && !MODELS.includes(model)) errors.push('מודל ההסכם אינו מוכר');
+  const rental = isRental(s);
   const y = s.lease && s.lease.termYears;
-  if (!Number.isSafeInteger(y) || y < TERM_YEARS.min || y > TERM_YEARS.max) {
-    errors.push(`תקופת הליסינג חייבת להיות מספר שלם של שנים בין ${TERM_YEARS.min} ל-${TERM_YEARS.max}`);
+  const bounds = rental ? RENTAL_TERM_YEARS : TERM_YEARS;
+  if (!Number.isSafeInteger(y) || y < bounds.min || y > bounds.max) {
+    errors.push(`תקופת ${rental ? 'השכירות' : 'הליסינג'} חייבת להיות מספר שלם של שנים בין ${bounds.min} ל-${bounds.max}`);
+  }
+  if (rental) {
+    const r = s.rent || {};
+    if (!Number.isSafeInteger(r.annualAmount) || r.annualAmount <= 0 || r.annualAmount > MAX_ANNUAL_RENT) errors.push('דמי השכירות השנתיים אינם תקינים');
+    if (s.backupOption && s.backupOption.offered) errors.push('בהסכם שכירות לא מוצעת תוספת ממיר היברידי וסוללות');
+  } else if (s.rent !== undefined) {
+    errors.push('דמי שכירות שייכים להסכם שכירות בלבד');
   }
 
   // ── the system, by the sales quote's rules ──
@@ -202,8 +239,8 @@ function validateLeaseState(state) {
 }
 
 const api = {
-  LEASE_VERSION, TERM_YEARS, ROOF_TYPES, BATTERY,
-  emptyLeaseState, validateLeaseState, normalizeLeaseKnobs, leaseKnobChoices, backupPrice,
+  LEASE_VERSION, TERM_YEARS, RENTAL_TERM_YEARS, MODELS, ROOF_TYPES, BATTERY,
+  leaseModel, isRental, emptyLeaseState, validateLeaseState, normalizeLeaseKnobs, leaseKnobChoices, backupPrice,
   panelCount, systemTypeLabel, defaultBackupPrices, engineVat,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
