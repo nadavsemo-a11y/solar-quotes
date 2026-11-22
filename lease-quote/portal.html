@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>הפקת הסכם ליסינג סולארי | SEMO A.G.S</title>
+<title>הפקת הסכם ליסינג / שכירות גג סולארי | SEMO A.G.S</title>
 <!--
   lease-quote/portal.html — authoring page for residential solar LEASING agreements.
   Reuses the trunk endpoints only: /q/hubspot/search (contact pull), /q/data/:id (load a solar sales
@@ -14,6 +14,10 @@
   the lease term, and whether to offer the optional backup upgrade (hybrid inverter + batteries) at
   the sales price book's prices. The agreement preview is rendered by the SAME module the Worker
   signs with (lease-agreement.js).
+  TWO MODELS (lease.model): «ליסינג» — the system passes to the customer at the end of the term;
+  «שכירות גג» — the system stays SEMO's for the whole IEC term and SEMO pays an annual rent
+  (rental-terms.js). ?model=rental opens the page on the rental model (the portal toolbar's
+  «הצעת שכירות גג» button).
 -->
 <link rel="icon" type="image/png" href="https://nadavsemo-a11y.github.io/solar-quotes/ags-mark.png">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -67,8 +71,17 @@ input[readonly]{background:#f1f5f9;color:var(--ink-500)}
 <div class="wrap">
   <div class="topbar">
     <img src="https://nadavsemo-a11y.github.io/solar-quotes/ags-logo.png" alt="A.G.S">
-    <h1>הסכם ליסינג למערכת סולארית ביתית</h1>
+    <h1 id="pageTitle">הסכם ליסינג למערכת סולארית ביתית</h1>
     <a href="../index.html">← לפורטל ההצעות</a>
+  </div>
+
+  <!-- 0. MODEL -->
+  <div class="card">
+    <h2><span class="bar"></span>מודל ההסכם</h2>
+    <div class="radios" id="modelRadios">
+      <label><input type="radio" name="model" value="ownership" checked onchange="onModel()">ליסינג — המערכת עוברת ללקוח בתום התקופה</label>
+      <label><input type="radio" name="model" value="rental" onchange="onModel()">שכירות גג — המערכת בבעלות סמו לכל תקופת חברת החשמל</label>
+    </div>
   </div>
 
   <!-- 1. CUSTOMER -->
@@ -109,8 +122,8 @@ input[readonly]{background:#f1f5f9;color:var(--ink-500)}
     </div>
   </div>
 
-  <!-- 3. OPTIONAL BACKUP — the only money in a lease, paid by the customer, chosen on the link -->
-  <div class="card">
+  <!-- 3. OPTIONAL BACKUP — the only money in a lease, paid by the customer, chosen on the link (not on a rental) -->
+  <div class="card" id="backupCard">
     <h2><span class="bar"></span>תוספת אופציונלית: ממיר היברידי וסוללות (גיבוי בהפסקת חשמל)</h2>
     <label class="check"><input id="backupOffered" type="checkbox" checked onchange="syncBackup()">להציע ללקוח את התוספת — הלקוח יבחר בקישור אם להוסיף ואת כמות המצברים (2–6)</label>
     <div id="backupPrices" class="grid3">
@@ -122,16 +135,27 @@ input[readonly]{background:#f1f5f9;color:var(--ink-500)}
     <p class="hint">ברירת המחדל: מחירון ההצעה הרגילה לפי יצרן הממיר. התוספת על חשבון הלקוח ומשולמת לפני ההתקנה; הסוללות בבעלות הלקוח, הממיר ההיברידי חלק מהמערכת.</p>
   </div>
 
-  <!-- 4. LEASE TERM -->
+  <!-- 4. TERM (and, on a rental, the annual rent) -->
   <div class="card">
-    <h2><span class="bar"></span>תקופת הליסינג</h2>
+    <h2><span class="bar"></span><span id="termTitle">תקופת הליסינג</span></h2>
     <div class="term">
       <input id="termYears" class="num" type="number" min="1" max="25" step="1" value="6" oninput="syncTerm()">
       <span class="out" id="termOut"></span>
     </div>
-    <div class="fixed">
+    <div id="rentBox" class="hidden">
+      <label for="annualRent">דמי שכירות שנתיים לבעל הנכס (₪, שלם) <span class="req">*</span></label>
+      <input id="annualRent" class="num" type="number" min="1" step="100" placeholder="לדוגמה 6000" oninput="syncTerm()">
+      <p class="hint" id="rentOut"></p>
+    </div>
+    <div class="fixed" id="fixedLease">
       קבוע בהסכם (אינו ניתן לשינוי כאן): עלות הקמה 0 ₪ · דמי ליסינג 0 ₪ · תשלום חודשי לפי הצריכה הכוללת × תעריף החשמל הביתי ·
       100% מהכנסות ההזרמה לחברה בתקופה · תחזוקה על החברה · אין רכישה מוקדמת · העברת בעלות ללקוח בתום התקופה ללא תשלום.
+    </div>
+    <div class="fixed hidden" id="fixedRental">
+      קבוע בהסכם (אינו ניתן לשינוי כאן): עלות הקמה 0 ₪ · המערכת בבעלות סמו לכל התקופה · חשבון החשמל על שם סמו, והלקוח משלם לסמו מדי חודש
+      את הצריכה הכוללת × תעריף החשמל הביתי · 100% מהכנסות ההזרמה לסמו, וההכנסות ממוחות לסמו · דמי השכירות מתעדכנים לפי ההספק המותקן ותעריף ההזרמה, משולמים שנה בדיעבד ובקיזוז חובות הלקוח · שכירות בלתי מוגנת · סמו רשאית לסיים בכל עת בהודעה של 30 יום · פיצוי מוסכם על פגיעה בפעולת המערכת ·
+      זכות לרשום הערת אזהרה על הנכס · מכירת הנכס מותנית בהצטרפות הקונה · אין רכישה של המערכת · בתום התקופה סמו בוחרת: פירוק או העברה ללקוח ללא תשלום ·
+      ללא תוספת סוללות.
     </div>
   </div>
 
@@ -164,6 +188,7 @@ input[readonly]{background:#f1f5f9;color:var(--ink-500)}
 <script src="../quote-engine.js"></script>
 <script src="./lease-validate.js"></script>
 <script src="./lease-assets.js"></script>
+<script src="./rental-terms.js"></script>
 <script src="./lease-agreement.js"></script>
 <script src="./lease-public.js"></script>
 <script>
@@ -194,11 +219,25 @@ function roofVal(){var r=document.querySelector('input[name="roof"]:checked');re
 function setRoof(v){document.querySelectorAll('input[name="roof"]').forEach(function(r){r.checked=(r.value===v);});}
 
 function syncPanels(){ $('panelCount').value=LeaseValidate.panelCount({kw:numVal('sysKW'),panelW:numVal('panelW')})||''; }
-function syncTerm(){ var y=intVal('termYears'); $('termOut').textContent=(y>0)?(LeaseAgreement.yearsHe(y)+' · '+(y*12)+' חודשים'):''; }
+function modelVal(){var r=document.querySelector('input[name="model"]:checked');return r&&r.value==='rental'?'rental':'ownership';}
+function setModel(m){document.querySelectorAll('input[name="model"]').forEach(function(r){r.checked=(r.value===m);});}
+// Switching the model resets the term to that model's default and shows that model's fields.
+function onModel(keepTerm){
+  var rental=modelVal()==='rental';
+  var b=rental?LeaseValidate.RENTAL_TERM_YEARS:LeaseValidate.TERM_YEARS;
+  $('pageTitle').textContent=rental?RentalTerms.RENTAL_TITLE:LeaseAgreement.TITLE;
+  $('termTitle').textContent=rental?'תקופת השכירות (תקופת ההסדר מול חברת החשמל) ודמי השכירות':'תקופת הליסינג';
+  $('termYears').min=b.min;$('termYears').max=b.max;if(!keepTerm)$('termYears').value=b.default;
+  $('rentBox').classList.toggle('hidden',!rental);$('fixedRental').classList.toggle('hidden',!rental);$('fixedLease').classList.toggle('hidden',rental);
+  $('backupCard').classList.toggle('hidden',rental);
+  syncTerm();syncBackup();
+}
+function syncTerm(){ var y=intVal('termYears'); $('termOut').textContent=(y>0)?(LeaseAgreement.yearsHe(y)+' · '+(y*12)+' חודשים'):'';
+  var r=intVal('annualRent'); $('rentOut').textContent=(modelVal()==='rental'&&r>0&&y>0)?('בהסכם: '+LeaseAgreement.ils(r)+' לשנה · סה"כ לכל התקופה '+LeaseAgreement.ils(r*y)):''; }
 function setBackupPrices(p){ $('hybridPrice').value=p.hybridInverterPrice; $('battFP').value=p.batteryFirstPrice; $('battEP').value=p.batteryAdditionalPrice; }
 function onInverter(){ setBackupPrices(LeaseValidate.defaultBackupPrices(val('inv'))); syncBackup(); }
 function syncBackup(){
-  var on=$('backupOffered').checked; $('backupPrices').style.opacity=on?'1':'.45'; $('backupTable').innerHTML='';
+  var on=$('backupOffered').checked&&modelVal()!=='rental'; $('backupPrices').style.opacity=on?'1':'.45'; $('backupTable').innerHTML='';
   if(!on)return;
   var st=buildState(); var v=LeaseValidate.validateLeaseState(st);
   if(!(st.backupOption.hybridInverterPrice>0&&st.backupOption.batteryFirstPrice>0&&st.backupOption.batteryAdditionalPrice>0))return;
@@ -209,16 +248,20 @@ function syncBackup(){
 
 function buildState(){
   var c=ClientDetails.getClientDetailsValues(cdMount);
-  return {
+  var rental=modelVal()==='rental';
+  var st={
     type:'lease', leaseVersion:LeaseValidate.LEASE_VERSION,
     customer:{ name:c.name, phone:c.phone, email:c.email, address:c.address, city:c.city, date:c.date, note:'', hubspotId:_hsContactId||'' },
     system:{ kw:numVal('sysKW'), acKW:numVal('sysAC'), panelW:intVal('panelW'), roof:roofVal(), roofArea:numVal('roofArea'), inv:val('inv') },
-    lease:{ termYears:intVal('termYears') },
+    // An ownership lease carries no `model` key — the shape every lease had before the rental model.
+    lease:rental?{ model:'rental', termYears:intVal('termYears') }:{ termYears:intVal('termYears') },
     property:{ parcel:val('parcel') },
-    backupOption:{ offered:$('backupOffered').checked, hybridInverterPrice:intVal('hybridPrice'), batteryFirstPrice:intVal('battFP'), batteryAdditionalPrice:intVal('battEP') },
+    backupOption:{ offered:rental?false:$('backupOffered').checked, hybridInverterPrice:intVal('hybridPrice'), batteryFirstPrice:intVal('battFP'), batteryAdditionalPrice:intVal('battEP') },
     vatRate:LeaseValidate.engineVat(),
     sourceQuoteId:_sourceQuoteId||'',
   };
+  if(rental)st.rent={ annualAmount:intVal('annualRent') };
+  return st;
 }
 
 function showValidation(v){
@@ -268,8 +311,10 @@ async function loadSource(){
       var y=s.system||{};
       $('sysKW').value=y.kw;$('sysAC').value=y.acKW;$('roofArea').value=y.roofArea;setRoof(y.roof);$('inv').value=y.inv;$('panelW').value=y.panelW;
       var o=s.backupOption||{};$('backupOffered').checked=!!o.offered;setBackupPrices(o);
+      setModel(LeaseValidate.leaseModel(s));onModel(true);
       $('termYears').value=(s.lease&&s.lease.termYears)||6;$('parcel').value=(s.property&&s.property.parcel)||'';
-      msg.textContent='הסכם הליסינג נטען — עדכנו את התאריך לפני יצירת קישור חדש';
+      if(s.rent)$('annualRent').value=s.rent.annualAmount;
+      msg.textContent=(LeaseValidate.isRental(s)?'הסכם השכירות':'הסכם הליסינג')+' נטען — עדכנו את התאריך לפני יצירת קישור חדש';
     } else if(!s.type||s.type==='quote'||s.type==='solar'){
       // A solar SALES quote: the customer, the system and the roof as the seller entered them, and the
       // hybrid-inverter / battery prices that quote used. Its price per kW is irrelevant to a lease.
@@ -305,12 +350,14 @@ async function save(){
       fetch(WORKER+'/q/hubspot/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hsBody)});
     }catch(e){/* best-effort: never blocks the link */}
     var name=st.customer.name||'לקוח יקר';
-    $('waLink').href='https://wa.me/?text='+encodeURIComponent('שלום '+name+',\nמצורף הסכם הליסינג למערכת הסולארית לעיון וחתימה דיגיטלית:\n'+link);
+    $('waLink').href='https://wa.me/?text='+encodeURIComponent('שלום '+name+',\nמצורף '+(LeaseValidate.isRental(st)?'הסכם שכירות הגג':'הסכם הליסינג')+' למערכת הסולארית לעיון וחתימה דיגיטלית:\n'+link);
     btn.disabled=false;
   }catch(e){msg.className='msg err';msg.textContent='שגיאת רשת';btn.disabled=false;}
 }
 function copyLink(){var t=$('resultLink').textContent;navigator.clipboard&&navigator.clipboard.writeText(t);}
-onInverter();syncPanels();syncTerm();
+onInverter();syncPanels();
+try{if(new URLSearchParams(location.search).get('model')==='rental')setModel('rental');}catch(e){}
+onModel();
 </script>
 </body>
 </html>
