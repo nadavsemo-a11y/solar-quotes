@@ -457,6 +457,9 @@ const QuoteEngine = (() => {
       battExtraPrice = 6500,
       premiumPanel = 100,
       usdRate = 3.65,
+      // The panels' $ per W DC stated by the USD-linkage note (shared/upgrade-pricing.js
+      // panelUsdPerW is the source; tests/panel-usd.test.js fails if this fallback drifts).
+      panelUsdPerW = 0.17,
       meterPanelPrice = 2500,
       extras = [],
       tariffOverrideState = null,
@@ -508,7 +511,7 @@ const QuoteEngine = (() => {
       price, priceVAT, batteryPrice,
       // Present only on a deal, so the engine output of every other quote is unchanged.
       ...(discount > 0 ? { listPrice, dealDiscount: discount } : {}),
-      premiumPanelNIS, premiumPanel, usdRate,
+      premiumPanelNIS, premiumPanel, usdRate, panelUsdPerW,
       // תוצאות טכניות
       annualKwh, clipping, breaker,
       // שלבי תשלום
