@@ -144,7 +144,7 @@ class QuoteUI {
     'note-7':  { section: 'הערות והגבלות', text: 'באחריות הלקוח לדאוג לנקודת תקשורת אלחוטית או קווית במקום בו יותקן הממיר.' },
     'note-8':  { section: 'הערות והגבלות', text: 'חברת סמו א.ג.ס בע"מ איננה אחראית למקרה של סירוב חברת החשמל, הרשות המקומית, רמ"י או כל גורם שלישי אחר אשר עלול שלא לאשר ו/או לעכב את הקמת המתקן.' },
     'note-9':  { section: 'הערות והגבלות', text: 'חברת סמו א.ג.ס בע"מ איננה אחראית לתעריף ייצור החשמל שיקבע לצרכן.' },
-    'note-10': { section: 'הערות והגבלות', text: '<strong>שווי הפאנלים — 170$ לקילוואט DC — צמוד לשער הדולר נכון ליום ההצעה.</strong>' },
+    'note-10': { section: 'הערות והגבלות', text: '<strong>שווי הפאנלים — {{panelUsdPerKwp}}$ לקילוואט DC — צמוד לשער הדולר נכון ליום ההצעה.</strong>' },
     'note-11': { section: 'הערות והגבלות', text: 'הזמנת העבודה שתופק מהווה אישרור להסכם לעלות הפרויקט המדויקת בהתאם לפריסת הפאנלים המאושרת והמפרט המוסכם ועל בסיס המחיר שמפורט בהצעת המחיר.' },
     'note-12': { section: 'הערות והגבלות', text: 'תוקף ההצעה — 14 יום.' },
   };
@@ -637,6 +637,8 @@ class QuoteUI {
     const invBook = UpgradePricing.resolveInverterDefaults(get('inv'));
     const premiumPanel = parseFloat(get('premiumPanelPrice')) || 0;
     const usdRate      = parseFloat(get('usdRate')) || inputDefaults.usdRate;
+    // The ONE place the panels' $/W enters a quote; the note and the dashboard charge derive from it.
+    const panelUsdPerW = UpgradePricing.panelUsdPerWOf({ panelUsdW: get('panelUsdPerW') });
 
     // Single-line customer fields are trimmed and whitespace-collapsed here, at the ONE point they
     // enter the quote. A stray double space is invisible in the input but would be frozen into the
@@ -676,6 +678,7 @@ class QuoteUI {
       battExtraPrice:  parseFloat(get('battExtraPrice'))   || invBook.batteryAdditional,
       premiumPanel,
       usdRate,
+      panelUsdPerW,
       meterPanelPrice: parseFloat(get('meterPanelPrice'))  || 0,
       evModel:         get('evModel'),
 
@@ -1913,6 +1916,7 @@ class QuoteUI {
       catalogVersionId: this._catalog ? this._catalog.versionId : undefined,
       battFP: get('battFirstPrice'), battEP: get('battExtraPrice'),
       premP: get('premiumPanelPrice'), usdRate: get('usdRate'),
+      panelUsdW: String(UpgradePricing.panelUsdPerWOf({ panelUsdW: get('panelUsdPerW') })),
       meterP: get('meterPanelPrice'),
       evM: get('evModel'),
       // extras — dynamic: scans all items from config so new extras are auto-included
@@ -1952,6 +1956,8 @@ class QuoteUI {
     // catalog. (Switching the inverter afterwards is an explicit act and does apply new defaults.)
     set('battFirstPrice', s.battFP); set('battExtraPrice', s.battEP);
     set('premiumPanelPrice', s.premP); set('usdRate', s.usdRate);
+    // A quote saved before the field existed stated the default — show exactly that.
+    set('panelUsdPerW', typeof UpgradePricing !== 'undefined' ? String(UpgradePricing.panelUsdPerWOf(s)) : s.panelUsdW);
     set('meterPanelPrice', s.meterP);
     set('evModel', s.evM);
     set('clientEmail', s.email);
@@ -2078,6 +2084,7 @@ class QuoteUI {
       '{{carKm}}': carKm,
       '{{panelW}}': String(d.panelW),
       '{{inv}}': d.inv,
+      '{{panelUsdPerKwp}}': UpgradePricing.panelUsdPerKwpLabel(d.panelUsdPerW),
     };
 
     const grouped = {};
