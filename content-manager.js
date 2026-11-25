@@ -367,6 +367,7 @@ const ContentManager = (() => {
       '{{panelW}}': String(d.panelW),
       '{{panelCount}}': String(d.panelCount),
       '{{inv}}': d.inv,
+      '{{panelUsdPerKwp}}': (globalThis.UpgradePricing ? globalThis.UpgradePricing.panelUsdPerKwpLabel(d.panelUsdPerW) : String(Math.round((d.panelUsdPerW || 0.17) * 10000) / 10)),
     };
     for (const [ph, val] of Object.entries(map)) {
       text = text.split(ph).join(val);
