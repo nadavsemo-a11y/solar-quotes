@@ -54,6 +54,9 @@ const UpgradePricing = (() => {
     meterPanelPrice: 2500,
     premiumPanelUsd: 100,
     usdRate: 3.09,
+    // The panels' dollar value the quote's USD-linkage note states, per W DC (owner 2026-11-25).
+    // The note's "N$ לקילוואט DC" and the dashboard's linkage charge are both derived from it.
+    panelUsdPerW: 0.17,
   };
 
   // ── the upgrade catalog ─────────────────────────────────────────────────────────────────────
@@ -97,6 +100,22 @@ const UpgradePricing = (() => {
 
   /** Portal input defaults for a fresh quote form. */
   function getNewQuoteInputDefaults() { return { ...NEW_QUOTE_INPUT_DEFAULTS }; }
+
+  /**
+   * The panel value ($ per W DC) a quote STATE carries (`panelUsdW`). A quote saved before the field
+   * existed, or with a value outside (0, 1], is the default — what every quote stated until now.
+   */
+  function panelUsdPerWOf(state) {
+    const v = parseFloat(state && state.panelUsdW);
+    return Number.isFinite(v) && v > 0 && v <= 1 ? Math.round(v * 10000) / 10000 : NEW_QUOTE_INPUT_DEFAULTS.panelUsdPerW;
+  }
+
+  /** $ per W → the "$ per kWp" the note prints: 0.17 → "170", 0.185 → "185". */
+  function panelUsdPerKwpLabel(perW) {
+    const v = parseFloat(perW);
+    const w = Number.isFinite(v) && v > 0 ? v : NEW_QUOTE_INPUT_DEFAULTS.panelUsdPerW;
+    return String(Math.round(w * 10000) / 10);
+  }
 
   /**
    * The per-inverter price book for one manufacturer.
@@ -307,6 +326,8 @@ const UpgradePricing = (() => {
     legacyUpgradeIds,
     isLegacyUpgrade,
     getNewQuoteInputDefaults,
+    panelUsdPerWOf,
+    panelUsdPerKwpLabel,
     getInverterPricing,
     hasInverterPricing,
     resolveInverterDefaults,
