@@ -70,7 +70,11 @@ input[readonly]{background:#f1f5f9;color:var(--ink-500)}
   <div class="topbar">
     <img src="https://nadavsemo-a11y.github.io/solar-quotes/ags-logo.png" alt="A.G.S">
     <h1 id="pageTitle">הסכם ליסינג למערכת סולארית ביתית</h1>
-    <a href="../index.html">← לפורטל ההצעות</a>
+    <a href="../index.html" id="portalHomeLink">← לפורטל ההצעות</a>
+    <script>
+    // Served at s-a.gs/portal/lease, "back" is the signed-in portal — not the static site's copy.
+    try { if (location.origin === 'https://s-a.gs') document.getElementById('portalHomeLink').href = 'https://s-a.gs/portal'; } catch (e) {}
+    </script>
   </div>
 
   <!-- 0. MODEL -->

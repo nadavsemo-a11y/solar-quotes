@@ -1394,7 +1394,10 @@ ${url}`;
       const nameParts = (vals.name || '').trim().split(/\s+/);
       const firstname = nameParts[0] || '';
       const lastname = nameParts.slice(1).join(' ') || '';
-      const syncRes = await fetch('https://s-a.gs/q/hubspot/sync', {
+      // The page's API base, like every other call: same-origin at s-a.gs/portal (the seller's
+      // session travels with it) and the CRM's proxy at crm.s-a.gs. The route is not public.
+      const apiBase = (typeof window !== 'undefined' && window.__SEMO_API_BASE__) || 'https://s-a.gs';
+      const syncRes = await fetch(apiBase + '/q/hubspot/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
