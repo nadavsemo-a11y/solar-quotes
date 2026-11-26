@@ -783,10 +783,6 @@ body { font-family: 'Heebo', 'Assistant', system-ui, sans-serif; background: var
   .extra-item { flex-direction:column; align-items:flex-start; gap:8px; }
   .extra-right { width:100%; justify-content:flex-end; }
 
-  /* Share bar */
-  #share-bar { padding:12px 14px; }
-  #share-bar > div:last-of-type { flex-direction:column; }
-  #share-bar button { width:100%; justify-content:center; }
 }
 
 /* =====================================================================
@@ -1614,7 +1610,7 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
       </div>
     </div>
 
-    <button class="gen-btn" onclick="generateQuote()">צור הצעת מחיר מלאה ←</button>  </div>
+    <button class="gen-btn" onclick="generateQuote()">תצוגה מקדימה ←</button>  </div>
 </div>
 
 <!-- ==================== QUOTE ==================== -->
@@ -1625,25 +1621,6 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
       <button class="btn-sm btn-primary" onclick="scrollToSign()">לחתימה דיגיטלית</button>
       <button class="btn-sm btn-outline" onclick="window.print()">הדפס / שמור PDF</button>
     </div>
-  </div>
-  <!-- Share bar — shown after quote generation in portal mode -->
-  <div id="share-bar" style="display:none;background:white;border-bottom:3px solid #22c55e;padding:20px 24px;direction:rtl">
-    <div id="share-loading" style="display:none;font-size:13px;font-weight:700;color:#64748b;text-align:center;padding:10px">⏳ יוצר לינק קצר...</div>
-    <div id="share-ready" style="display:none">
-      <div style="font-size:14px;font-weight:800;color:#15803d;margin-bottom:14px">✅ ההצעה מוכנה לשליחה ללקוח</div>
-      <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:9px;padding:9px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
-        <input id="share-url" type="text" readonly style="flex:1;border:none;background:transparent;font-size:12px;direction:ltr;font-family:monospace;color:#334155;outline:none">
-        <button onclick="copyShareUrl()" id="copy-btn" style="padding:5px 12px;background:#22c55e;color:white;border:none;border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit">📋 העתק</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
-        <button onclick="shareWhatsApp()" style="padding:12px;background:#25D366;color:white;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">WhatsApp</button>
-        <button onclick="openShareUrl()" style="padding:12px;background:#0A1628;color:white;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">👁 תצוגה מקדימה</button>
-        <button onclick="window.print()" style="padding:12px;background:#f59e0b;color:white;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">הורד PDF</button>
-        <button onclick="shareEmail()" style="padding:12px;background:#6366f1;color:white;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">✉️ שלח במייל</button>
-      </div>
-      <div id="copy-confirm" style="display:none;margin-top:8px;font-size:12px;color:#15803d;font-weight:700;text-align:center">✔ הלינק הועתק ללוח!</div>
-    </div>
-    <div id="share-error" style="display:none;font-size:12px;color:#dc2626;margin-top:6px"></div>
   </div>
   <div class="qpage" id="quotePage"></div>
 </div>
@@ -1854,6 +1831,8 @@ if (window.__QUOTE_DATA__ || location.hash.length > 2) {
 <script src="quote-engine.js"></script>
 <script src="url-shortener.js"></script>
 <script src="storage-service.js"></script>
+<!-- The preview-and-send screen shared by every quote type. -->
+<script src="shared/quote-issue-panel.js"></script>
 <!-- signature-service.js classic load replaced by ESM module below
      (installs window.SignatureService with includeDocumentHtml opt-in). -->
 <script src="template-engine.js"></script>
@@ -1900,10 +1879,6 @@ function switchPlan(key, el)           { _quoteUI && _quoteUI.switchPlan(key, el
 function updatePreview()               { _quoteUI && _quoteUI._updatePreview(); }
 function refreshQuoteFinancials()      { _quoteUI && _quoteUI._refreshQuoteFinancials(); }
 function toggleTip(id, e)              { _quoteUI && _quoteUI._toggleTip(id, e); }
-function copyShareUrl()                { _quoteUI && _quoteUI.copyShareUrl(); }
-function openShareUrl()                { _quoteUI && _quoteUI.openShareUrl(); }
-function shareWhatsApp()               { _quoteUI && _quoteUI.shareWhatsApp(); }
-function shareEmail()                  { _quoteUI && _quoteUI.shareEmail(); }
 function submitSig()                   { _quoteUI && _quoteUI.submitSig().catch(e => { console.error('[SIG] uncaught:', e); alert('שגיאה: ' + e.message); }); }
 function clearSigCanvas()              { _quoteUI && _quoteUI.clearSigCanvas(); }
 function openPrintDocument()           { _quoteUI && _quoteUI.openPrintDocument(); }
@@ -2367,7 +2342,7 @@ function ceResetDefaults() {
 </script>
 
 <!-- Unified Version Display -->
-<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.06.20.00</div>
+<div id="app-version" style="position:fixed;bottom:8px;right:12px;font-size:10px;color:rgba(0,0,0,0.25);letter-spacing:0.3px;z-index:9999;pointer-events:none;font-family:'Segoe UI',sans-serif">Version 1.06.24.00</div>
 
 </body>
 </html>

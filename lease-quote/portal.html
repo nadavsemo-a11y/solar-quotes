@@ -60,11 +60,9 @@ input[readonly]{background:#f1f5f9;color:var(--ink-500)}
 .msg.err{color:#c0392b;font-weight:700}
 .msg ul{margin:4px 0;padding-inline-start:18px}
 .warn{color:#8a5a00}
-.result a{font-family:'JetBrains Mono',monospace;font-weight:700;word-break:break-all}
 .hidden{display:none}
 #hubResults div{padding:8px;border:1px solid var(--ink-200);border-radius:4px;margin-top:6px;cursor:pointer;font-size:13px}
 #hubResults div:hover{background:var(--mint-soft)}
-#preview{display:block;width:100%;height:75vh;border:1.5px solid var(--ink-200);margin-top:12px;background:#EFEFEC}
 </style>
 </head>
 <body>
@@ -159,23 +157,14 @@ input[readonly]{background:#f1f5f9;color:var(--ink-500)}
     </div>
   </div>
 
-  <!-- 5. PREVIEW + CREATE -->
+  <!-- 5. PREVIEW — the shared preview-and-send screen (shared/quote-issue-panel.js) -->
   <div class="card">
-    <h2><span class="bar"></span>תצוגה מקדימה ויצירת קישור</h2>
+    <h2><span class="bar"></span>תצוגה מקדימה ושליחה</h2>
+    <p class="hint" style="margin:0 0 10px">ההסכם יוצג בדיוק כפי שהלקוח יראה אותו. הקישור נוצר רק בלחיצה על «צור הצעה» או על שליחה במסך התצוגה המקדימה.</p>
     <div class="btn-row">
-      <button class="btn" type="button" onclick="preview()">תצוגה מקדימה של ההסכם</button>
-      <button id="saveBtn" class="btn btn-mint" type="button" onclick="save()">צור קישור לחתימה</button>
+      <button class="btn btn-mint" type="button" onclick="openPreview()">תצוגה מקדימה ←</button>
     </div>
     <div id="saveMsg" class="msg"></div>
-    <iframe id="preview" class="hidden" title="תצוגה מקדימה" sandbox="allow-same-origin"></iframe>
-    <div id="result" class="result hidden">
-      <p>הקישור להסכם:</p>
-      <a id="resultLink" href="#" target="_blank" rel="noreferrer"></a>
-      <div class="btn-row">
-        <button class="btn" type="button" onclick="copyLink()">העתק קישור</button>
-        <a id="waLink" class="btn" target="_blank" rel="noreferrer">WhatsApp</a>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -191,8 +180,11 @@ input[readonly]{background:#f1f5f9;color:var(--ink-500)}
 <script src="./rental-terms.js"></script>
 <script src="./lease-agreement.js"></script>
 <script src="./lease-public.js"></script>
+<!-- The preview-and-send screen shared by every quote type. -->
+<script src="../shared/quote-issue-panel.js"></script>
 <script>
-const WORKER='https://s-a.gs';
+// Production origin; `window.__SEMO_API_BASE__` overrides it for a local run, as in the solar portal.
+const WORKER=(typeof window!=='undefined'&&window.__SEMO_API_BASE__)||'https://s-a.gs';
 const cdMount=document.getElementById('clientDetailsMount');
 // The HubSpot identity of whoever is loaded. Carried TOP-LEVEL into /q/hubspot/sync, which is what
 // stops every agreement from minting a duplicate contact.
@@ -271,12 +263,30 @@ function showValidation(v){
   return false;
 }
 
-function preview(){
+// ── preview + issue: the shared screen. Nothing is saved until the seller creates or sends there. ──
+function encodeState(s){return btoa(unescape(encodeURIComponent(JSON.stringify(s))));}
+function openPreview(){
   var st=buildState();
   if(!showValidation(LeaseValidate.validateLeaseState(st)))return;
-  var f=$('preview');f.classList.remove('hidden');
-  // The preview shows the option as the customer first sees it ("none"); Annex A explains the offer.
-  f.srcdoc=LeaseAgreement.renderAgreement(st,{id:'PREVIEW',knobs:{backupBatteries:0},reviewDraft:true});
+  var rental=LeaseValidate.isRental(st);
+  var doc=rental?'הסכם שכירות הגג':'הסכם הליסינג';
+  var name=st.customer.name||'לקוח יקר';
+  var text=function(link){return 'שלום '+name+',\nמצורף '+doc+' למערכת הסולארית לעיון וחתימה דיגיטלית:\n'+link;};
+  QuoteIssuePanel.open({
+    apiBase:WORKER,
+    typeLabel:rental?RentalTerms.RENTAL_TITLE:LeaseAgreement.TITLE,
+    encodedState:encodeState(st),
+    customer:{name:st.customer.name,phone:st.customer.phone,email:st.customer.email},
+    whatsappText:text,
+    emailSubject:doc+' למערכת סולארית — SEMO A.G.S',
+    emailText:function(link){return text(link)+'\n\nבברכה,\nSEMO A.G.S';},
+    // The CRM record: contact + note + follow-up task, with the contact id top-level so no duplicate
+    // contact is minted. Best-effort — the panel never lets it hide the link.
+    onIssued:function(r){
+      var hsBody=LeasePublic.buildLeaseHubspotSyncPayload(st,{quoteId:r.id,quoteUrl:r.url});
+      return fetch(WORKER+'/q/hubspot/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hsBody)});
+    }
+  });
 }
 
 // ── HubSpot (trunk /q/hubspot/search) ──
@@ -332,29 +342,6 @@ async function loadSource(){
   }catch(e){msg.textContent='שגיאה בטעינה';}
 }
 
-// ── save (trunk /q/save; the Worker re-validates through the lease quote-type) ──
-function encodeState(s){return btoa(unescape(encodeURIComponent(JSON.stringify(s))));}
-async function save(){
-  var st=buildState();
-  if(!showValidation(LeaseValidate.validateLeaseState(st)))return;
-  var btn=$('saveBtn');btn.disabled=true;var msg=$('saveMsg');msg.className='msg';msg.textContent='שומר…';
-  try{
-    var r=await fetch(WORKER+'/q/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:encodeState(st)})});
-    var j=await r.json();
-    if(!r.ok){msg.className='msg err';msg.textContent='שגיאה: '+(j.error||r.status)+(j.details?' — '+j.details.join('; '):'');btn.disabled=false;return;}
-    msg.textContent='';
-    var link=j.url;$('result').classList.remove('hidden');
-    var a=$('resultLink');a.href=link;a.textContent=link;
-    try{
-      var hsBody=LeasePublic.buildLeaseHubspotSyncPayload(st,{quoteId:j.id,quoteUrl:link});
-      fetch(WORKER+'/q/hubspot/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hsBody)});
-    }catch(e){/* best-effort: never blocks the link */}
-    var name=st.customer.name||'לקוח יקר';
-    $('waLink').href='https://wa.me/?text='+encodeURIComponent('שלום '+name+',\nמצורף '+(LeaseValidate.isRental(st)?'הסכם שכירות הגג':'הסכם הליסינג')+' למערכת הסולארית לעיון וחתימה דיגיטלית:\n'+link);
-    btn.disabled=false;
-  }catch(e){msg.className='msg err';msg.textContent='שגיאת רשת';btn.disabled=false;}
-}
-function copyLink(){var t=$('resultLink').textContent;navigator.clipboard&&navigator.clipboard.writeText(t);}
 onInverter();syncPanels();
 try{if(new URLSearchParams(location.search).get('model')==='rental')setModel('rental');}catch(e){}
 onModel();

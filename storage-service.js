@@ -5,8 +5,9 @@
  *   - encode / decode של state (base64 JSON)
  *   - שמירה ל-Cloudflare KV דרך Worker
  *   - טעינה מ-URL hash או מ-Worker
- *   - בניית קישורי שיתוף (WhatsApp, Email, fallback)
- *   - fallback URL (ללא Worker, embed מלא ב-hash)
+ *
+ * השליחה ללקוח (וואטסאפ / מייל / העתקת קישור) אינה כאן: היא במסך התצוגה המקדימה המשותף לכל סוגי
+ * ההצעות — shared/quote-issue-panel.js.
  *
  * תלויות:
  *   - url-shortener.js → UrlShortener (מודול קיצור כתובות עצמאי)
@@ -96,21 +97,6 @@ class StorageService {
     return json.url;
   }
 
-  /**
-   * buildFallbackUrl(state, baseUrl?)
-   * מייצר URL עם ה-state מוטבע ב-hash — ללא Worker.
-   * שימושי כ-fallback אם השרת לא זמין.
-   *
-   * @param {object} state
-   * @param {string} [baseUrl]  — ברירת מחדל: ה-URL הנוכחי
-   * @returns {string}
-   */
-  buildFallbackUrl(state, baseUrl) {
-    const base    = (baseUrl || window.location.href).split('#')[0];
-    const encoded = this.encode(state);
-    return `${base}#q=${encoded}`;
-  }
-
   // ── Load ───────────────────────────────────────────────────────────────
 
   /**
@@ -143,65 +129,6 @@ class StorageService {
    */
   async load() {
     return this.loadFromHash();
-  }
-
-  // ── Share Links ────────────────────────────────────────────────────────
-
-  /**
-   * buildWhatsAppUrl(shortUrl, clientName, clientPhone, dcKW)
-   * בונה קישור WhatsApp עם הודעה מוכנה.
-   * אם יש מספר טלפון — פותח צ'אט ישיר, אחרת share כללי.
-   *
-   * @param {string} shortUrl
-   * @param {string} clientName
-   * @param {string} clientPhone   — מספר כולל/ללא קידומת
-   * @param {string|number} dcKW
-   * @returns {string}
-   */
-  buildWhatsAppUrl(shortUrl, clientName, clientPhone, dcKW) {
-    const name  = clientName  || 'לקוח יקר';
-    const kw    = dcKW        || '';
-    const phone = String(clientPhone || '').replace(/\D/g, '');
-
-    const msg = encodeURIComponent(
-      `שלום ${name},\nמצורפת הצעת מחיר למערכת סולארית בהספק ${kw} kW:\n${shortUrl}`
-    );
-
-    return phone
-      ? `https://wa.me/972${phone.replace(/^0/, '')}?text=${msg}`
-      : `https://wa.me/?text=${msg}`;
-  }
-
-  /**
-   * buildEmailUrl(shortUrl, clientName, dcKW)
-   * בונה mailto: link עם נושא וגוף מוכנים.
-   *
-   * @param {string} shortUrl
-   * @param {string} clientName
-   * @param {string|number} dcKW
-   * @returns {string}
-   */
-  buildEmailUrl(shortUrl, clientName, dcKW) {
-    const name    = clientName || 'לקוח יקר';
-    const kw      = dcKW      || '';
-    const subject = encodeURIComponent(`הצעת מחיר למערכת סולארית ${kw} kW — SEMO AGS`);
-    const body    = encodeURIComponent(
-      `שלום ${name},\n\nמצורפת הצעת מחיר למערכת סולארית בהספק ${kw} kW:\n${shortUrl}\n\nבברכה,\nSEMO AGS`
-    );
-    return `mailto:?subject=${subject}&body=${body}`;
-  }
-
-  // ── Copy to Clipboard ──────────────────────────────────────────────────
-
-  /**
-   * copyToClipboard(text)
-   * מדליגט למודול url-shortener.js החיצוני.
-   *
-   * @param {string} text
-   * @returns {Promise<boolean>}
-   */
-  async copyToClipboard(text) {
-    return this.shortener.copyToClipboard(text);
   }
 }
 

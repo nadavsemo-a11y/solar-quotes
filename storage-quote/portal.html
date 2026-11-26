@@ -195,19 +195,12 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
     </div>
   </div>
 
-  <!-- 4. SAVE -->
+  <!-- 4. PREVIEW — the shared preview-and-send screen (shared/quote-issue-panel.js) -->
   <div class="card">
-    <h2><span class="bar"></span>יצירת הצעה</h2>
-    <button id="saveBtn" class="btn btn-mint" disabled onclick="save()">צור קישור להצעה</button>
+    <h2><span class="bar"></span>תצוגה מקדימה ושליחה</h2>
+    <p style="font-size:12px;color:var(--ink-500);margin:0 0 10px">ההצעה תוצג בדיוק כפי שהלקוח יראה אותה. הקישור נוצר רק בלחיצה על «צור הצעה» או על שליחה במסך התצוגה המקדימה.</p>
+    <button id="saveBtn" class="btn btn-mint" disabled onclick="openPreview()">תצוגה מקדימה ←</button>
     <div id="saveMsg" class="msg"></div>
-    <div id="result" class="result hidden">
-      <p>הקישור להצעה:</p>
-      <a id="resultLink" href="#" target="_blank"></a>
-      <div class="btn-row">
-        <button class="btn" onclick="copyLink()">העתק קישור</button>
-        <a id="waLink" class="btn" target="_blank">WhatsApp</a>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -231,8 +224,11 @@ input[type=text],input[type=tel],input[type=email],input[type=date],textarea{wid
 <script src="./storage-milestones-editor.js"></script>
 <script src="./storage-bop-editor.js"></script>
 <script src="./storage-refinance.js"></script>
+<!-- The preview-and-send screen shared by every quote type. -->
+<script src="../shared/quote-issue-panel.js"></script>
 <script>
-const WORKER='https://s-a.gs';
+// Production origin; `window.__SEMO_API_BASE__` overrides it for a local run, as in the solar portal.
+const WORKER=(typeof window!=='undefined'&&window.__SEMO_API_BASE__)||'https://s-a.gs';
 let currentState=null;
 
 // ── contact helpers (shared client-details component) ──
@@ -417,45 +413,44 @@ function showReport(res){
   document.getElementById('saveBtn').disabled=!res.ok;
 }
 
-// ── save (reuses trunk /q/save) ──
+// ── preview + issue: the shared screen. Nothing is saved until the seller creates or sends there. ──
 function encodeState(s){return btoa(unescape(encodeURIComponent(JSON.stringify(s))));}
-async function save(){
+function openPreview(){
   if(!currentState){return;}
+  const msg=document.getElementById('saveMsg');msg.textContent='';
   currentState=ContactAdapters.applyContactToStorageState(currentState,getContact());
-  if(!currentState.customer.name){document.getElementById('saveMsg').textContent='נא למלא שם לקוח';return;}
-  // Persist the negotiated milestone schedule (normalized). Block save on an invalid schedule.
-  if(!StorageMilestonesEditor.isValid(msMount)){document.getElementById('saveMsg').textContent='לוח אבני הדרך אינו תקין — תקנו לפני שמירה';return;}
+  if(!currentState.customer.name){msg.textContent='נא למלא שם לקוח';return;}
+  // The negotiated milestone schedule (normalized). An invalid schedule blocks the preview.
+  if(!StorageMilestonesEditor.isValid(msMount)){msg.textContent='לוח אבני הדרך אינו תקין — תקנו לפני ההמשך';return;}
   currentState.paymentMilestones=StorageMilestonesEditor.getSchedule(msMount);
-  // Persist (or remove) the additional-cost itemisation. An invalid breakdown BLOCKS the save — it
-  // is never silently dropped back to the single BOP line, because that would issue a quote the
-  // salesperson believes is itemised. Disabled → the key is deleted, so the quote is byte-identical
-  // to one authored before this feature existed.
+  // The additional-cost itemisation. An invalid breakdown BLOCKS — it is never silently dropped
+  // back to the single BOP line, because that would issue a quote the salesperson believes is
+  // itemised. Disabled → the key is deleted, so the quote is byte-identical to one authored before
+  // this feature existed.
   const bopV=StorageBopEditor.validation(bopMount);
-  if(!bopV.ok){document.getElementById('saveMsg').textContent='פירוט העלויות הנוספות אינו תקין — תקנו לפני שמירה';return;}
+  if(!bopV.ok){msg.textContent='פירוט העלויות הנוספות אינו תקין — תקנו לפני ההמשך';return;}
   const bopCfg=StorageBopEditor.getBreakdown(bopMount);
   if(bopCfg) currentState.bopBreakdown=bopCfg; else delete currentState.bopBreakdown;
-  const btn=document.getElementById('saveBtn');btn.disabled=true;
-  const msg=document.getElementById('saveMsg');msg.textContent='שומר…';
-  try{
-    const r=await fetch(WORKER+'/q/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:encodeState(currentState)})});
-    const j=await r.json();
-    if(!r.ok){msg.textContent='שגיאה: '+(j.error||r.status)+(j.details?' — '+j.details.join('; '):'');btn.disabled=false;return;}
-    msg.textContent='';
-    const link=j.url;document.getElementById('result').classList.remove('hidden');
-    const a=document.getElementById('resultLink');a.href=link;a.textContent=link;
-    // Generation-time HubSpot sync (contact + Note + follow-up Task) — same endpoint as solar,
-    // storage-specific wording from the shared payload builder. Best-effort: never blocks the link.
-    try{
-      const hsBody=StoragePublic.buildStorageHubspotSyncPayload(currentState,{quoteId:j.id,quoteUrl:link});
-      fetch(WORKER+'/q/hubspot/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hsBody)});
-    }catch(e){/* best-effort */}
-    const name=currentState.customer.name||'לקוח יקר';
-    const wa='https://wa.me/?text='+encodeURIComponent('שלום '+name+',\nמצורפת הצעת מחיר למערכת אגירה:\n'+link);
-    document.getElementById('waLink').href=wa;
-    btn.disabled=false;
-  }catch(e){msg.textContent='שגיאת רשת';btn.disabled=false;}
+  // The state is frozen HERE: what the screen previews is what it issues.
+  const st=JSON.parse(JSON.stringify(currentState));
+  const name=st.customer.name||'לקוח יקר';
+  const text=link=>'שלום '+name+',\nמצורפת הצעת מחיר למערכת אגירה:\n'+link;
+  QuoteIssuePanel.open({
+    apiBase:WORKER,
+    typeLabel:'הצעת מחיר — מערכת אגירה',
+    encodedState:encodeState(st),
+    customer:{name:st.customer.name,phone:st.customer.phone,email:st.customer.email},
+    whatsappText:text,
+    emailSubject:'הצעת מחיר למערכת אגירה — SEMO A.G.S',
+    emailText:link=>text(link)+'\n\nבברכה,\nSEMO A.G.S',
+    // The CRM record (contact + Note + follow-up Task) — same endpoint as solar, storage wording
+    // from the shared payload builder. Best-effort: the panel never lets it hide the link.
+    onIssued:r=>{
+      const hsBody=StoragePublic.buildStorageHubspotSyncPayload(st,{quoteId:r.id,quoteUrl:r.url});
+      return fetch(WORKER+'/q/hubspot/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(hsBody)});
+    }
+  });
 }
-function copyLink(){const t=document.getElementById('resultLink').textContent;navigator.clipboard&&navigator.clipboard.writeText(t);}
 </script>
 </body>
 </html>

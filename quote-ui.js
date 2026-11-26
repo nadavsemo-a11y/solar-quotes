@@ -1136,13 +1136,15 @@ class QuoteUI {
 
   /**
    * generateQuote(clientMode)
-   * מחשב + מרנדר את עמוד ההצעה.
-   * clientMode=true: הלקוח צופה (ללא share bar).
+   * clientMode=false (the seller's button): opens the shared preview screen — see previewQuote().
+   * clientMode=true  (the customer's legacy view): computes and renders the quote page.
    */
   async generateQuote(clientMode = false) {
-    // AUTHORING GATE. Only the salesperson's portal path is validated: a customer opening a quote
-    // signed long ago must never be blocked by rules that did not exist when it was written.
-    if (!clientMode && !this._validateNewQuote()) return;
+    // The seller's path no longer renders or saves anything here: it opens the shared preview
+    // screen, which validates first. Only the customer's legacy view (clientMode) renders below —
+    // and that one is never validated: a customer opening a quote signed long ago must not be
+    // blocked by rules that did not exist when it was written.
+    if (!clientMode) return this.previewQuote();
 
     const vals = this._getFormValues();
     const d    = QuoteEngine.calculate({
@@ -1160,18 +1162,13 @@ class QuoteUI {
     const page = document.getElementById('quotePage');
     if (page) page.innerHTML = html;
 
-    // Share bar (portal mode only)
-    if (!clientMode) await this._initShareBar(vals);
-
     document.getElementById('portal').style.display       = 'none';
     document.getElementById('quote-output').style.display = 'block';
     window.scrollTo(0, 0);
 
-    if (clientMode) {
-      this._prepareSigSection(d, vals);
-      this._initVatToggle();
-      this._initSunHoursSlider();
-    }
+    this._prepareSigSection(d, vals);
+    this._initVatToggle();
+    this._initSunHoursSlider();
 
     // ROI bar animation: defer until after initial paint, then read current
     // toggle state (avoids stale-closure race if user flipped during the delay).
@@ -1342,48 +1339,53 @@ class QuoteUI {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // SHARE BAR
+  // PREVIEW + ISSUE  (the shared screen: shared/quote-issue-panel.js)
   // ══════════════════════════════════════════════════════════════════════
 
-  async _initShareBar(vals) {
-    // Defence in depth: nothing invalid may reach KV even if a future call path skips
-    // generateQuote(). This is the last boundary before the quote becomes a customer URL.
+  /**
+   * previewQuote() — the seller's "תצוגה מקדימה".
+   *
+   * Opens the shared preview-and-send screen on the state this form describes. NOTHING is issued
+   * here: the screen shows a server-rendered draft of the customer page, and the quote is created —
+   * once — only when the seller presses create / WhatsApp / mail there. This replaced the old flow,
+   * in which pressing the form's button saved a quote (and wrote the HubSpot note and task) every
+   * time, so each correction left another stored copy behind.
+   */
+  previewQuote() {
+    // The single authoring gate. Nothing invalid may reach the server, as a draft or as a quote.
     if (!this._validateNewQuote()) return;
 
-    const bar     = document.getElementById('share-bar');
-    const loading = document.getElementById('share-loading');
-    const ready   = document.getElementById('share-ready');
-    const errDiv  = document.getElementById('share-error');
-    if (!bar) return;
-
-    bar.style.display     = 'block';
-    loading.style.display = 'block';
-    ready.style.display   = 'none';
-    if (errDiv) errDiv.style.display = 'none';
-
+    const vals  = this._getFormValues();
     const state = this._buildState(vals);
-    let shortUrl;
-    try {
-      shortUrl = await this.storage.save(state);
-      // Adopt the identities the server minted for this quote's one-time items, so a second save
-      // from the same open page describes the same lines rather than creating new ones.
-      this.adoptMintedQuoteLocalIds(this.storage.lastSaveResult && this.storage.lastSaveResult.quoteLocalItems);
-    } catch {
-      shortUrl = this.storage.buildFallbackUrl(state);
-      if (errDiv) {
-        errDiv.style.display = 'block';
-        errDiv.textContent   = '⚠️ לא ניתן ליצור לינק קצר — נוצר לינק ארוך במקום';
-      }
-    }
+    const name  = vals.name || 'לקוח יקר';
+    const email = document.getElementById('clientEmail')?.value?.trim() || '';
+    const message = (url) => `שלום ${name},
+מצורפת הצעת מחיר למערכת סולארית בהספק ${vals.kw || ''} kW:
+${url}`;
 
-    const urlInput = document.getElementById('share-url');
-    if (urlInput) urlInput.value = shortUrl;
-    loading.style.display = 'none';
-    ready.style.display   = 'block';
-
-    // Sync contact to HubSpot (best-effort, non-blocking)
-    const quoteUrl = document.getElementById('share-url')?.value || '';
-    this._syncToHubspot(vals, quoteUrl);
+    QuoteIssuePanel.open({
+      typeLabel:    'הצעת מחיר — מערכת סולארית',
+      encodedState: this.storage.encode(state),
+      // The same quote, whether or not HubSpot has answered yet: issuing a new customer's quote makes
+      // the page adopt their contact id, which changes `hsId` and nothing else about the quote.
+      stateKey:     this.storage.encode({ ...state, hsId: '' }),
+      customer:     { name: vals.name || '', phone: vals.phone || '', email },
+      whatsappText: message,
+      // The designed mail is built by the server from the SAVED quote (POST /q/email).
+      sendEmail: async ({ id, email: to }) => {
+        const result = await EmailService.sendQuoteEmail({ quoteId: id, clientEmail: to });
+        return result.success
+          ? { ok: true,  message: 'ההצעה נשלחה במייל אל ' + ((result.sentTo && result.sentTo[0]) || to) }
+          : { ok: false, message: 'המייל לא נשלח: ' + (result.error || '') };
+      },
+      onIssued: async ({ url, response }) => {
+        // Adopt the identities the server minted for this quote's one-time items, so issuing again
+        // from the same open page describes the same lines rather than creating new ones.
+        this.adoptMintedQuoteLocalIds(response && response.quoteLocalItems);
+        // The CRM record: contact + quote note + follow-up task (best-effort).
+        await this._syncToHubspot(vals, url);
+      },
+    });
   }
 
   async _syncToHubspot(vals, quoteUrl) {
@@ -1417,76 +1419,6 @@ class QuoteUI {
       const synced = await syncRes.json().catch(() => null);
       if (synced && synced.success && synced.id) window._hsContactId = String(synced.id);
     } catch { /* best-effort */ }
-  }
-
-  async copyShareUrl() {
-    const url = document.getElementById('share-url')?.value;
-    if (!url) return;
-    const ok = await this.storage.copyToClipboard(url);
-    if (ok) {
-      const conf = document.getElementById('copy-confirm');
-      const btn  = document.getElementById('copy-btn');
-      if (conf) conf.style.display = 'block';
-      if (btn)  btn.textContent    = '✔ הועתק!';
-      setTimeout(() => {
-        if (conf) conf.style.display = 'none';
-        if (btn)  btn.textContent    = '📋 העתק לינק';
-      }, 2500);
-    }
-  }
-
-  openShareUrl() {
-    const url = document.getElementById('share-url')?.value;
-    if (url) window.open(url, '_blank');
-  }
-
-  shareWhatsApp() {
-    const url   = document.getElementById('share-url')?.value;
-    const vals  = this._getFormValues();
-    const waUrl = this.storage.buildWhatsAppUrl(url, vals.name, vals.phone, vals.kw);
-    window.open(waUrl, '_blank');
-  }
-
-  async shareEmail() {
-    // One click = one send. The server sends every request it accepts (no retry, no idempotency key),
-    // so a second click while the first is in flight must not reach it.
-    if (this._emailSending) return;
-
-    // The mail is built server-side from the SAVED quote, so there must be one — and it must be the
-    // quote the share bar shows. When saving failed the bar holds the long fallback URL, which no
-    // stored record stands behind.
-    const url   = document.getElementById('share-url')?.value || '';
-    const saved = this.storage && this.storage.lastSaveResult;
-    const quoteId = saved && saved.id && saved.url === url ? saved.id : '';
-    if (!quoteId) {
-      EmailService.showToast('⚠️ ההצעה לא נשמרה בשרת — לא ניתן לשלוח במייל. יש להפיק את ההצעה מחדש', true);
-      return;
-    }
-
-    const clientMail = document.getElementById('clientEmail')?.value?.trim() || '';
-    if (!clientMail) {
-      EmailService.showToast('⚠️ יש למלא אימייל לקוח בטופס', true);
-      return;
-    }
-
-    const btn = document.getElementById('share-email-btn');
-    this._emailSending = true;
-    if (btn) btn.disabled = true;
-    try {
-      const result = await EmailService.sendQuoteEmail({ quoteId, clientEmail: clientMail });
-
-      if (result.success) {
-        EmailService.showToast('📧 ההצעה נשלחה ל-' + ((result.sentTo && result.sentTo[0]) || clientMail));
-      } else {
-        EmailService.showToast('⚠️ שגיאה בשליחה: ' + (result.error || ''), true);
-      }
-    } catch (err) {
-      console.error('shareEmail failed:', err);
-      EmailService.showToast('⚠️ שגיאה בשליחת מייל', true);
-    } finally {
-      this._emailSending = false;
-      if (btn) btn.disabled = false;
-    }
   }
 
   // ══════════════════════════════════════════════════════════════════════

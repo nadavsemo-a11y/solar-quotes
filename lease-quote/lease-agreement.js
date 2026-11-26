@@ -447,8 +447,7 @@ ol.decl{padding-inline-start:1.6em}
  * The complete frozen agreement HTML for a VALIDATED lease state (lease-validate.js).
  * @param {object} state
  * @param {object} ctx  { id: the quote id (the agreement number),
- *                        knobs?: { backupBatteries } — the customer's choice (normalizeLeaseKnobs),
- *                        reviewDraft?: boolean }
+ *                        knobs?: { backupBatteries } — the customer's choice (normalizeLeaseKnobs) }
  * @returns {string}
  */
 function renderAgreement(state, ctx) {
@@ -529,7 +528,6 @@ function renderAgreement(state, ctx) {
 <div class="meta"><span class="he">${esc(headerLine)}</span></div>
 </header>
 <main>
-${ctx.reviewDraft ? '<p class="summary"><strong>טיוטה לבדיקה — אינה מיועדת לחתימה</strong></p>' : ''}
 <h1>${esc(title)}</h1>
 <p class="lead">${esc(rental ? rentalSubtitle(t.termYears) : subtitle(t.termYears))}</p>
 <div class="titlebar"><span class="stamp">הסכם מס׳ ${esc(number)} · תאריך ההסכם ${esc(issued)}</span></div>
